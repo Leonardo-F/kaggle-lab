@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0a1120">
+  <title>Square Packing Studio — Kaggle Lab</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>ORIGINAL RESEARCH TOOLING</small></div></div>
+    <div class="top-title"><span class="trail">COMPETITIONS <span class="chev">/</span> SQUARES IN SQUARES</span><h1>Square Packing Studio <span class="beta">v0.1</span></h1></div>
+    <div class="top-actions"><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">Competition <span>↗</span></a><a href="../../../README.md" id="repoGuide" title="Repository README (when viewing source)">Repository</a></div>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar">
+      <section class="control-section intro"><div class="eyebrow">WORKSPACE / 001</div><h2>Pack unit squares.</h2><p>Explore placements, verify geometry, and export Kaggle-ready coordinates. Entirely self-contained.</p></section>
+      <section class="control-section">
+        <div class="section-heading"><h3>Puzzle size</h3><span class="subtle">N = 1–1000</span></div>
+        <div class="number-wrap"><span class="n-prefix">n</span><input id="count" type="number" min="1" max="1000" step="1" value="5" aria-label="Number of unit squares"><span class="unit">squares</span></div>
+        <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="5" aria-label="Puzzle size slider">
+        <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset" data-count="1000">1000</button></div>
+      </section>
+      <section class="control-section">
+        <div class="section-heading"><h3>Arrangement</h3><span class="subtle">geometric baseline</span></div>
+        <button class="action primary" id="resetLayout">↺ <span>Reset to grid baseline</span></button>
+        <button class="action secondary" id="optimize">✦ <span>Experiment: compact & relax</span></button>
+        <p class="hint">Experimental search for small puzzles (n ≤ 80). Keeps a change only when a locally feasible improvement is found.</p>
+      </section>
+      <section class="control-section">
+        <div class="section-heading"><h3>Selected square</h3><span id="selectedLabel" class="subtle">none</span></div>
+        <div class="dual"><button class="action secondary" id="rotateLeft">↶ Rotate −5°</button><button class="action secondary" id="rotateRight">↷ Rotate +5°</button></div>
+        <p class="hint">Click a square to select; drag to move. Arrow keys shift by 0.05; [ and ] rotate by 5°. Shift+drag pans the view.</p>
+      </section>
+      <section class="control-section export-section">
+        <div class="section-heading"><h3>Export / import</h3><span class="subtle">CSV</span></div>
+        <button class="action accent" id="exportOne">↓ Export current puzzle</button>
+        <button class="action secondary" id="exportAll">↓ Export full 1–1000 submission</button>
+        <button class="action secondary" id="importCSV">↑ Import saved CSV</button>
+        <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+        <p class="hint">Full submission includes 500,500 data rows. Unedited puzzles use the grid baseline. Invalid edited layouts cannot be exported.</p>
+      </section>
+      <div class="sidebar-footer"><span class="status-dot"></span><span>Offline • no dependencies • original implementation</span></div>
+    </aside>
+    <section class="stage-column">
+      <div class="statistics">
+        <div class="stat"><span>BOUNDING SIDE</span><strong id="sideStat">—</strong><small>translation-invariant L</small></div>
+        <div class="stat"><span>PUZZLE SCORE</span><strong id="scoreStat">—</strong><small>L / √n − 1 (lower is better)</small></div>
+        <div class="stat"><span>PACKING DENSITY</span><strong id="densityStat">—</strong><small>n / L²</small></div>
+        <div class="stat"><span>FEASIBILITY</span><strong id="validStat">—</strong><small id="validNote">checking geometry</small></div>
+      </div>
+      <div class="canvas-card">
+        <div class="canvas-header"><div><span class="small-icon">◇</span><strong>Interactive layout</strong><span class="subtle" id="layoutName">grid baseline</span></div><div class="canvas-actions"><button id="fitView">⤢ Fit</button><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div>
+        <div class="canvas-container"><canvas id="stage" aria-label="Interactive two-dimensional square packing layout"></canvas><div class="canvas-corner">XY PLANE <span>·</span> UNIT EDGE = 1</div><div class="canvas-legend"><span><i class="swatch square"></i>unit squares</span><span><i class="swatch border"></i>bounding container</span><span><i class="swatch collision"></i>overlap</span></div></div>
+        <div class="canvas-status"><span id="message" role="status" aria-live="polite">Grid baseline loaded. Select and drag any square.</span><span id="coordReadout">x: — &nbsp; y: —</span></div>
+      </div>
+      <div class="notes-grid"><div class="note"><span class="note-number">01 / GEOMETRY</span><h4>Separating-axis validation</h4><p>Rotated squares are checked on all four edge-normal axes, with spatial hashing to prune distant pairs. This is a local numerical check, not Kaggle’s final certified verifier.</p></div><div class="note"><span class="note-number">02 / SCORING</span><h4>Minimize bounding extent</h4><p>The objective is the sum over puzzles of L/√n − 1. The lower bound is zero, reached by perfect-square grids. Invalid layouts receive the baseline penalty.</p></div><div class="note"><span class="note-number">03 / SUBMISSIONS</span><h4>Six official columns</h4><p>Each row stores id, n, square_id, x, y and angle (radians). Exported values are plain decimals; independently verify the final file with Kaggle’s metric.</p></div></div>
+    </section>
+  </main>
+</div>
+</body>
+</html>
