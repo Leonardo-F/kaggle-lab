@@ -18,7 +18,7 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 
 ## Quick start / 快速开始
 
-**Square Packing Studio (no build tools or dependencies):** open `competitions/squares-in-squares/simulator/index.html` directly in a modern browser.
+**Square Packing Studio (no build tools or dependencies):** download and open the standalone HTML below. The Chinese UI defaults to n=1000 and its main download button generates a complete `submission.csv` (n=1–1000, 500,500 rows). The default algorithm is the organizer-described unrotated grid baseline; a single-puzzle export is available for debugging.
 
 A portable all-in-one HTML version is also included at `competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html` (and supplied as a separate downloadable HTML).
 
