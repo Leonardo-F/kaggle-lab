@@ -21,3 +21,10 @@ jobs:
       - name: Syntax-check browser JavaScript
         run: |
           node --check competitions/squares-in-squares/simulator/app.js
+          node --check competitions/squares-in-squares/simulator/packing-core.js
+      - name: Test browser geometry and complete CSV
+        run: node --test competitions/squares-in-squares/experiments/test_core.cjs
+      - name: Rebuild standalone HTML
+        run: |
+          python competitions/squares-in-squares/simulator/build_standalone.py
+          git diff --exit-code -- competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html
