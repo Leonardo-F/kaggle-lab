@@ -10,6 +10,7 @@ import csv
 import math
 import re
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path
 from typing import Iterable
 
@@ -22,6 +23,9 @@ class Tile:
     x: float
     y: float
     angle: float = 0.0
+    x_text: str | None = None
+    y_text: str | None = None
+    angle_text: str | None = None
 
 
 def grid_layout(n: int) -> list[Tile]:
@@ -50,13 +54,26 @@ def _intersects(a: Tile, b: Tile, tolerance: float = 1e-9) -> bool:
     dx, dy = b.x - a.x, b.y - a.y
     if abs(dx) >= math.sqrt(2) + tolerance or abs(dy) >= math.sqrt(2) + tolerance:
         return False
+    if a.angle == b.angle == 0 and Fraction(a.angle_text or '0') == Fraction(b.angle_text or '0') == 0:
+        # Do not round a submitted decimal before deciding a touching case.
+        for name, distance in (("x", abs(dx)), ("y", abs(dy))):
+            if distance > 1 + tolerance:
+                return False
+            if abs(distance - 1) <= tolerance:
+                av = Fraction(getattr(a, name + '_text') or str(getattr(a, name)))
+                bv = Fraction(getattr(b, name + '_text') or str(getattr(b, name)))
+                if abs(bv - av) >= 1:
+                    return False
+        return True
     ca, sa = math.cos(a.angle), math.sin(a.angle)
     cb, sb = math.cos(b.angle), math.sin(b.angle)
     for ax, ay in ((ca, sa), (-sa, ca), (cb, sb), (-sb, cb)):
         ra = 0.5 * (abs(ca * ax + sa * ay) + abs(-sa * ax + ca * ay))
         rb = 0.5 * (abs(cb * ax + sb * ay) + abs(-sb * ax + cb * ay))
         projection = abs(dx * ax + dy * ay)
-        if ra + rb - projection <= tolerance:
+        # A borderline rotated contact is rejected conservatively; only the
+        # official interval verifier can resolve it. Never forgive penetration.
+        if ra + rb - projection < -tolerance:
             return False
     return True
 
@@ -64,10 +81,13 @@ def _intersects(a: Tile, b: Tile, tolerance: float = 1e-9) -> bool:
 def validate_layout(tiles: list[Tile]) -> list[tuple[int, int]]:
     """Report intersecting tile index pairs using a 2-unit spatial hash.
 
-    Uses floating-point SAT; not equivalent to Kaggle interval certification.
+    Rotated near-contact pairs are included conservatively. Zero-angle contacts
+    use exact decimal separation. Not equivalent to Kaggle interval certification.
     """
     if not tiles or not all(all(math.isfinite(v) for v in (t.x, t.y, t.angle)) for t in tiles):
         raise ValueError("Layout is empty or contains non-finite parameters")
+    if any(abs(t.x) > 1e6 or abs(t.y) > 1e6 or abs(t.angle) > 1000 for t in tiles):
+        raise ValueError("Outside local numerical limits: |x|, |y| <= 1e6; |angle| <= 1000")
     buckets: dict[tuple[int, int], list[int]] = {}
     overlaps: list[tuple[int, int]] = []
     for i, tile in enumerate(tiles):
@@ -97,8 +117,12 @@ def write_baseline(output: Path, max_n: int = 1000) -> int:
 
 
 def _parse_float(text: str, line_no: int) -> float:
-    if not DECIMAL.fullmatch(text.strip()):
+    text = text.strip()
+    if len(text) > 2048 or not DECIMAL.fullmatch(text):
         raise ValueError(f"line {line_no}: expected finite decimal literal: {text!r}")
+    exponent = text.lower().split('e')[-1] if 'e' in text.lower() else '0'
+    if abs(int(exponent)) > 2048:
+        raise ValueError(f"line {line_no}: exponent exceeds local magnitude limit 2048")
     number = float(text)
     if not math.isfinite(number):
         raise ValueError(f"line {line_no}: non-finite coordinate")
@@ -150,7 +174,7 @@ def validate_csv(input_path: Path, complete: bool = False) -> dict[str, float | 
                 current_n, current_tiles = puzzle, []
             if square_id != len(current_tiles):
                 raise ValueError(f"line {line_no}: square_id expected {len(current_tiles)}, got {square_id}")
-            current_tiles.append(Tile(_parse_float(row["x"], line_no), _parse_float(row["y"], line_no), _parse_float(row["angle"], line_no)))
+            current_tiles.append(Tile(_parse_float(row["x"], line_no), _parse_float(row["y"], line_no), _parse_float(row["angle"], line_no), row['x'].strip(), row['y'].strip(), row['angle'].strip()))
             rows += 1
     total_score += finish()
     groups += bool(current_tiles)
