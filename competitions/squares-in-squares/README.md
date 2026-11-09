@@ -11,18 +11,33 @@ A geometric packing challenge: place **n=1…1000** unit squares, optionally rot
 - Missing/invalid puzzles receive their trivial-grid penalty from the official scorer.
 - One CSV with columns **`id,n,square_id,x,y,angle`**; center coordinates and angles in **radians**. Complete n=1…1000 produces **500,500 data rows**.
 
-## Interactive simulator
+## Interactive simulator (v0.2)
 
-Open [`simulator/index.html`](simulator/index.html) with its neighboring CSS/JS files, or the completely self-contained [`SquarePackingStudio-standalone.html`](simulator/SquarePackingStudio-standalone.html). No npm, frameworks or network assets are required. Features:
+**Easiest:** download [`SquarePackingStudio-standalone.html`](simulator/SquarePackingStudio-standalone.html) and open it in a modern desktop browser. All JavaScript and CSS are embedded; no install, server, account, or network assets are needed. The Chinese interface also adapts to narrow screens.
 
-1. Browse n=1 to 1000; every puzzle starts with a deterministic non-overlapping grid.
-2. Select a square, drag it, rotate it 5° at a time, nudge with arrows, zoom or pan.
-3. View bounding side `L`, per-puzzle score, density, and local overlap check.
-4. Experimental **compact & relax** search for n≤80 (may find *no* improvement; a failed candidate leaves the prior feasible layout intact).
-5. Export just the selected puzzle CSV or a complete 1–1000 `submission.csv`. Edited layouts take precedence; remaining puzzles use safe grids.
-6. Import CSV from a previous session. Complete puzzles are validated locally before being accepted. Work is held in memory, so **export to save** before closing the tab.
+- The default preview is **n=1000**: a 32×32 unrotated unit grid, with 24 empty cells.
+- The primary button downloads **`submission.csv` with all 1,000 puzzles and 500,500 data rows**, independent of the currently previewed n. IDs run from 0 to 500499.
+- Algorithm: m=ceil(sqrt(n)); center i is `(i % m + 0.5, floor(i / m) + 0.5)`, angle=0. This independently implements the **trivial grid baseline described by the organizer**, not an optimal packing and not a byte-for-byte copy of sample_submission.csv. Its total score from the published formula is approximately **28.93766991655**.
+- Edits take precedence for their puzzle; other puzzles use the baseline. A secondary button exports a single puzzle for debugging only.
+- Drag/select, rotate, nudge, zoom and pan. Camera scale stays fixed while dragging. Reset restores the current puzzle's baseline.
+- Optional compact-and-relax search for n≤80 never starts by itself and may find no improvement.
+- Import merges complete, locally acceptable puzzles atomically. The original decimal strings are preserved for unchanged imported coordinates. Empty values, non-decimal literals, incorrect IDs, missing squares, overlaps and uncertain contacts are rejected.
+- Work remains in memory. **Download CSV before closing the page.** No automatic Kaggle submission occurs.
 
-**Limitations:** canvas-based **2D** preview is the scientifically correct view for a two-dimensional packing task. This is an independent visualization tool, **not** a claim to implement a state-of-the-art packing optimizer. CSV imports expect standard unquoted numeric fields and six columns in official order. The app does not autosave. The full CSV may take a moment to generate.
+### What the checker does
+
+Zero-angle near contacts use exact decimal differences; positive overlaps are not forgiven by a tolerance. For rotated squares, separating-axis tests and spatial hashing identify clear separation/overlap. Borderline rotated contacts are labeled uncertain and blocked, even when an official high-precision verifier could prove them feasible. Invalid layouts show no attractive negative score.
+
+The local numerical editor accepts |x|,|y|≤10⁶ and |angle|≤1000 radians, decimal fields up to 2048 characters with exponent magnitude≤2048, and files up to 100 MB. These are **local resource/precision limits**, not a restatement of competition rules. Arbitrary rotated layouts still require the official interval verifier; no official certification is claimed by this app.
+
+### Development and checks
+
+The editable version is `simulator/index.html` beside `styles.css`, `packing-core.js` and `app.js`. Rebuild the one-file edition with:
+
+```bash
+python simulator/build_standalone.py
+node --test experiments/test_core.cjs
+```
 
 ## Reproducible Python baseline
 
@@ -36,12 +51,12 @@ python -m unittest discover -s experiments -v
 
 The generated CSV is a **valid but weak baseline**: a `ceil(sqrt(n))`-column grid for each puzzle. Its chief purpose is to establish correct formatting, local feasibility, and a safe fallback before implementing stronger research algorithms.
 
-Geometry checks implement SAT (separating-axis theorem) with a 2-unit spatial hash. The local threshold uses floating-point tolerance; close-to-touching rotated squares can still fail the competition's certified interval arithmetic. **Always rerun the original official metric before submitting.**
+Geometry checks implement SAT (separating-axis theorem) with a 2-unit spatial hash. Zero-angle critical contacts use exact decimal comparisons; borderline rotated contacts are conservatively rejected locally. **Always rerun the original official metric before submitting.**
 
 ## Provenance / attribution
 
 **Original code in this project:**
-- `simulator/index.html`, `simulator/styles.css`, `simulator/app.js`: designed and implemented from scratch for Kaggle Lab, with no third-party script, CSS, artwork, source material or layout algorithm copied.
+- `simulator/index.html`, `simulator/styles.css`, `simulator/packing-core.js`, `simulator/app.js`, `simulator/build_standalone.py`: designed and implemented from scratch for Kaggle Lab, with no third-party script, CSS, artwork, source material or layout algorithm copied.
 - `algorithms/packing.py`: independently implemented deterministic grid layout, geometric projections, separating-axis collision checks, CSV writer, CSV reader and score calculation.
 - `experiments/test_packing.py`: independent sanity checks.
 
