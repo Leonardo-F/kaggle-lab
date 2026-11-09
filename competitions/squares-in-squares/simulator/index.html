@@ -1,63 +1,65 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0a1120">
-  <title>Square Packing Studio — Kaggle Lab</title>
+  <title>正方形装箱模拟器 — Kaggle Lab</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="packing-core.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
 <div class="app-shell">
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>ORIGINAL RESEARCH TOOLING</small></div></div>
-    <div class="top-title"><span class="trail">COMPETITIONS <span class="chev">/</span> SQUARES IN SQUARES</span><h1>Square Packing Studio <span class="beta">v0.1</span></h1></div>
-    <div class="top-actions"><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">Competition <span>↗</span></a><a href="../../../README.md" id="repoGuide" title="Repository README (when viewing source)">Repository</a></div>
+    <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>SQUARES IN SQUARES</small></div></div>
+    <div class="top-title"><span class="trail">离线工具 / 单文件 HTML</span><h1>正方形装箱模拟器 <span class="beta">v0.2</span></h1></div>
+    <div class="top-actions"><button class="action accent" id="exportTop">↓ 下载 submission.csv</button><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">赛题 ↗</a></div>
   </header>
   <main class="workspace">
     <aside class="sidebar">
-      <section class="control-section intro"><div class="eyebrow">WORKSPACE / 001</div><h2>Pack unit squares.</h2><p>Explore placements, verify geometry, and export Kaggle-ready coordinates. Entirely self-contained.</p></section>
-      <section class="control-section">
-        <div class="section-heading"><h3>Puzzle size</h3><span class="subtle">N = 1–1000</span></div>
-        <div class="number-wrap"><span class="n-prefix">n</span><input id="count" type="number" min="1" max="1000" step="1" value="5" aria-label="Number of unit squares"><span class="unit">squares</span></div>
-        <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="5" aria-label="Puzzle size slider">
-        <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset" data-count="1000">1000</button></div>
-      </section>
-      <section class="control-section">
-        <div class="section-heading"><h3>Arrangement</h3><span class="subtle">geometric baseline</span></div>
-        <button class="action primary" id="resetLayout">↺ <span>Reset to grid baseline</span></button>
-        <button class="action secondary" id="optimize">✦ <span>Experiment: compact & relax</span></button>
-        <p class="hint">Experimental search for small puzzles (n ≤ 80). Keeps a change only when a locally feasible improvement is found.</p>
-      </section>
-      <section class="control-section">
-        <div class="section-heading"><h3>Selected square</h3><span id="selectedLabel" class="subtle">none</span></div>
-        <div class="dual"><button class="action secondary" id="rotateLeft">↶ Rotate −5°</button><button class="action secondary" id="rotateRight">↷ Rotate +5°</button></div>
-        <p class="hint">Click a square to select; drag to move. Arrow keys shift by 0.05; [ and ] rotate by 5°. Shift+drag pans the view.</p>
-      </section>
+      <section class="control-section intro"><div class="eyebrow">默认算法 / GRID BASELINE</div><h2>先生成一份完整提交。</h2><p>默认采用赛题方说明的网格基线。直接下载即可得到 n=1–1000 的全部坐标；也可以先编辑布局，再导出。</p><div class="formula">m = ⌈√n⌉ &nbsp; · &nbsp; L₀ = m<br><small>中心 (列 + 0.5, 行 + 0.5)，angle = 0</small></div></section>
       <section class="control-section export-section">
-        <div class="section-heading"><h3>Export / import</h3><span class="subtle">CSV</span></div>
-        <button class="action accent" id="exportOne">↓ Export current puzzle</button>
-        <button class="action secondary" id="exportAll">↓ Export full 1–1000 submission</button>
-        <button class="action secondary" id="importCSV">↑ Import saved CSV</button>
+        <div class="section-heading"><h3>参赛文件</h3><span class="subtle">1000 个实例</span></div>
+        <button class="action accent" id="exportAll">↓ 下载完整 submission.csv</button>
+        <p class="hint">500,500 行数据，id 从 0 到 500499。预览的 n 不影响完整导出的范围。未编辑实例自动使用网格基线。</p>
+        <button class="action secondary" id="exportOne">↓ 仅导出当前 n（调试）</button>
+        <button class="action secondary" id="importCSV">↑ 导入已有 CSV</button>
         <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
-        <p class="hint">Full submission includes 500,500 data rows. Unedited puzzles use the grid baseline. Invalid edited layouts cannot be exported.</p>
+        <p class="hint">修改保存在本次页面内，关闭前请导出。导入会合并完整实例；重叠与不确定接触会阻止导入或导出。</p>
       </section>
-      <div class="sidebar-footer"><span class="status-dot"></span><span>Offline • no dependencies • original implementation</span></div>
+      <section class="control-section">
+        <div class="section-heading"><h3>当前预览</h3><span class="subtle">n = 1–1000</span></div>
+        <div class="number-wrap"><span class="n-prefix">n</span><input id="count" type="number" min="1" max="1000" step="1" value="1000" aria-label="正方形数量"><span class="unit">个</span></div>
+        <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="1000" aria-label="实例数量滑块">
+        <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset active" data-count="1000">1000</button></div>
+        <button class="action primary" id="resetLayout">↺ 当前实例恢复网格基线</button>
+      </section>
+      <section class="control-section">
+        <div class="section-heading"><h3>手动调整</h3><span id="selectedLabel" class="subtle">未选择</span></div>
+        <div class="dual"><button class="action secondary" id="rotateLeft">↶ 旋转 −5°</button><button class="action secondary" id="rotateRight">↷ 旋转 +5°</button></div>
+        <p class="hint">点选方块后拖动；方向键移动 0.05；[ / ] 旋转 5°。滚轮缩放，Shift + 拖动平移。界面用角度描述，CSV 始终写弧度。</p>
+        <details><summary>实验性搜索（可选）</summary><button class="action secondary" id="optimize">✦ 尝试压缩与松弛</button><p class="hint">仅限 n ≤ 80，可能找不到改进。只保留通过本地检查且 L 变小的候选；不会自动启动。</p></details>
+      </section>
+      <div class="sidebar-footer"><span class="status-dot"></span><span>可离线 · 无依赖 · 原创实现</span></div>
     </aside>
     <section class="stage-column">
+      <div class="baseline-banner"><strong id="baselineTitle">默认预览：最大实例 n = 1000</strong><span id="baselineText">32 × 32 网格，放入 1000 个单位正方形，余 24 个空位。基线可行，不代表最优解。</span></div>
       <div class="statistics">
-        <div class="stat"><span>BOUNDING SIDE</span><strong id="sideStat">—</strong><small>translation-invariant L</small></div>
-        <div class="stat"><span>PUZZLE SCORE</span><strong id="scoreStat">—</strong><small>L / √n − 1 (lower is better)</small></div>
-        <div class="stat"><span>PACKING DENSITY</span><strong id="densityStat">—</strong><small>n / L²</small></div>
-        <div class="stat"><span>FEASIBILITY</span><strong id="validStat">—</strong><small id="validNote">checking geometry</small></div>
+        <div class="stat"><span>外包正方形边长</span><strong id="sideStat">—</strong><small>L = max(横向跨度, 纵向跨度)</small></div>
+        <div class="stat"><span>当前实例得分估计</span><strong id="scoreStat">—</strong><small>L / √n − 1，越小越好</small></div>
+        <div class="stat"><span>面积利用率</span><strong id="densityStat">—</strong><small>n / L²，重叠时仅为几何比值</small></div>
+        <div class="stat"><span>本地可行性</span><strong id="validStat">—</strong><small id="validNote">正在检查</small></div>
       </div>
       <div class="canvas-card">
-        <div class="canvas-header"><div><span class="small-icon">◇</span><strong>Interactive layout</strong><span class="subtle" id="layoutName">grid baseline</span></div><div class="canvas-actions"><button id="fitView">⤢ Fit</button><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div>
-        <div class="canvas-container"><canvas id="stage" aria-label="Interactive two-dimensional square packing layout"></canvas><div class="canvas-corner">XY PLANE <span>·</span> UNIT EDGE = 1</div><div class="canvas-legend"><span><i class="swatch square"></i>unit squares</span><span><i class="swatch border"></i>bounding container</span><span><i class="swatch collision"></i>overlap</span></div></div>
-        <div class="canvas-status"><span id="message" role="status" aria-live="polite">Grid baseline loaded. Select and drag any square.</span><span id="coordReadout">x: — &nbsp; y: —</span></div>
+        <div class="canvas-header"><div><span class="small-icon">◇</span><strong>布局预览</strong><span class="subtle" id="layoutName">赛题网格基线</span></div><div class="canvas-actions"><button id="fitView">适配视图</button><button id="zoomOut" aria-label="缩小">−</button><button id="zoomIn" aria-label="放大">+</button></div></div>
+        <div class="canvas-container"><canvas id="stage" aria-label="二维正方形装箱交互画布"></canvas><div class="canvas-corner">XY 平面 <span>·</span> 单位边长 = 1</div><div class="canvas-legend"><span><i class="swatch square"></i>单位正方形</span><span><i class="swatch border"></i>外包正方形</span><span><i class="swatch collision"></i>重叠 / 待核验</span></div></div>
+        <div class="canvas-status"><span id="message" role="status" aria-live="polite">正在载入网格基线…</span><span id="coordReadout">x: — &nbsp; y: —</span></div>
       </div>
-      <div class="notes-grid"><div class="note"><span class="note-number">01 / GEOMETRY</span><h4>Separating-axis validation</h4><p>Rotated squares are checked on all four edge-normal axes, with spatial hashing to prune distant pairs. This is a local numerical check, not Kaggle’s final certified verifier.</p></div><div class="note"><span class="note-number">02 / SCORING</span><h4>Minimize bounding extent</h4><p>The objective is the sum over puzzles of L/√n − 1. The lower bound is zero, reached by perfect-square grids. Invalid layouts receive the baseline penalty.</p></div><div class="note"><span class="note-number">03 / SUBMISSIONS</span><h4>Six official columns</h4><p>Each row stores id, n, square_id, x, y and angle (radians). Exported values are plain decimals; independently verify the final file with Kaggle’s metric.</p></div></div>
+      <details class="help-details"><summary>如何使用、评分与校验范围</summary>
+        <div class="notes-grid"><div class="note"><span class="note-number">01 / 使用</span><h4>打开 HTML → 下载 CSV</h4><p>单文件版无需安装或启动服务器。第一次直接下载，就是所有实例的网格基线。调整某个 n 后，完整导出会采用该布局并补齐其他实例。</p></div><div class="note"><span class="note-number">02 / 目标</span><h4>目标是把外框变小</h4><p>网格的 L₀=⌈√n⌉ 是保底方案；面积下界为 √n。完整网格基线的总分约为 28.93766992。不是只提交 n=1000，也不是把外框做得越大越好。</p></div><div class="note"><span class="note-number">03 / 校验</span><h4>本地检查与官方认证</h4><p>无旋转方块的临界接触按精确十进制比较；旋转布局使用保守 SAT，无法确定时阻止导出。优化或编辑后的最终候选仍需赛题官方区间算术认证。</p></div></div>
+        <p class="sources"><a href="https://www.kaggle.com/competitions/squares-in-squares/data" target="_blank" rel="noopener noreferrer">官方 CSV 格式 ↗</a> · <a href="https://www.kaggle.com/code/metric/squares-in-squares" target="_blank" rel="noopener noreferrer">官方评分与认证 ↗</a> · <a href="https://github.com/Leonardo-F/kaggle-lab" target="_blank" rel="noopener noreferrer">源代码 ↗</a></p>
+      </details>
     </section>
   </main>
 </div>

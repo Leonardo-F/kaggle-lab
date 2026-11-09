@@ -1,15 +1,238 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0a1120">
-  <title>Square Packing Studio — Kaggle Lab</title>
+  <title>正方形装箱模拟器 — Kaggle Lab</title>
   <style>
 :root{color-scheme:dark;--bg:#080e19;--surface:#101a2a;--surface2:#141f31;--line:#283750;--line2:#1e2a3e;--text:#edf5ff;--muted:#95a7bf;--teal:#62e9cd;--cyan:#7acafa;--gold:#f2bc78;--red:#ff8295}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}button{cursor:pointer}button:disabled{opacity:.4;cursor:not-allowed}.app-shell{min-height:100vh}.topbar{min-height:94px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:45px;padding:18px 34px;background:#0c1422}.brand{display:flex;align-items:center;gap:12px;min-width:226px}.brand-mark{display:grid;place-items:center;width:36px;height:36px;border:1px solid #427e86;border-radius:10px;color:var(--teal);font-size:24px;background:#142a35}.brand strong{font-size:13px;letter-spacing:.18em;display:block}.brand small{font-size:9px;color:#6f8b9e;letter-spacing:.14em}.top-title{flex:1}.trail{font-size:10px;color:var(--muted);letter-spacing:.15em}.chev{color:#4d5b74;padding:0 10px}.top-title h1{font-size:22px;font-weight:650;letter-spacing:-.035em;margin:5px 0 0}.beta{font-size:10px;color:var(--teal);border:1px solid #2b6566;padding:4px 6px;border-radius:4px;letter-spacing:.06em;vertical-align:middle;font-weight:550}.top-actions{display:flex;align-items:center;gap:22px}.top-actions a{color:#bdd0e7;font-size:12px;text-decoration:none;white-space:nowrap}.top-actions a:hover{color:var(--teal)}.workspace{display:grid;grid-template-columns:312px minmax(0,1fr);min-height:calc(100vh - 94px)}.sidebar{border-right:1px solid var(--line2);background:#0b1422;display:flex;flex-direction:column}.control-section{padding:25px 26px;border-bottom:1px solid var(--line2)}.control-section.intro{padding-top:29px;padding-bottom:23px}.eyebrow,.note-number{font-size:10px;letter-spacing:.15em;color:var(--teal);font-weight:700}.intro h2{font-size:21px;margin:12px 0 8px;letter-spacing:-.035em}.intro p,.hint{font-size:12px;color:var(--muted);line-height:1.65;margin:0}.section-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px}.section-heading h3{font-size:12px;letter-spacing:.03em;margin:0;font-weight:700}.subtle{font-size:10px;color:#778ba5}.number-wrap{display:flex;gap:8px;align-items:center;background:#131f30;border:1px solid #2b3b52;border-radius:8px;padding:10px 13px}.n-prefix{font-family:Georgia,serif;font-style:italic;color:var(--teal);font-size:21px;width:23px}.number-wrap input{width:100%;background:none;border:0;outline:0;color:#f4f8ff;font-size:22px;font-weight:650;font-variant-numeric:tabular-nums}.unit{white-space:nowrap;font-size:11px;color:var(--muted)}.wide-slider{width:100%;margin:21px 0 12px;accent-color:var(--teal);cursor:pointer}.presets{display:flex;gap:7px}.preset{flex:1;background:#131f30;color:#90a8c2;border:1px solid #27374b;border-radius:6px;padding:7px 0;font-size:11px}.preset:hover,.preset.active{color:var(--teal);border-color:#3b9c91}.action{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:11px 9px;border-radius:7px;border:1px solid #2b3b50;margin:8px 0 0;font-size:12px;font-weight:650;min-height:39px}.action.primary{background:#294e4e;border-color:#3e837b;color:#aafbe7}.action.accent{background:#44cbaa;border-color:#68ebcf;color:#071e1d}.action.secondary{background:#142236;color:#c7d8e9}.action:hover:not(:disabled){filter:brightness(1.15)}.dual{display:flex;gap:8px}.dual .action{font-size:10px}.hint{margin-top:11px;font-size:11px}.sidebar-footer{margin-top:auto;padding:25px 26px;color:#708399;font-size:10px;display:flex;gap:8px;align-items:center}.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#48d7ac}.stage-column{padding:27px 29px 28px;min-width:0;max-width:1600px;width:100%;margin:0 auto}.statistics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:19px}.stat{border:1px solid #25354c;border-radius:10px;background:#111d2e;padding:20px 21px;min-width:0}.stat span{display:block;color:#a4b7cd;font-size:10px;font-weight:700;letter-spacing:.115em}.stat strong{display:block;margin:11px 0 4px;font-weight:650;font-size:29px;letter-spacing:-.05em;font-variant-numeric:tabular-nums}.stat small{display:block;color:#71849d;font-size:10px;line-height:1.4}.stat.good strong{color:var(--teal)}.stat.bad strong{color:var(--red)}.canvas-card{border:1px solid #2b3b50;border-radius:12px;background:#0e1828;overflow:hidden}.canvas-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #26344b;gap:9px}.canvas-header>div{display:flex;align-items:center;gap:13px}.canvas-header strong{font-size:13px}.small-icon{font-size:21px;color:var(--teal)}.canvas-actions{gap:7px!important}.canvas-actions button{color:#b6c8dc;border:1px solid #2b3b50;border-radius:6px;padding:6px 10px;background:#172438;font-size:11px}.canvas-container{height:min(61vh,670px);min-height:360px;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 43%,#16243a,#0c1523 76%)}#stage{display:block;width:100%;height:100%;cursor:grab;touch-action:none}#stage.dragging{cursor:grabbing}.canvas-corner{position:absolute;top:19px;left:20px;font-size:10px;color:#7287a2;letter-spacing:.12em;pointer-events:none}.canvas-corner span{padding:0 6px;color:#3b5771}.canvas-legend{position:absolute;left:18px;bottom:18px;display:flex;flex-wrap:wrap;gap:17px;pointer-events:none}.canvas-legend>span{font-size:10px;color:#97abc3;display:flex;align-items:center;gap:7px}.swatch{display:inline-block;width:10px;height:10px;border:1px solid}.swatch.square{background:#236972;border-color:#6fe2c9}.swatch.border{border:1px dashed #f2bc78}.swatch.collision{background:#8a324b;border-color:#ff8295}.canvas-status{border-top:1px solid #26344b;display:flex;justify-content:space-between;gap:15px;padding:12px 18px;color:#88a6bc;font-size:11px}.canvas-status #message{white-space:normal}.canvas-status #coordReadout{white-space:nowrap;font-variant-numeric:tabular-nums}.notes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:19px}.note{border:1px solid #1f2d42;border-radius:9px;padding:17px 18px;background:#0d1625}.note-number{font-size:9px}.note h4{margin:12px 0 7px;font-size:13px}.note p{font-size:11px;color:#869db9;line-height:1.75;margin:0}@media(max-width:1050px){.topbar{padding:15px 20px;gap:12px}.brand{min-width:185px}.workspace{grid-template-columns:270px minmax(0,1fr)}.stage-column{padding:19px}.statistics{gap:8px}.stat{padding:13px 12px}.stat strong{font-size:22px}.stat small{font-size:9px}.control-section{padding:21px 18px}.notes-grid{grid-template-columns:1fr}}@media(max-width:720px){.topbar{flex-wrap:wrap;min-height:unset;gap:8px;padding:14px 17px}.brand{flex:1}.top-title{order:3;flex:0 0 100%;padding-top:5px}.top-title h1{font-size:19px}.top-actions{gap:11px}.top-actions a{font-size:10px}.workspace{display:flex;flex-direction:column}.sidebar{border-right:0}.control-section{padding:16px 18px}.control-section.intro{padding:17px 18px}.sidebar-footer{display:none}.stage-column{order:-1;padding:12px}.statistics{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:10px}.stat{padding:11px}.stat strong{font-size:22px;margin:6px 0}.canvas-container{height:48vh;min-height:300px}.canvas-status{flex-wrap:wrap}.notes-grid{margin-top:10px}.canvas-legend{gap:8px}.canvas-legend>span{font-size:9px}}
+.formula{margin-top:14px;padding:12px;border:1px solid #2a514f;background:#142a30;color:#aff4e3;border-radius:7px;font-size:16px;line-height:1.8}.formula small{font-size:10px;color:#91beb9}.baseline-banner{display:flex;flex-direction:column;gap:7px;background:#142a30;border:1px solid #2b5552;padding:14px 18px;border-radius:9px;margin-bottom:16px;font-size:13px}.baseline-banner span{font-size:12px;color:#a2bdbd;line-height:1.6}.top-actions .action{margin:0;width:auto;padding:11px 16px;white-space:nowrap}.hint{line-height:1.8}details{margin-top:17px}summary{cursor:pointer;color:#9db9c7;font-size:12px;line-height:1.8}.help-details{border-top:1px solid #283750;padding-top:14px}.sources{font-size:11px;line-height:1.8}.sources a{color:#8dd5c6}.stat strong{font-size:24px}.canvas-header>div{flex-wrap:wrap;gap:8px}.canvas-actions{flex-wrap:nowrap!important}button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--teal);outline-offset:3px}@media(max-width:720px){.top-actions{width:100%;justify-content:space-between;order:4}.top-actions .action{font-size:12px;flex:1}.top-actions a{padding:0 8px}.stat strong{font-size:20px}.baseline-banner{padding:10px 12px;font-size:12px}.canvas-header{padding:10px}.canvas-corner{font-size:9px}.canvas-header strong{font-size:12px}.canvas-header .subtle{font-size:9px}.help-details{margin:12px 0}.control-section.intro{padding-top:12px}}
 
 </style>
-  <script defer>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>SQUARES IN SQUARES</small></div></div>
+    <div class="top-title"><span class="trail">离线工具 / 单文件 HTML</span><h1>正方形装箱模拟器 <span class="beta">v0.2</span></h1></div>
+    <div class="top-actions"><button class="action accent" id="exportTop">↓ 下载 submission.csv</button><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">赛题 ↗</a></div>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar">
+      <section class="control-section intro"><div class="eyebrow">默认算法 / GRID BASELINE</div><h2>先生成一份完整提交。</h2><p>默认采用赛题方说明的网格基线。直接下载即可得到 n=1–1000 的全部坐标；也可以先编辑布局，再导出。</p><div class="formula">m = ⌈√n⌉ &nbsp; · &nbsp; L₀ = m<br><small>中心 (列 + 0.5, 行 + 0.5)，angle = 0</small></div></section>
+      <section class="control-section export-section">
+        <div class="section-heading"><h3>参赛文件</h3><span class="subtle">1000 个实例</span></div>
+        <button class="action accent" id="exportAll">↓ 下载完整 submission.csv</button>
+        <p class="hint">500,500 行数据，id 从 0 到 500499。预览的 n 不影响完整导出的范围。未编辑实例自动使用网格基线。</p>
+        <button class="action secondary" id="exportOne">↓ 仅导出当前 n（调试）</button>
+        <button class="action secondary" id="importCSV">↑ 导入已有 CSV</button>
+        <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
+        <p class="hint">修改保存在本次页面内，关闭前请导出。导入会合并完整实例；重叠与不确定接触会阻止导入或导出。</p>
+      </section>
+      <section class="control-section">
+        <div class="section-heading"><h3>当前预览</h3><span class="subtle">n = 1–1000</span></div>
+        <div class="number-wrap"><span class="n-prefix">n</span><input id="count" type="number" min="1" max="1000" step="1" value="1000" aria-label="正方形数量"><span class="unit">个</span></div>
+        <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="1000" aria-label="实例数量滑块">
+        <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset active" data-count="1000">1000</button></div>
+        <button class="action primary" id="resetLayout">↺ 当前实例恢复网格基线</button>
+      </section>
+      <section class="control-section">
+        <div class="section-heading"><h3>手动调整</h3><span id="selectedLabel" class="subtle">未选择</span></div>
+        <div class="dual"><button class="action secondary" id="rotateLeft">↶ 旋转 −5°</button><button class="action secondary" id="rotateRight">↷ 旋转 +5°</button></div>
+        <p class="hint">点选方块后拖动；方向键移动 0.05；[ / ] 旋转 5°。滚轮缩放，Shift + 拖动平移。界面用角度描述，CSV 始终写弧度。</p>
+        <details><summary>实验性搜索（可选）</summary><button class="action secondary" id="optimize">✦ 尝试压缩与松弛</button><p class="hint">仅限 n ≤ 80，可能找不到改进。只保留通过本地检查且 L 变小的候选；不会自动启动。</p></details>
+      </section>
+      <div class="sidebar-footer"><span class="status-dot"></span><span>可离线 · 无依赖 · 原创实现</span></div>
+    </aside>
+    <section class="stage-column">
+      <div class="baseline-banner"><strong id="baselineTitle">默认预览：最大实例 n = 1000</strong><span id="baselineText">32 × 32 网格，放入 1000 个单位正方形，余 24 个空位。基线可行，不代表最优解。</span></div>
+      <div class="statistics">
+        <div class="stat"><span>外包正方形边长</span><strong id="sideStat">—</strong><small>L = max(横向跨度, 纵向跨度)</small></div>
+        <div class="stat"><span>当前实例得分估计</span><strong id="scoreStat">—</strong><small>L / √n − 1，越小越好</small></div>
+        <div class="stat"><span>面积利用率</span><strong id="densityStat">—</strong><small>n / L²，重叠时仅为几何比值</small></div>
+        <div class="stat"><span>本地可行性</span><strong id="validStat">—</strong><small id="validNote">正在检查</small></div>
+      </div>
+      <div class="canvas-card">
+        <div class="canvas-header"><div><span class="small-icon">◇</span><strong>布局预览</strong><span class="subtle" id="layoutName">赛题网格基线</span></div><div class="canvas-actions"><button id="fitView">适配视图</button><button id="zoomOut" aria-label="缩小">−</button><button id="zoomIn" aria-label="放大">+</button></div></div>
+        <div class="canvas-container"><canvas id="stage" aria-label="二维正方形装箱交互画布"></canvas><div class="canvas-corner">XY 平面 <span>·</span> 单位边长 = 1</div><div class="canvas-legend"><span><i class="swatch square"></i>单位正方形</span><span><i class="swatch border"></i>外包正方形</span><span><i class="swatch collision"></i>重叠 / 待核验</span></div></div>
+        <div class="canvas-status"><span id="message" role="status" aria-live="polite">正在载入网格基线…</span><span id="coordReadout">x: — &nbsp; y: —</span></div>
+      </div>
+      <details class="help-details"><summary>如何使用、评分与校验范围</summary>
+        <div class="notes-grid"><div class="note"><span class="note-number">01 / 使用</span><h4>打开 HTML → 下载 CSV</h4><p>单文件版无需安装或启动服务器。第一次直接下载，就是所有实例的网格基线。调整某个 n 后，完整导出会采用该布局并补齐其他实例。</p></div><div class="note"><span class="note-number">02 / 目标</span><h4>目标是把外框变小</h4><p>网格的 L₀=⌈√n⌉ 是保底方案；面积下界为 √n。完整网格基线的总分约为 28.93766992。不是只提交 n=1000，也不是把外框做得越大越好。</p></div><div class="note"><span class="note-number">03 / 校验</span><h4>本地检查与官方认证</h4><p>无旋转方块的临界接触按精确十进制比较；旋转布局使用保守 SAT，无法确定时阻止导出。优化或编辑后的最终候选仍需赛题官方区间算术认证。</p></div></div>
+        <p class="sources"><a href="https://www.kaggle.com/competitions/squares-in-squares/data" target="_blank" rel="noopener noreferrer">官方 CSV 格式 ↗</a> · <a href="https://www.kaggle.com/code/metric/squares-in-squares" target="_blank" rel="noopener noreferrer">官方评分与认证 ↗</a> · <a href="https://github.com/Leonardo-F/kaggle-lab" target="_blank" rel="noopener noreferrer">源代码 ↗</a></p>
+      </details>
+    </section>
+  </main>
+</div>
+<script>
+/* Independent geometry and CSV implementation for the organizer-described grid
+   baseline. Floating-point SAT is deliberately conservative near rotated contact;
+   it is NOT the official interval-arithmetic certifier. MIT, Kaggle Lab. */
+'use strict';
+((root, factory) => {
+  const api=factory();
+  if(typeof module==='object' && module.exports) module.exports=api;
+  else root.PackingCore=api;
+})(typeof globalThis!=='undefined'?globalThis:this, () => {
+  const MAX_N=1000, HEADER='id,n,square_id,x,y,angle';
+  const DECIMAL=/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+  const CONTACT_EPS=1e-9;
+  function checkN(n){if(!Number.isInteger(n)||n<1||n>MAX_N)throw Error('n 必须是 1–1000 的整数');}
+  function makeGrid(n){
+    checkN(n);const m=Math.ceil(Math.sqrt(n));
+    return Array.from({length:n},(_,i)=>({x:i%m+.5,y:Math.floor(i/m)+.5,angle:0}));
+  }
+  function decimal(value){if(!Number.isFinite(value))throw Error('坐标必须为有限数');return String(Object.is(value,-0)?0:value);}
+  function numericText(tile,key){
+    const raw=tile.raw?.[key];
+    return raw!==undefined&&Number(raw)===tile[key]?raw:decimal(tile[key]);
+  }
+  function updateTile(tile,changes){
+    for(const key of ['x','y','angle'])if(key in changes&&changes[key]!==tile[key]){
+      if(tile.raw)delete tile.raw[key];
+      tile[key]=changes[key];
+    }
+  }
+  // Decimal arithmetic is only needed near a zero-angle contact. Ordinary grids
+  // use exactly representable half-integers. Retained source strings also detect
+  // a positive overlap smaller than a double's unit in the last place.
+  function decimalParts(text){
+    const [mantissa,exp='0']=text.toLowerCase().split('e');
+    const negative=mantissa.startsWith('-'),digits=mantissa.replace(/^[+-]/,'').split('.');
+    return {v:BigInt((negative?'-':'')+(digits[0]||'0')+(digits[1]||'')),e:Number(exp)-(digits[1]||'').length};
+  }
+  function separatedExactly(a,b,key){
+    const aa=decimalParts(numericText(a,key)),bb=decimalParts(numericText(b,key));
+    const e=Math.min(aa.e,bb.e,0);
+    const d=aa.v*10n**BigInt(aa.e-e)-bb.v*10n**BigInt(bb.e-e);
+    return (d<0n?-d:d)>=10n**BigInt(-e);
+  }
+  function getBounds(placed){
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    for(const s of placed){
+      const h=(Math.abs(Math.cos(s.angle))+Math.abs(Math.sin(s.angle)))*.5;
+      minX=Math.min(minX,s.x-h);maxX=Math.max(maxX,s.x+h);
+      minY=Math.min(minY,s.y-h);maxY=Math.max(maxY,s.y+h);
+    }
+    return {minX,maxX,minY,maxY,width:maxX-minX,height:maxY-minY,L:Math.max(maxX-minX,maxY-minY)};
+  }
+  function penetration(a,b){
+    const dx=b.x-a.x,dy=b.y-a.y;
+    if(Math.abs(dx)>Math.SQRT2+CONTACT_EPS||Math.abs(dy)>Math.SQRT2+CONTACT_EPS)return null;
+    // Exact zero rotation must mean exact zero in the submitted text too.
+    const axisAligned=a.angle===0&&b.angle===0&&decimalParts(numericText(a,'angle')).v===0n&&decimalParts(numericText(b,'angle')).v===0n;
+    if(axisAligned){
+      const px=1-Math.abs(dx),py=1-Math.abs(dy);
+      if(px < -CONTACT_EPS || py < -CONTACT_EPS)return null;
+      if(Math.abs(px)<=CONTACT_EPS&&separatedExactly(a,b,'x'))return null;
+      if(Math.abs(py)<=CONTACT_EPS&&separatedExactly(a,b,'y'))return null;
+      return px<=py?{depth:Math.max(px,Number.EPSILON),nx:dx<0?-1:1,ny:0,uncertain:false}
+        :{depth:Math.max(py,Number.EPSILON),nx:0,ny:dy<0?-1:1,uncertain:false};
+    }
+    const ca=Math.cos(a.angle),sa=Math.sin(a.angle),cb=Math.cos(b.angle),sb=Math.sin(b.angle);
+    let best=Infinity,nx=0,ny=0;
+    for(const [ax,ay] of [[ca,sa],[-sa,ca],[cb,sb],[-sb,cb]]){
+      const ra=.5*(Math.abs(ca*ax+sa*ay)+Math.abs(-sa*ax+ca*ay));
+      const rb=.5*(Math.abs(cb*ax+sb*ay)+Math.abs(-sb*ax+cb*ay));
+      const along=dx*ax+dy*ay,depth=ra+rb-Math.abs(along);
+      if(depth < -CONTACT_EPS)return null;
+      if(depth<best){best=depth;const sign=along<0?-1:1;nx=ax*sign;ny=ay*sign;}
+    }
+    return {depth:Math.max(best,0),nx,ny,uncertain:best<=CONTACT_EPS};
+  }
+  function collisions(placed,withPairs=false){
+    const buckets=new Map(),pairs=[],colliding=new Set();let count=0,uncertainCount=0;
+    for(let i=0;i<placed.length;i++){
+      const s=placed[i],gx=Math.floor(s.x/2),gy=Math.floor(s.y/2);
+      for(let ox=-1;ox<=1;ox++)for(let oy=-1;oy<=1;oy++)for(const j of buckets.get(`${gx+ox},${gy+oy}`)||[]){
+        const p=penetration(placed[j],s);
+        if(p){count++;if(p.uncertain)uncertainCount++;colliding.add(i);colliding.add(j);if(withPairs)pairs.push([j,i,p]);}
+      }
+      const key=`${gx},${gy}`;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(i);
+    }
+    return {count,uncertainCount,colliding,pairs};
+  }
+  function evaluate(placed){
+    const finite=placed.length>0&&placed.every(s=>s&&[s.x,s.y,s.angle].every(Number.isFinite)&&Math.abs(s.x)<=1e6&&Math.abs(s.y)<=1e6&&Math.abs(s.angle)<=1000);
+    if(!finite)return {valid:false,score:null,density:null,bounds:{L:NaN},hits:{count:0,uncertainCount:0,colliding:new Set(),pairs:[]}};
+    const bounds=getBounds(placed),hits=collisions(placed);
+    const valid=hits.count===0&&Number.isFinite(bounds.L)&&bounds.L>=Math.sqrt(placed.length)-1e-9;
+    return {bounds,hits,valid,score:valid?Math.max(0,bounds.L/Math.sqrt(placed.length)-1):null,density:placed.length/bounds.L**2};
+  }
+  function parseLine(line,lineNo){
+    const cells=[];let field='',quoted=false,ended=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(quoted){if(c==='"'){if(line[i+1]==='"'){field+='"';i++;}else{quoted=false;ended=true;}}else field+=c;}
+      else if(c===','){cells.push(field);field='';ended=false;}
+      else if(c==='"'&&field===''&&!ended)quoted=true;
+      else if(c==='"'||ended)throw Error(`第 ${lineNo} 行 CSV 引号格式错误`);
+      else field+=c;
+    }
+    if(quoted)throw Error(`第 ${lineNo} 行 CSV 引号未闭合`);
+    cells.push(field);return cells;
+  }
+  function readDecimal(text,lineNo){
+    const raw=text.trim();
+    // Local resource limits prevent hostile exponents from allocating huge BigInts.
+    if(!DECIMAL.test(raw)||raw.length>2048||Math.abs(Number(raw.split(/[eE]/)[1]||0))>2048||!Number.isFinite(Number(raw)))
+      throw Error(`第 ${lineNo} 行：需有限十进制数（最多 2048 字符，指数绝对值 ≤ 2048）`);
+    return raw;
+  }
+  function parseCsv(text){
+    const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
+    if(parseLine(lines[0],1).join(',')!==HEADER)throw Error(`CSV 表头应为 ${HEADER}`);
+    const temp=new Map();let rowId=0;
+    for(let i=1;i<lines.length;i++){
+      if(!lines[i].trim())continue;
+      const f=parseLine(lines[i],i+1);
+      if(f.length!==6)throw Error(`第 ${i+1} 行应有六列`);
+      if(!f.slice(0,3).every(s=>/^\d+$/.test(s.trim())))throw Error(`第 ${i+1} 行：id、n、square_id 必须是非负整数`);
+      const id=Number(f[0]),n=Number(f[1]),sid=Number(f[2]);checkN(n);
+      if(id!==rowId++)throw Error(`第 ${i+1} 行：id 应从 0 连续递增`);
+      if(!Number.isInteger(sid)||sid>=n)throw Error(`第 ${i+1} 行：square_id 超出范围`);
+      const raw={x:readDecimal(f[3],i+1),y:readDecimal(f[4],i+1),angle:readDecimal(f[5],i+1)};
+      const tile={x:Number(raw.x),y:Number(raw.y),angle:Number(raw.angle),raw};
+      // Very large translations/angles make double precision unsuitable for editing.
+      if(Math.abs(tile.x)>1e6||Math.abs(tile.y)>1e6||Math.abs(tile.angle)>1000)
+        throw Error(`第 ${i+1} 行超出本地编辑器数值范围：|x|、|y| ≤ 10⁶，|angle| ≤ 1000`);
+      if(!temp.has(n))temp.set(n,Array(n).fill(null));
+      if(temp.get(n)[sid])throw Error(`第 ${i+1} 行：重复 square_id`);
+      temp.get(n)[sid]=tile;
+    }
+    if(!rowId)throw Error('CSV 没有数据行');
+    for(const [n,placed] of temp){
+      if(placed.some(s=>s===null))throw Error(`n=${n}：必须恰好有 ${n} 个正方形`);
+      assertExportable(n,placed);
+    }
+    return temp;
+  }
+  function assertExportable(n,placed){
+    if(placed.length!==n)throw Error(`n=${n}：正方形数量错误`);
+    const e=evaluate(placed);
+    if(!e.valid)throw Error(`n=${n}：存在重叠或无法确定的接触（${e.hits.uncertainCount} 对不确定接触），请调整后再导出`);
+    return e;
+  }
+  function* csvChunks(layouts=new Map(),{maxN=MAX_N,onlyN=null}={}){
+    checkN(maxN);if(onlyN!==null)checkN(onlyN);
+    const start=onlyN??1,end=onlyN??maxN;
+    // Validate every edit before yielding any file content. Unchanged grids have
+    // an exact construction proof and need no expensive pairwise revalidation.
+    for(const [n,placed] of layouts)if(n>=start&&n<=end)assertExportable(n,placed);
+    yield HEADER+'\n';let id=0,chunk='';
+    for(let n=start;n<=end;n++){
+      const placed=layouts.get(n)||makeGrid(n);
+      for(let k=0;k<n;k++){
+        const s=placed[k];chunk+=`${id++},${n},${k},${numericText(s,'x')},${numericText(s,'y')},${numericText(s,'angle')}\n`;
+      }
+      if(chunk.length>500000){yield chunk;chunk='';}
+    }
+    if(chunk)yield chunk;
+  }
+  return {MAX_N,HEADER,makeGrid,getBounds,penetration,collisions,evaluate,parseCsv,csvChunks,numericText,updateTile};
+});
+
 /* Kaggle Lab Square Packing Studio — an original, dependency-free implementation.
    Coordinates and angles follow the Kaggle Squares in Squares submission schema. */
 'use strict';
@@ -17,92 +240,38 @@
   const $ = id => document.getElementById(id);
   const canvas = $('stage'), ctx = canvas.getContext('2d');
   const layouts = new Map();
-  const SQRT2 = Math.SQRT2;
+  const {makeGrid,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
+  const tags=new Map();
+  let viewL=32;
   const scoreFmt = v => Number.isFinite(v) ? v.toFixed(8) : '—';
-  let n = 5, selected = -1, dragging = null, dpr = 1;
+  let n = 1000, selected = -1, dragging = null, dpr = 1;
   let zoom = 1, cameraX = 1.5, cameraY = 1.5, canvasW = 800, canvasH = 500;
-  let layoutTag = 'grid baseline', running = false;
+  let layoutTag = '赛题网格基线', running = false;
 
-  function makeGrid(count) {
-    const columns = Math.ceil(Math.sqrt(count));
-    return Array.from({length:count}, (_,i) => ({x:(i%columns)+0.5, y:Math.floor(i/columns)+0.5, angle:0}));
-  }
   function current() { if(!layouts.has(n)) layouts.set(n,makeGrid(n)); return layouts.get(n); }
-  function corners(s) {
-    const c = Math.cos(s.angle), t = Math.sin(s.angle);
-    return [[-0.5,-0.5],[0.5,-0.5],[0.5,0.5],[-0.5,0.5]].map(([u,v])=>[s.x+u*c-v*t,s.y+u*t+v*c]);
-  }
-  function getBounds(placed) {
-    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-    for (const s of placed) {
-      const h=(Math.abs(Math.cos(s.angle))+Math.abs(Math.sin(s.angle)))*0.5;
-      minX=Math.min(minX,s.x-h);maxX=Math.max(maxX,s.x+h);
-      minY=Math.min(minY,s.y-h);maxY=Math.max(maxY,s.y+h);
-    }
-    const width=maxX-minX,height=maxY-minY;
-    return {minX,maxX,minY,maxY,width,height,L:Math.max(width,height)};
-  }
-  function penetration(a,b) {
-    // SAT: test both edge-normal directions of each square.
-    const dx=b.x-a.x,dy=b.y-a.y;
-    if (Math.abs(dx)>=SQRT2+1e-9 || Math.abs(dy)>=SQRT2+1e-9) return null;
-    const ca=Math.cos(a.angle),sa=Math.sin(a.angle),cb=Math.cos(b.angle),sb=Math.sin(b.angle);
-    const axes=[[ca,sa],[-sa,ca],[cb,sb],[-sb,cb]];
-    let best=Infinity,normalX=0,normalY=0;
-    for (const [ax,ay] of axes) {
-      const ra=0.5*(Math.abs(ca*ax+sa*ay)+Math.abs(-sa*ax+ca*ay));
-      const rb=0.5*(Math.abs(cb*ax+sb*ay)+Math.abs(-sb*ax+cb*ay));
-      const along=dx*ax+dy*ay,depth=ra+rb-Math.abs(along);
-      if (depth<=1e-9) return null; // edge touch is allowed; numerical tolerance is not certification
-      if (depth<best) {best=depth;const sign=along<0?-1:1;normalX=ax*sign;normalY=ay*sign;}
-    }
-    return {depth:best,nx:normalX,ny:normalY};
-  }
-  function collisions(placed,withPairs=false) {
-    // Square centers of overlapping unit tiles are at most sqrt(2) apart on either axis.
-    const buckets=new Map(),pairs=[],colliding=new Set();let count=0;
-    for (let i=0;i<placed.length;i++) {
-      const s=placed[i],gx=Math.floor(s.x/2),gy=Math.floor(s.y/2);
-      for(let ox=-1;ox<=1;ox++)for(let oy=-1;oy<=1;oy++){
-        for(const j of buckets.get(`${gx+ox},${gy+oy}`)||[]) {
-          const p=penetration(placed[j],s);
-          if(p){count++;colliding.add(i);colliding.add(j);if(withPairs)pairs.push([j,i,p]);}
-        }
-      }
-      const key=`${gx},${gy}`;
-      if(!buckets.has(key))buckets.set(key,[]);
-      buckets.get(key).push(i);
-    }
-    return {count,colliding,pairs};
-  }
-  function evaluate(placed) {
-    const bounds=getBounds(placed),hits=collisions(placed);
-    const valid=hits.count===0&&Number.isFinite(bounds.L)&&placed.every(s=>Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.angle));
-    return {bounds,valid,hits,score:bounds.L/Math.sqrt(placed.length)-1,density:placed.length/(bounds.L*bounds.L)};
-  }
   function colorMessage(text){$('message').textContent=text;}
   function syncMetrics() {
     const e=evaluate(current());
     $('sideStat').textContent=e.bounds.L.toFixed(6);
     $('scoreStat').textContent=scoreFmt(e.score);
     $('densityStat').textContent=(e.density*100).toFixed(2)+'%';
-    $('validStat').textContent=e.valid?'VALID':'OVERLAP';
-    $('validNote').textContent=e.valid?'local SAT check passed':`${e.hits.count} overlapping pairs`;
+    $('validStat').textContent=e.valid?'本地通过':e.hits.uncertainCount?'接触待核验':'存在重叠';
+    $('validNote').textContent=e.valid?'本地几何检查；未调用官方认证':`${e.hits.count-e.hits.uncertainCount} 对重叠 / ${e.hits.uncertainCount} 对不确定`;
     $('validStat').closest('.stat').className='stat '+(e.valid?'good':'bad');
-    $('selectedLabel').textContent=selected<0?'none':`#${selected}`;
+    $('selectedLabel').textContent=selected<0?'未选择':`#${selected}`;
     $('rotateLeft').disabled=selected<0||running;
     $('rotateRight').disabled=selected<0||running;
     $('layoutName').textContent=layoutTag;
     return e;
   }
   function fit() {
-    const b=getBounds(current());cameraX=(b.minX+b.maxX)/2;cameraY=(b.minY+b.maxY)/2;zoom=1;draw();
+    const b=getBounds(current());viewL=b.L;cameraX=(b.minX+b.maxX)/2;cameraY=(b.minY+b.maxY)/2;zoom=1;draw();
   }
   function resize() {
     const r=canvas.getBoundingClientRect();canvasW=Math.max(200,r.width);canvasH=Math.max(200,r.height);
     dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(canvasW*dpr);canvas.height=Math.round(canvasH*dpr);draw();
   }
-  function scale() {return Math.max(1,Math.min(canvasW,canvasH)/(getBounds(current()).L+2.4)*zoom);}
+  function scale() {return Math.max(1,Math.min(canvasW,canvasH)/(viewL+2.4)*zoom);}
   function worldToScreen(x,y,s=scale()) {return [canvasW/2+(x-cameraX)*s,canvasH/2-(y-cameraY)*s];}
   function screenToWorld(px,py,s=scale()) {return {x:cameraX+(px-canvasW/2)/s,y:cameraY-(py-canvasH/2)/s};}
   function draw() {
@@ -141,10 +310,14 @@
   function changeCount(next) {
     if(running)return;
     const value=Math.max(1,Math.min(1000,Math.round(Number(next)||1)));
-    n=value;selected=-1;layoutTag=layouts.has(n)?'saved layout':'grid baseline';
+    const wasSaved=tags.has(value);
+    n=value;selected=-1;layoutTag=tags.get(n)||'赛题网格基线';
     $('count').value=value;$('countRange').value=value;
+    const m=Math.ceil(Math.sqrt(n));
+    $('baselineTitle').textContent=`当前实例 n = ${n} · 网格基线参照 L₀ = ${m}`;
+    $('baselineText').textContent=`${m} × ${m} 网格，放入 ${n} 个单位正方形，余 ${m*m-n} 个空位。基线可行，不代表最优解。`;
     document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.count)===n));
-    fit();colorMessage(`Puzzle n=${n}. ${layouts.has(n)?'Saved edits restored.':'Grid baseline loaded.'}`);
+    fit();colorMessage(`n=${n}：${wasSaved?'已恢复此实例的编辑。':'已加载网格基线。'} 导出完整提交始终包含 1–1000。`);
   }
   function hitTest(p) {
     const placed=current();
@@ -152,12 +325,13 @@
       if(Math.abs(dx*c+dy*t)<=.5&&Math.abs(-dx*t+dy*c)<=.5)return i;
     }return -1;
   }
-  function changeAngle(delta){if(selected<0||running)return;current()[selected].angle+=delta;layoutTag='manually edited';draw();}
+  function markEdited(){layoutTag='手动编辑';tags.set(n,layoutTag);}
+  function changeAngle(delta){if(selected<0||running)return;const tile=current()[selected];updateTile(tile,{angle:tile.angle+delta});markEdited();draw();}
   function localPoint(evt){const box=canvas.getBoundingClientRect();return {x:evt.clientX-box.left,y:evt.clientY-box.top};}
   canvas.addEventListener('pointerdown',evt=>{
     if(running)return;const mouse=localPoint(evt),world=screenToWorld(mouse.x,mouse.y);
     if(evt.shiftKey||evt.button===1){dragging={type:'pan',startMouse:mouse,x:cameraX,y:cameraY};}
-    else {selected=hitTest(world);if(selected>=0){const item=current()[selected];dragging={type:'square',i:selected,dx:item.x-world.x,dy:item.y-world.y};layoutTag='manually edited';}else dragging=null;}
+    else {selected=hitTest(world);if(selected>=0){const item=current()[selected];dragging={type:'square',i:selected,dx:item.x-world.x,dy:item.y-world.y};}else dragging=null;}
     canvas.classList.add('dragging');canvas.setPointerCapture(evt.pointerId);draw();
   });
   canvas.addEventListener('pointermove',evt=>{
@@ -165,73 +339,68 @@
     $('coordReadout').textContent=`x: ${p.x.toFixed(3)}  y: ${p.y.toFixed(3)}`;
     if(!dragging)return;
     if(dragging.type==='pan') {const s=scale();cameraX=dragging.x-(mouse.x-dragging.startMouse.x)/s;cameraY=dragging.y+(mouse.y-dragging.startMouse.y)/s;}
-    else {const tile=current()[dragging.i];tile.x=p.x+dragging.dx;tile.y=p.y+dragging.dy;}
+    else {const tile=current()[dragging.i];updateTile(tile,{x:p.x+dragging.dx,y:p.y+dragging.dy});markEdited();}
     draw();
   });
-  function stopDrag(){if(dragging&&dragging.type==='square'){const e=evaluate(current());colorMessage(e.valid?'Edited layout is locally feasible.':'Overlapping squares detected — resolve before exporting.');}dragging=null;canvas.classList.remove('dragging');}
+  function stopDrag(){if(dragging&&dragging.type==='square'){const e=evaluate(current());colorMessage(e.valid?'编辑布局通过本地检查。':'检测到重叠或不确定接触，请调整后再导出。');}dragging=null;canvas.classList.remove('dragging');}
   canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);
   canvas.addEventListener('wheel',evt=>{evt.preventDefault();zoom=Math.min(12,Math.max(.15,zoom*Math.exp(-evt.deltaY*.001)));draw();},{passive:false});
   window.addEventListener('keydown',evt=>{
     if(running||selected<0||['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
     const delta=.05,sq=current()[selected];let changed=true;
-    if(evt.key==='ArrowLeft')sq.x-=delta;else if(evt.key==='ArrowRight')sq.x+=delta;
-    else if(evt.key==='ArrowUp')sq.y+=delta;else if(evt.key==='ArrowDown')sq.y-=delta;
-    else if(evt.key==='[')sq.angle-=Math.PI/36;else if(evt.key===']')sq.angle+=Math.PI/36;else changed=false;
-    if(changed){evt.preventDefault();layoutTag='manually edited';draw();}
+    if(evt.key==='ArrowLeft')updateTile(sq,{x:sq.x-delta});else if(evt.key==='ArrowRight')updateTile(sq,{x:sq.x+delta});
+    else if(evt.key==='ArrowUp')updateTile(sq,{y:sq.y+delta});else if(evt.key==='ArrowDown')updateTile(sq,{y:sq.y-delta});
+    else if(evt.key==='[')updateTile(sq,{angle:sq.angle-Math.PI/36});else if(evt.key===']')updateTile(sq,{angle:sq.angle+Math.PI/36});else changed=false;
+    if(changed){evt.preventDefault();markEdited();draw();}
   });
-  function decimal(value) {if(!Number.isFinite(value))throw Error('Non-finite coordinate');return String(Object.is(value,-0)?0:value);}
-  function csvParts(limit,onlyN=null) {
-    const parts=['id,n,square_id,x,y,angle\n'];let section='',id=0;
-    const start=onlyN||1,end=onlyN||limit;
-    for(let puzzle=start;puzzle<=end;puzzle++){
-      const placed=layouts.get(puzzle)||makeGrid(puzzle);
-      if(placed.length!==puzzle)throw Error(`n=${puzzle}: unexpected square count`);
-      const e=evaluate(placed);if(!e.valid)throw Error(`n=${puzzle}: ${e.hits.count} overlapping pairs. Export blocked.`);
-      for(let k=0;k<placed.length;k++){
-        const p=placed[k];section+=`${id++},${puzzle},${k},${decimal(p.x)},${decimal(p.y)},${decimal(p.angle)}\n`;
-        if(section.length>650000){parts.push(section);section='';}
-      }
-    }
-    if(section)parts.push(section);
-    return {parts,rows:id};
+  function setBusy(value){
+    running=value;dragging=null;
+    document.querySelectorAll('button,input').forEach(el=>el.disabled=value);
+    if(!value)syncMetrics();
   }
-  function downloadCsv(limit,onlyN=null) {
+  const nextFrame=()=>new Promise(resolve=>setTimeout(resolve,0));
+  async function downloadCsv(onlyN=null){
+    if(running)return;setBusy(true);colorMessage('正在检查布局并生成 CSV…');
     try{
-      const {parts,rows}=csvParts(limit,onlyN);
+      await nextFrame();const parts=[];let bytes=0;
+      for(const part of csvChunks(layouts,{onlyN})){
+        parts.push(part);bytes+=part.length;
+        colorMessage(`正在生成 CSV：${(bytes/1e6).toFixed(1)} MB…`);await nextFrame();
+      }
       const blob=new Blob(parts,{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
       a.href=url;a.download=onlyN?`squares-n${String(onlyN).padStart(4,'0')}.csv`:'submission.csv';
-      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-      colorMessage(`${rows.toLocaleString()} rows exported. Validate using the official Kaggle metric before submission.`);
-    }catch(error){colorMessage('Export refused: '+error.message);}
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+      colorMessage(onlyN?`已导出 n=${onlyN} 的 ${onlyN} 行调试文件；完整参赛请使用 submission.csv。`:
+        '已导出 submission.csv：1000 个实例、500,500 行。未编辑实例使用网格基线。');
+    }catch(error){colorMessage('导出已阻止：'+error.message);}
+    finally{setBusy(false);}
   }
-  async function loadCsv(file) {
-    if(!file)return;
-    const text=await file.text(),lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
-    if(lines[0].trim()!=='id,n,square_id,x,y,angle')throw Error('Invalid header; expected id,n,square_id,x,y,angle');
-    const temp=new Map();let rows=0;
-    for(let i=1;i<lines.length;i++){
-      const line=lines[i].trim();if(!line)continue;
-      const fields=line.split(',');if(fields.length!==6)throw Error(`Line ${i+1}: expected six columns`);
-      const puzzle=Number(fields[1]),idx=Number(fields[2]),x=Number(fields[3]),y=Number(fields[4]),angle=Number(fields[5]);
-      if(!Number.isInteger(puzzle)||puzzle<1||puzzle>1000||!Number.isInteger(idx)||idx<0||idx>=puzzle||![x,y,angle].every(Number.isFinite))throw Error(`Line ${i+1}: invalid values`);
-      if(!temp.has(puzzle))temp.set(puzzle,Array(puzzle));
-      if(temp.get(puzzle)[idx])throw Error(`Line ${i+1}: duplicate square_id`);
-      temp.get(puzzle)[idx]={x,y,angle};rows++;
-    }
-    for(const [puzzle,placed] of temp){
-      if(placed.some(v=>!v)||placed.filter(Boolean).length!==puzzle)throw Error(`n=${puzzle}: incomplete layout`);
-      const check=evaluate(placed);if(!check.valid)throw Error(`n=${puzzle}: ${check.hits.count} overlaps`);
-    }
-    for(const [puzzle,placed] of temp)layouts.set(puzzle,placed);
-    selected=-1;layoutTag='imported CSV';fit();colorMessage(`Imported ${rows.toLocaleString()} rows covering ${temp.size} complete valid puzzles.`);
+  async function loadCsv(file){
+    if(!file||running)return;setBusy(true);colorMessage('正在读取并检查 CSV…');
+    try{
+      if(file.size>100*1024*1024)throw Error('本地导入上限为 100 MB');
+      const text=await file.text();await nextFrame();
+      const temp=parseCsv(text); // Atomic: the existing work changes only after every puzzle passes.
+      for(const [puzzle,placed] of temp){layouts.set(puzzle,placed);tags.set(puzzle,'导入的布局');}
+      selected=-1;
+      if(!temp.has(n))n=Math.min(...temp.keys());
+      $('count').value=n;$('countRange').value=n;
+      const m=Math.ceil(Math.sqrt(n));
+      $('baselineTitle').textContent=`当前实例 n = ${n} · 网格基线参照 L₀ = ${m}`;
+      $('baselineText').textContent=`${m} × ${m} 网格可容纳该实例；画布显示导入的布局。`;
+      document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.count)===n));
+      layoutTag=tags.get(n)||'赛题网格基线';fit();
+      colorMessage(`已导入 ${temp.size} 个完整实例。未编辑的原始十进制精度会保留。完整导出自动补齐其余实例。`);
+    }catch(error){colorMessage('导入已拒绝，原布局保留：'+error.message);}
+    finally{setBusy(false);}
   }
   async function compactExperiment() {
     if(running)return;
-    if(n>80){colorMessage('Experimental compaction is limited to n ≤ 80. Change n to run it.');return;}
+    if(n>80){colorMessage('实验搜索仅用于 n ≤ 80，请先选择较小的实例。');return;}
     const original=current(),base=evaluate(original);
-    if(!base.valid){colorMessage('First fix any overlap: experimental search starts from a locally valid layout.');return;}
-    if(base.bounds.L-Math.sqrt(n)<1e-7){colorMessage('Already at the area lower bound; no further compaction is possible.');return;}
-    running=true;$('optimize').disabled=true;
+    if(!base.valid){colorMessage('请先解决重叠或不确定接触。');return;}
+    if(base.bounds.L-Math.sqrt(n)<1e-7){colorMessage('当前布局已达到面积下界，无需继续压缩。');return;}
+    setBusy(true);
     let best=original.map(s=>({...s})),bestL=base.bounds.L,success=0;
     const awaitFrame=()=>new Promise(resolve=>requestAnimationFrame(resolve));
     try{
@@ -251,80 +420,27 @@
           for(const [i,j,p] of hits.pairs){const strength=Math.min(.36,p.depth*.34+0.00008);candidate[i].x-=p.nx*strength;candidate[i].y-=p.ny*strength;candidate[j].x+=p.nx*strength;candidate[j].y+=p.ny*strength;}
           for(const q of candidate){const half=.5*(Math.abs(Math.cos(q.angle))+Math.abs(Math.sin(q.angle)));
             q.x=Math.max(half,Math.min(target-half,q.x));q.y=Math.max(half,Math.min(target-half,q.y));}
-          if(step%65===0){colorMessage(`Exploring target L=${target.toFixed(4)} · attempt ${attempt+1}/6 · iteration ${step+1}`);await awaitFrame();}
+          if(step%65===0){colorMessage(`探索目标 L=${target.toFixed(4)} · 第 ${attempt+1}/6 轮 · 步数 ${step+1}`);await awaitFrame();}
         }
         await awaitFrame();
       }
       const finalEval=evaluate(best);
-      if(success>0&&finalEval.valid&&finalEval.bounds.L<base.bounds.L-1e-5){layouts.set(n,best);layoutTag='experimental candidate';fit();colorMessage(`Improved L from ${base.bounds.L.toFixed(6)} to ${finalEval.bounds.L.toFixed(6)}. Revalidate with Kaggle.`);}
-      else colorMessage('No feasible improvement found in this short search. Original layout preserved.');
-    }finally{running=false;$('optimize').disabled=false;draw();}
+      if(success>0&&finalEval.valid&&finalEval.bounds.L<base.bounds.L-1e-5){layouts.set(n,best);layoutTag='实验搜索候选';tags.set(n,layoutTag);fit();colorMessage(`L 从 ${base.bounds.L.toFixed(6)} 改进为 ${finalEval.bounds.L.toFixed(6)}。此候选仍需官方认证。`);}
+      else colorMessage('本轮未找到可用改进，原布局已保留。');
+    }finally{setBusy(false);draw();}
   }
   $('count').addEventListener('change',e=>changeCount(e.target.value));$('countRange').addEventListener('input',e=>changeCount(e.target.value));
   document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>changeCount(b.dataset.count)));
-  $('resetLayout').addEventListener('click',()=>{if(running)return;layouts.set(n,makeGrid(n));selected=-1;layoutTag='grid baseline';fit();colorMessage(`Reset n=${n} to a guaranteed-feasible grid baseline.`);});
+  $('resetLayout').addEventListener('click',()=>{if(running)return;layouts.set(n,makeGrid(n));selected=-1;layoutTag='赛题网格基线';tags.delete(n);fit();colorMessage(`已将 n=${n} 恢复为无旋转网格基线。`);});
   $('rotateLeft').addEventListener('click',()=>changeAngle(-Math.PI/36));$('rotateRight').addEventListener('click',()=>changeAngle(Math.PI/36));
-  $('fitView').addEventListener('click',fit);$('zoomIn').addEventListener('click',()=>{zoom*=1.25;draw();});$('zoomOut').addEventListener('click',()=>{zoom/=1.25;draw();});
-  $('exportOne').addEventListener('click',()=>{if(!running)downloadCsv(n,n);});$('exportAll').addEventListener('click',()=>{if(!running)downloadCsv(1000);});
-  $('importCSV').addEventListener('click',()=>$('fileInput').click());$('fileInput').addEventListener('change',async e=>{try{await loadCsv(e.target.files[0]);}catch(err){colorMessage(`Import rejected: ${err.message}`);}finally{e.target.value='';}});
+  $('fitView').addEventListener('click',fit);$('zoomIn').addEventListener('click',()=>{zoom=Math.min(12,zoom*1.25);draw();});$('zoomOut').addEventListener('click',()=>{zoom=Math.max(.15,zoom/1.25);draw();});
+  $('exportOne').addEventListener('click',()=>{if(!running)downloadCsv(n);});$('exportAll').addEventListener('click',()=>{if(!running)downloadCsv();});
+  $('exportTop').addEventListener('click',()=>downloadCsv());
+  $('importCSV').addEventListener('click',()=>$('fileInput').click());$('fileInput').addEventListener('change',async e=>{try{await loadCsv(e.target.files[0]);}finally{e.target.value='';}});
   $('optimize').addEventListener('click',compactExperiment);
-  window.addEventListener('resize',resize);fit();resize();
+  window.addEventListener('resize',resize);changeCount(1000);resize();
 })();
 
 </script>
-</head>
-<body>
-<div class="app-shell">
-  <header class="topbar">
-    <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>ORIGINAL RESEARCH TOOLING</small></div></div>
-    <div class="top-title"><span class="trail">COMPETITIONS <span class="chev">/</span> SQUARES IN SQUARES</span><h1>Square Packing Studio <span class="beta">v0.1</span></h1></div>
-    <div class="top-actions"><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">Competition <span>↗</span></a><a href="https://github.com/new?name=kaggle-lab" id="repoGuide" title="Create repository when ready">GitHub</a></div>
-  </header>
-  <main class="workspace">
-    <aside class="sidebar">
-      <section class="control-section intro"><div class="eyebrow">WORKSPACE / 001</div><h2>Pack unit squares.</h2><p>Explore placements, verify geometry, and export Kaggle-ready coordinates. Entirely self-contained.</p></section>
-      <section class="control-section">
-        <div class="section-heading"><h3>Puzzle size</h3><span class="subtle">N = 1–1000</span></div>
-        <div class="number-wrap"><span class="n-prefix">n</span><input id="count" type="number" min="1" max="1000" step="1" value="5" aria-label="Number of unit squares"><span class="unit">squares</span></div>
-        <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="5" aria-label="Puzzle size slider">
-        <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset" data-count="1000">1000</button></div>
-      </section>
-      <section class="control-section">
-        <div class="section-heading"><h3>Arrangement</h3><span class="subtle">geometric baseline</span></div>
-        <button class="action primary" id="resetLayout">↺ <span>Reset to grid baseline</span></button>
-        <button class="action secondary" id="optimize">✦ <span>Experiment: compact & relax</span></button>
-        <p class="hint">Experimental search for small puzzles (n ≤ 80). Keeps a change only when a locally feasible improvement is found.</p>
-      </section>
-      <section class="control-section">
-        <div class="section-heading"><h3>Selected square</h3><span id="selectedLabel" class="subtle">none</span></div>
-        <div class="dual"><button class="action secondary" id="rotateLeft">↶ Rotate −5°</button><button class="action secondary" id="rotateRight">↷ Rotate +5°</button></div>
-        <p class="hint">Click a square to select; drag to move. Arrow keys shift by 0.05; [ and ] rotate by 5°. Shift+drag pans the view.</p>
-      </section>
-      <section class="control-section export-section">
-        <div class="section-heading"><h3>Export / import</h3><span class="subtle">CSV</span></div>
-        <button class="action accent" id="exportOne">↓ Export current puzzle</button>
-        <button class="action secondary" id="exportAll">↓ Export full 1–1000 submission</button>
-        <button class="action secondary" id="importCSV">↑ Import saved CSV</button>
-        <input type="file" id="fileInput" accept=".csv,text/csv" hidden>
-        <p class="hint">Full submission includes 500,500 data rows. Unedited puzzles use the grid baseline. Invalid edited layouts cannot be exported.</p>
-      </section>
-      <div class="sidebar-footer"><span class="status-dot"></span><span>Offline • no dependencies • original implementation</span></div>
-    </aside>
-    <section class="stage-column">
-      <div class="statistics">
-        <div class="stat"><span>BOUNDING SIDE</span><strong id="sideStat">—</strong><small>translation-invariant L</small></div>
-        <div class="stat"><span>PUZZLE SCORE</span><strong id="scoreStat">—</strong><small>L / √n − 1 (lower is better)</small></div>
-        <div class="stat"><span>PACKING DENSITY</span><strong id="densityStat">—</strong><small>n / L²</small></div>
-        <div class="stat"><span>FEASIBILITY</span><strong id="validStat">—</strong><small id="validNote">checking geometry</small></div>
-      </div>
-      <div class="canvas-card">
-        <div class="canvas-header"><div><span class="small-icon">◇</span><strong>Interactive layout</strong><span class="subtle" id="layoutName">grid baseline</span></div><div class="canvas-actions"><button id="fitView">⤢ Fit</button><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div>
-        <div class="canvas-container"><canvas id="stage" aria-label="Interactive two-dimensional square packing layout"></canvas><div class="canvas-corner">XY PLANE <span>·</span> UNIT EDGE = 1</div><div class="canvas-legend"><span><i class="swatch square"></i>unit squares</span><span><i class="swatch border"></i>bounding container</span><span><i class="swatch collision"></i>overlap</span></div></div>
-        <div class="canvas-status"><span id="message" role="status" aria-live="polite">Grid baseline loaded. Select and drag any square.</span><span id="coordReadout">x: — &nbsp; y: —</span></div>
-      </div>
-      <div class="notes-grid"><div class="note"><span class="note-number">01 / GEOMETRY</span><h4>Separating-axis validation</h4><p>Rotated squares are checked on all four edge-normal axes, with spatial hashing to prune distant pairs. This is a local numerical check, not Kaggle’s final certified verifier.</p></div><div class="note"><span class="note-number">02 / SCORING</span><h4>Minimize bounding extent</h4><p>The objective is the sum over puzzles of L/√n − 1. The lower bound is zero, reached by perfect-square grids. Invalid layouts receive the baseline penalty.</p></div><div class="note"><span class="note-number">03 / SUBMISSIONS</span><h4>Six official columns</h4><p>Each row stores id, n, square_id, x, y and angle (radians). Exported values are plain decimals; independently verify the final file with Kaggle’s metric.</p></div></div>
-    </section>
-  </main>
-</div>
 </body>
 </html>
