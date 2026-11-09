@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.DS_Store
+# Local Kaggle credentials
+kaggle.json
+# Generated large submissions and experimental intermediate results
+**/submissions/*.csv
+**/submissions/*.zip
+**/submissions/*.npz
+**/submissions/*.kmx
+**/submissions/*.kmb
+**/submissions/*/angle_k_*.kmb
+**/submissions/*/angle_k_*.kmx
+**/experiments/results/
+# Local root CSV
+/submission.csv
