@@ -27,6 +27,16 @@ class GeometryTests(unittest.TestCase):
     def test_touching_allowed(self):
         self.assertFalse(packing.validate_layout([packing.Tile(0.5,0.5), packing.Tile(1.5,0.5)]))
 
+    def test_tiny_positive_overlap_is_not_ignored(self):
+        self.assertEqual(packing.validate_layout([packing.Tile(0.5,0.5), packing.Tile(1.5-5e-10,0.5)]), [(0,1)])
+
+    def test_sub_float_decimal_overlap_is_not_lost(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'tiny.csv'
+            path.write_text('id,n,square_id,x,y,angle\n0,2,0,0.5,0.5,0\n1,2,1,1.499999999999999999999999999999,0.5,0\n')
+            with self.assertRaises(ValueError):
+                packing.validate_csv(path)
+
     def test_small_csv(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "sample.csv"
@@ -36,6 +46,20 @@ class GeometryTests(unittest.TestCase):
             self.assertEqual(result["puzzles"], 3)
             with self.assertRaises(ValueError):
                 packing.validate_csv(path, complete=True)
+
+    def test_large_translation_cannot_hide_overlap(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'translated.csv'
+            path.write_text('id,n,square_id,x,y,angle\n0,2,0,10000000000000000.9,0.5,0\n1,2,1,10000000000000001.1,0.5,0\n')
+            with self.assertRaisesRegex(ValueError, 'local'):
+                packing.validate_csv(path)
+
+    def test_numeric_resource_limits(self):
+        for value in ('1e-2049', '0.' + '0' * 2048):
+            with self.assertRaises(ValueError):
+                packing._parse_float(value, 2)
+        with self.assertRaises(ValueError):
+            packing.validate_layout([packing.Tile(.5, .5, 1001)])
 
     def test_invalid_csv_overlap(self):
         with tempfile.TemporaryDirectory() as folder:
