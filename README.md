@@ -18,6 +18,8 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 
 ## Quick start / 快速开始
 
+**中文解题笔记（2026-11-11）：** 从 [阅读指南](docs/competition-strategies/README.md) 开始，依次阅读 [正方形装箱的构造、搜索与验证](docs/competition-strategies/01-square-packing.md) 和 [量子编译三个子题的思路与实验路线](docs/competition-strategies/02-quantum-compilation.md)。文档区分已有功能、公开方法与拟开展实验；尚未实现的优化不会被当作已有成绩。
+
 **Square Packing Studio (no build tools or dependencies):** download and open the standalone HTML below. The Chinese UI defaults to n=1000 and its main download button generates a complete `submission.csv` (n=1–1000, 500,500 rows). The default algorithm is the organizer-described unrotated grid baseline; a single-puzzle export is available for debugging.
 
 A portable all-in-one HTML version is also included at `competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html` (and supplied as a separate downloadable HTML).
