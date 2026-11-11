@@ -2,6 +2,8 @@
 
 整理日期：2026 年 11 月 11 日。本文汇总此前讨论；方案和数值试验均属于研究起点，尚未生成参赛电路或通过官方验证。
 
+后续阅读：[完整解题思路与实验路线](../../docs/competition-strategies/02-quantum-compilation.md) 补充了方法比较、误差推导、成本权衡与验收标准。本篇保留早期探索记录；下述未保存代码的数值结果仍待复现。
+
 ## 总体建议
 
 先深入第一题，建立从数值近似到电路验证的优化流程；第二题重点研究工作空间；第三题联合优化分子数据的表示和读取电路。
@@ -101,7 +103,7 @@ Q 为量子比特数，T 为 Toffoli 门成本，ε⁺ 为失败率置信上界�
 
 ## 当前状态与资料
 
-- 当前项目为本地文件夹，尚未关联 GitHub 仓库。
+- 当前项目已纳入 [Leonardo-F/kaggle-lab](https://github.com/Leonardo-F/kaggle-lab)，位于 `competitions/google-quantum-circuit-compilation/`。
 - 此前的数值实验尚未转化为参赛电路，也未通过官方验证或形成提交。
 - [Kaggle 官方赛题](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation/)
 - [Google 配套论文](https://arxiv.org/html/2610.23832v2)
