@@ -8,8 +8,8 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 
 | Project | Problem | What works now | Official page |
 | --- | --- | --- | --- |
-| [`squares-in-squares`](competitions/squares-in-squares/) | Pack 1–1,000 unit squares into the smallest enclosing square | Offline interactive 2D studio, local overlap checks, deterministic baseline, import/export of CSV, experimental compaction | [Kaggle](https://www.kaggle.com/competitions/squares-in-squares) |
-| [`google-quantum-circuit-compilation`](competitions/google-quantum-circuit-compilation/) | Reduce resources for three verifiable quantum-circuit tasks | Challenge brief, experiment scaffold, stand-alone cost-model helper | [Kaggle](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation) |
+| [`squares-in-squares`](competitions/squares-in-squares/) | Pack 1–1,000 unit squares into the smallest enclosing square | Offline HTML, rotated constructions, per-puzzle selection, CSV, pinned official interval certification | [Kaggle](https://www.kaggle.com/competitions/squares-in-squares) |
+| [`google-quantum-circuit-compilation`](competitions/google-quantum-circuit-compilation/) | Reduce resources for three verifiable quantum-circuit tasks | Cost model, exhaustive integer invsqrt experiments, official-verifier entry pending data access | [Kaggle](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation) |
 
 ## 竞赛项目概览（中文）
 
@@ -19,6 +19,8 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 ## Quick start / 快速开始
 
 **中文解题笔记（2026-11-11）：** 从 [阅读指南](docs/competition-strategies/README.md) 开始，依次阅读 [正方形装箱的构造、搜索与验证](docs/competition-strategies/01-square-packing.md) 和 [量子编译三个子题的思路与实验路线](docs/competition-strategies/02-quantum-compilation.md)。文档区分已有功能、公开方法与拟开展实验；尚未实现的优化不会被当作已有成绩。
+
+**实现进度（2026-11-12）：** [运行命令、已验证结果与下一步](docs/competition-strategies/implementation-status.md)。装箱构造组合的完整 CSV 在未修改的官方 v20 本地检查中通过全部 1000 个实例，总分 **26.9931552390**（网格为 28.9376699166）；这是本地验证结果。量子第一题已完成明确舍入规则的全输入整数实验，尚无通过官方验证的量子电路。
 
 **Square Packing Studio (no build tools or dependencies):** download and open the standalone HTML below. The Chinese UI defaults to n=1000 and its main download button generates a complete `submission.csv` (n=1–1000, 500,500 rows). The default algorithm is the organizer-described unrotated grid baseline; a single-puzzle export is available for debugging.
 
@@ -42,6 +44,7 @@ python competitions/squares-in-squares/algorithms/packing.py validate --input su
 **Run all local tests**:
 
 ```bash
+python -m pip install -r competitions/squares-in-squares/requirements.txt numpy==2.3.5
 python -m unittest discover -s competitions/squares-in-squares/experiments -v
 python -m unittest discover -s competitions/google-quantum-circuit-compilation/experiments -v
 ```
@@ -73,7 +76,7 @@ New competitions should get their own folder under `competitions/`; do not combi
 ## Attribution, independent implementation & competition ethics
 
 - The **packing web simulator and Python generator/verifier were independently written for this repository** using the mathematical geometry and file specifications in the official competition statement. No source was copied from third-party visualizers or optimization repositories.
-- **Official documentation references** appear in each competition's README. They are specifications and citation links, **not borrowed implementations**.
+- The packing `vendor/` directory now contains the **unmodified official v20 metric**, under its separate Apache 2.0 license and attribution notice. Its digest is pinned; original simulators and constructors remain independently implemented. References to other optimizers remain study links.
 - If a future algorithm or codebase is adapted from external work, document the exact source URL, original authors, license, modifications, and affected paths in that competition's README before committing it.
 - The local collision check is based on standard floating-point separating-axis geometry. **It does not replace** the organizers' interval-arithmetic validation and is not a guarantee of accepted Kaggle scoring.
 - Keep Kaggle API secrets, private datasets, large generated CSV/ZIPs and experimental checkpoints out of git. Verify active competition rules before making competition-specific solutions public.

@@ -20,3 +20,5 @@ kaggle.json
 **/experiments/results/
 # Local root CSV
 /submission.csv
+# Download competition data separately; never publish it or credentials.
+competitions/google-quantum-circuit-compilation/official/
