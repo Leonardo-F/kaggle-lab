@@ -1,0 +1,3 @@
+# The official v20 metric's formatter needs public mpf.man / mpf.exp.
+mpmath==1.4.1
+pandas==2.2.3

@@ -11,7 +11,7 @@ A geometric packing challenge: place **n=1…1000** unit squares, optionally rot
 - Missing/invalid puzzles receive their trivial-grid penalty from the official scorer.
 - One CSV with columns **`id,n,square_id,x,y,angle`**; center coordinates and angles in **radians**. Complete n=1…1000 produces **500,500 data rows**.
 
-## Interactive simulator (v0.2)
+## Interactive simulator (v0.3)
 
 **Easiest:** download [`SquarePackingStudio-standalone.html`](simulator/SquarePackingStudio-standalone.html) and open it in a modern desktop browser. All JavaScript and CSS are embedded; no install, server, account, or network assets are needed. The Chinese interface also adapts to narrow screens.
 
@@ -21,6 +21,7 @@ A geometric packing challenge: place **n=1…1000** unit squares, optionally rot
 - Edits take precedence for their puzzle; other puzzles use the baseline. A secondary button exports a single puzzle for debugging only.
 - Drag/select, rotate, nudge, zoom and pan. Camera scale stays fixed while dragging. Reset restores the current puzzle's baseline.
 - Optional compact-and-relax search for n≤80 never starts by itself and may find no improvement.
+- Optional **旋转构造** buttons compare a rotated core with four corner blocks or staircases, plus deletion transfer. Apply to the current puzzle or all 1,000; existing better valid edits are retained. The default remains the organizer grid.
 - Import merges complete, locally acceptable puzzles atomically. The original decimal strings are preserved for unchanged imported coordinates. Empty values, non-decimal literals, incorrect IDs, missing squares, overlaps and uncertain contacts are rejected.
 - Work remains in memory. **Download CSV before closing the page.** No automatic Kaggle submission occurs.
 
@@ -55,9 +56,25 @@ Geometry checks implement SAT (separating-axis theorem) with a 2-unit spatial ha
 
 ## Provenance / attribution
 
+### Constructive portfolio and official certification
+
+Install the separate numerical dependencies in a virtual environment, then run from the repository root:
+
+```bash
+python -m pip install -r competitions/squares-in-squares/requirements.txt
+python competitions/squares-in-squares/algorithms/constructions.py --output competitions/squares-in-squares/submissions/constructed.csv --manifest competitions/squares-in-squares/experiments/results/constructions.json
+python competitions/squares-in-squares/algorithms/certify.py --input competitions/squares-in-squares/submissions/constructed.csv --complete --workers 4 --report competitions/squares-in-squares/experiments/results/certification.json
+```
+
+The certifier checks final decimal strings and a pandas numeric read/write round trip with the **unmodified official v20 metric**. It reports rejected puzzles separately from their fallback score, and exits unsuccessfully if either route rejects any puzzle. It does not submit to Kaggle. Reports retain the CSV and verifier SHA-256 hashes. Full verification can take several minutes.
+
+On 2026-11-12, all 1,000 generated puzzles passed both routes. The portfolio improved 162 puzzles, lowering the local official score from 28.93766991655 to **26.99315523903**. See [results and limitations](../../docs/competition-strategies/implementation-status.md).
+
 **Original code in this project:**
 - `simulator/index.html`, `simulator/styles.css`, `simulator/packing-core.js`, `simulator/app.js`, `simulator/build_standalone.py`: designed and implemented from scratch for Kaggle Lab, with no third-party script, CSS, artwork, source material or layout algorithm copied.
 - `algorithms/packing.py`: independently implemented deterministic grid layout, geometric projections, separating-axis collision checks, CSV writer, CSV reader and score calculation.
+- `algorithms/constructions.py` and the matching browser function: independent implementation of classical rotated-core/corner families and per-puzzle deletion transfer. Mathematical inspiration is documented in the strategy notes; no external coordinates or optimizer code were imported.
+- `algorithms/certify.py`: original strict CSV wrapper around the third-party metric in `vendor/`.
 - `experiments/test_packing.py`: independent sanity checks.
 
 **External reference specifications only (not code reuse):**
@@ -65,4 +82,4 @@ Geometry checks implement SAT (separating-axis theorem) with a 2-unit spatial ha
 - Kaggle official data/CSV specification: https://www.kaggle.com/competitions/squares-in-squares/data
 - Kaggle official metric and high-precision verifier: https://www.kaggle.com/code/metric/squares-in-squares
 
-Potential third-party simulator designs, open-source Kaggle submissions, external packing tables and copied optimization routines were **not used**. If added in the future, they must be credited here with authorship, license, URLs, modifications and affected files.
+The official verifier is the sole vendored implementation: see [vendor/NOTICE.md](vendor/NOTICE.md) and its Apache 2.0 license. Third-party simulators, packing tables, submissions and optimization routines have not been copied. Further reuse must retain authorship, license, version, modifications and affected paths.
