@@ -2,7 +2,7 @@
 
 > Google 量子计算电路编译优化赛（Kaggle，2026–2027）
 >
-> **项目状态：资料整理 + 成本公式计算器 + 单元测试。尚无可提交的量子电路。**
+> **项目状态：成本计算器 + 可复现整数近似实验 + 官方验证入口。尚无通过官方验证的参赛电路；官方数据接入需要 Kaggle 登录和赛规确认。**
 
 - 官方比赛：[Google Quantum AI — Verifiable Quantum Circuit Compilation](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation)
 - 组织方：Google Quantum AI
@@ -88,7 +88,24 @@ submissions/README.md         # 本地生成的完整 ZIP 应放何处（输出�
 python -m unittest discover -s competitions/google-quantum-circuit-compilation/experiments -v
 ```
 
-当前尚未安装 Qualtran/kickmix，也未固定具体依赖版本；后续应以比赛官方 Notebook/文档为准建立锁定环境。
+### 新增：全输入整数实验与验证入口
+
+在独立虚拟环境安装 `requirements.txt`（Python 3.11+），然后从仓库根目录运行：
+
+```bash
+python -m pip install -r competitions/google-quantum-circuit-compilation/requirements.txt
+python competitions/google-quantum-circuit-compilation/algorithms/invsqrt_model.py --output competitions/google-quantum-circuit-compilation/experiments/results/invsqrt-scan.json
+```
+
+该命令遍历所有 3,133,452 个整数输入，比较 32/64/128 段与 26/28/30 位小数，保存全部整数系数、精确整数不等式的失败数及代码哈希。每次乘法采用 nearest-even 舍入，尺度指数单独保留。它尚未计入可逆清理和旋转合成成本。
+
+官方数据解压到 `official/` 后，可调用原始任务验证器（入口接口依据官方 metric v10；因当前数据权限不足，三题集成运行仍待完成）：
+
+```bash
+python competitions/google-quantum-circuit-compilation/algorithms/verify_official.py --data-root competitions/google-quantum-circuit-compilation/official --submission competitions/google-quantum-circuit-compilation/official/sample_submission --report competitions/google-quantum-circuit-compilation/experiments/results/reference-verification.json
+```
+
+入口提供 `--task invsqrt` / `dqi` / `dfthcsos`，默认验证三题，保留官方完整抽样预算。缺少数据或失败时写入失败回执并返回非零状态；不会沿用旧的成功报告。任务本地验证仍不等于 Kaggle 完整提交检查或私有 salt 评分。参见 [当前实测结果和接入限制](../../docs/competition-strategies/implementation-status.md)。
 
 ## 推荐实现路线 / Engineering roadmap
 

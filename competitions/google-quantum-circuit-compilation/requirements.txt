@@ -1,0 +1,4 @@
+# Numerical scan plus Google's public wheel. Official competition data is separate.
+numpy==2.3.5
+scipy==1.17.0
+kickmix==1.0.0
