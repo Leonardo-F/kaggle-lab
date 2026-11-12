@@ -5,7 +5,7 @@
   const $ = id => document.getElementById(id);
   const canvas = $('stage'), ctx = canvas.getContext('2d');
   const layouts = new Map();
-  const {makeGrid,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
+  const {makeGrid,makeConstructive,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
   const tags=new Map();
   let viewL=32;
   const scoreFmt = v => Number.isFinite(v) ? v.toFixed(8) : '—';
@@ -124,6 +124,23 @@
     if(!value)syncMetrics();
   }
   const nextFrame=()=>new Promise(resolve=>setTimeout(resolve,0));
+  async function useConstructions(all=false){
+    if(running)return;setBusy(true);let changed=0;
+    try{
+      for(let k=all?1:n;k<=(all?1000:n);k++){
+        const candidate=makeConstructive(k),old=layouts.get(k),before=old?evaluate(old):null;
+        const oldL=old?before.bounds.L:Math.ceil(Math.sqrt(k));
+        if((before&&!before.valid)||candidate.L<oldL-1e-12){
+          if(!evaluate(candidate.tiles).valid)throw Error(`n=${k} 构造未通过本地检查`);
+          layouts.set(k,candidate.tiles);tags.set(k,`旋转构造 · ${candidate.method} · 来源 n=${candidate.sourceN}`);changed++;
+        }
+        if(k%20===0){colorMessage(`正在逐题比较：${k}/1000，已替换 ${changed} 个实例…`);await nextFrame();}
+      }
+      selected=-1;layoutTag=tags.get(n)||'赛题网格基线';fit();
+      colorMessage(`已替换 ${changed} 个实例；保留其余更优布局。完整 CSV 可直接导出，最终文件仍需官方检查。`);
+    }catch(error){colorMessage('构造处理停止：'+error.message);}
+    finally{setBusy(false);draw();}
+  }
   async function downloadCsv(onlyN=null){
     if(running)return;setBusy(true);colorMessage('正在检查布局并生成 CSV…');
     try{
@@ -203,5 +220,7 @@
   $('exportTop').addEventListener('click',()=>downloadCsv());
   $('importCSV').addEventListener('click',()=>$('fileInput').click());$('fileInput').addEventListener('change',async e=>{try{await loadCsv(e.target.files[0]);}finally{e.target.value='';}});
   $('optimize').addEventListener('click',compactExperiment);
+  $('constructOne').addEventListener('click',()=>useConstructions());
+  $('constructAll').addEventListener('click',()=>useConstructions(true));
   window.addEventListener('resize',resize);changeCount(1000);resize();
 })();

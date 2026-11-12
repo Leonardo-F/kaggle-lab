@@ -15,6 +15,44 @@
     checkN(n);const m=Math.ceil(Math.sqrt(n));
     return Array.from({length:n},(_,i)=>({x:i%m+.5,y:Math.floor(i/m)+.5,angle:0}));
   }
+  let constructiveTemplates;
+  function makeConstructive(n){
+    checkN(n);
+    if(!constructiveTemplates){
+      constructiveTemplates=[];
+      const finish=(tiles,L,method,parameters)=>{
+        tiles=tiles.map(t=>({x:(t.x-L/2)*1.00000004,y:(t.y-L/2)*1.00000004,angle:t.angle}));
+        tiles.sort((a,b)=>(a.x*a.x+a.y*a.y)-(b.x*b.x+b.y*b.y)||a.x-b.x||a.y-b.y||a.angle-b.angle);
+        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+        const prefix=tiles.map(t=>{const h=(Math.abs(Math.cos(t.angle))+Math.abs(Math.sin(t.angle)))/2;
+          minX=Math.min(minX,t.x-h);maxX=Math.max(maxX,t.x+h);minY=Math.min(minY,t.y-h);maxY=Math.max(maxY,t.y+h);
+          return Math.max(maxX-minX,maxY-minY);});
+        constructiveTemplates.push({tiles,prefix,method,parameters});
+      };
+      const corners=(tiles,x,y,L)=>{for(const [a,b] of [[x,y],[L-x,y],[x,L-y],[L-x,L-y]])tiles.push({x:a,y:b,angle:0});};
+      // Same independently derived corner/core families as constructions.py.
+      for(let k=1;4*k*k+1<=1089;k++){
+        const L=2*k+Math.SQRT1_2,tiles=[{x:L/2,y:L/2,angle:Math.PI/4}];
+        for(let i=0;i<k;i++)for(let j=0;j<k;j++)corners(tiles,i+.5,j+.5,L);
+        finish(tiles,L,'four-corners',{k});
+      }
+      for(let m=2;2*m*(m-1)<1089;m++)for(let b=1;b*b<=2*m*m;b++){
+        if(b*b<2*(m-2)**2||2*m*(m-1)+b*b>1089)continue;
+        const L=m+b/Math.SQRT2,tiles=[];
+        for(let i=0;i<b;i++)for(let j=0;j<b;j++){
+          const u=i-(b-1)/2,v=j-(b-1)/2;
+          tiles.push({x:L/2+(u-v)/Math.SQRT2,y:L/2+(u+v)/Math.SQRT2,angle:Math.PI/4});
+        }
+        for(let i=0;i<m-1;i++)for(let j=0;j<m-1-i;j++)corners(tiles,i+.5,j+.5,L);
+        finish(tiles,L,'diamond-staircase',{m,b});
+      }
+    }
+    let best={tiles:makeGrid(n),method:'grid',sourceN:n,parameters:{},L:Math.ceil(Math.sqrt(n))};
+    for(const c of constructiveTemplates)if(c.tiles.length>=n&&c.prefix[n-1]<best.L-1e-12){
+      best={tiles:c.tiles.slice(0,n).map(t=>({...t})),method:c.method+(c.tiles.length===n?'':'/drop'),sourceN:c.tiles.length,parameters:{...c.parameters},L:c.prefix[n-1]};
+    }
+    return best;
+  }
   function decimal(value){if(!Number.isFinite(value))throw Error('坐标必须为有限数');return String(Object.is(value,-0)?0:value);}
   function numericText(tile,key){
     const raw=tile.raw?.[key];
@@ -162,5 +200,5 @@
     }
     if(chunk)yield chunk;
   }
-  return {MAX_N,HEADER,makeGrid,getBounds,penetration,collisions,evaluate,parseCsv,csvChunks,numericText,updateTile};
+  return {MAX_N,HEADER,makeGrid,makeConstructive,getBounds,penetration,collisions,evaluate,parseCsv,csvChunks,numericText,updateTile};
 });

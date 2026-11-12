@@ -15,7 +15,7 @@
 <div class="app-shell">
   <header class="topbar">
     <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>SQUARES IN SQUARES</small></div></div>
-    <div class="top-title"><span class="trail">离线工具 / 单文件 HTML</span><h1>正方形装箱模拟器 <span class="beta">v0.2</span></h1></div>
+    <div class="top-title"><span class="trail">离线工具 / 单文件 HTML</span><h1>正方形装箱模拟器 <span class="beta">v0.3</span></h1></div>
     <div class="top-actions"><button class="action accent" id="exportTop">↓ 下载 submission.csv</button><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">赛题 ↗</a></div>
   </header>
   <main class="workspace">
@@ -36,6 +36,9 @@
         <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="1000" aria-label="实例数量滑块">
         <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset active" data-count="1000">1000</button></div>
         <button class="action primary" id="resetLayout">↺ 当前实例恢复网格基线</button>
+        <button class="action secondary" id="constructOne">◇ 当前实例：尝试旋转构造</button>
+        <button class="action secondary" id="constructAll">◇ 全部实例：逐题择优构造</button>
+        <p class="hint">可选：比较旋转核心、四角阶梯和删块迁移，只替换更好的有效布局。默认仍为赛题网格基线，导出始终覆盖 1–1000。</p>
       </section>
       <section class="control-section">
         <div class="section-heading"><h3>手动调整</h3><span id="selectedLabel" class="subtle">未选择</span></div>
@@ -82,6 +85,44 @@
   function makeGrid(n){
     checkN(n);const m=Math.ceil(Math.sqrt(n));
     return Array.from({length:n},(_,i)=>({x:i%m+.5,y:Math.floor(i/m)+.5,angle:0}));
+  }
+  let constructiveTemplates;
+  function makeConstructive(n){
+    checkN(n);
+    if(!constructiveTemplates){
+      constructiveTemplates=[];
+      const finish=(tiles,L,method,parameters)=>{
+        tiles=tiles.map(t=>({x:(t.x-L/2)*1.00000004,y:(t.y-L/2)*1.00000004,angle:t.angle}));
+        tiles.sort((a,b)=>(a.x*a.x+a.y*a.y)-(b.x*b.x+b.y*b.y)||a.x-b.x||a.y-b.y||a.angle-b.angle);
+        let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+        const prefix=tiles.map(t=>{const h=(Math.abs(Math.cos(t.angle))+Math.abs(Math.sin(t.angle)))/2;
+          minX=Math.min(minX,t.x-h);maxX=Math.max(maxX,t.x+h);minY=Math.min(minY,t.y-h);maxY=Math.max(maxY,t.y+h);
+          return Math.max(maxX-minX,maxY-minY);});
+        constructiveTemplates.push({tiles,prefix,method,parameters});
+      };
+      const corners=(tiles,x,y,L)=>{for(const [a,b] of [[x,y],[L-x,y],[x,L-y],[L-x,L-y]])tiles.push({x:a,y:b,angle:0});};
+      // Same independently derived corner/core families as constructions.py.
+      for(let k=1;4*k*k+1<=1089;k++){
+        const L=2*k+Math.SQRT1_2,tiles=[{x:L/2,y:L/2,angle:Math.PI/4}];
+        for(let i=0;i<k;i++)for(let j=0;j<k;j++)corners(tiles,i+.5,j+.5,L);
+        finish(tiles,L,'four-corners',{k});
+      }
+      for(let m=2;2*m*(m-1)<1089;m++)for(let b=1;b*b<=2*m*m;b++){
+        if(b*b<2*(m-2)**2||2*m*(m-1)+b*b>1089)continue;
+        const L=m+b/Math.SQRT2,tiles=[];
+        for(let i=0;i<b;i++)for(let j=0;j<b;j++){
+          const u=i-(b-1)/2,v=j-(b-1)/2;
+          tiles.push({x:L/2+(u-v)/Math.SQRT2,y:L/2+(u+v)/Math.SQRT2,angle:Math.PI/4});
+        }
+        for(let i=0;i<m-1;i++)for(let j=0;j<m-1-i;j++)corners(tiles,i+.5,j+.5,L);
+        finish(tiles,L,'diamond-staircase',{m,b});
+      }
+    }
+    let best={tiles:makeGrid(n),method:'grid',sourceN:n,parameters:{},L:Math.ceil(Math.sqrt(n))};
+    for(const c of constructiveTemplates)if(c.tiles.length>=n&&c.prefix[n-1]<best.L-1e-12){
+      best={tiles:c.tiles.slice(0,n).map(t=>({...t})),method:c.method+(c.tiles.length===n?'':'/drop'),sourceN:c.tiles.length,parameters:{...c.parameters},L:c.prefix[n-1]};
+    }
+    return best;
   }
   function decimal(value){if(!Number.isFinite(value))throw Error('坐标必须为有限数');return String(Object.is(value,-0)?0:value);}
   function numericText(tile,key){
@@ -230,7 +271,7 @@
     }
     if(chunk)yield chunk;
   }
-  return {MAX_N,HEADER,makeGrid,getBounds,penetration,collisions,evaluate,parseCsv,csvChunks,numericText,updateTile};
+  return {MAX_N,HEADER,makeGrid,makeConstructive,getBounds,penetration,collisions,evaluate,parseCsv,csvChunks,numericText,updateTile};
 });
 
 /* Kaggle Lab Square Packing Studio — an original, dependency-free implementation.
@@ -240,7 +281,7 @@
   const $ = id => document.getElementById(id);
   const canvas = $('stage'), ctx = canvas.getContext('2d');
   const layouts = new Map();
-  const {makeGrid,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
+  const {makeGrid,makeConstructive,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
   const tags=new Map();
   let viewL=32;
   const scoreFmt = v => Number.isFinite(v) ? v.toFixed(8) : '—';
@@ -359,6 +400,23 @@
     if(!value)syncMetrics();
   }
   const nextFrame=()=>new Promise(resolve=>setTimeout(resolve,0));
+  async function useConstructions(all=false){
+    if(running)return;setBusy(true);let changed=0;
+    try{
+      for(let k=all?1:n;k<=(all?1000:n);k++){
+        const candidate=makeConstructive(k),old=layouts.get(k),before=old?evaluate(old):null;
+        const oldL=old?before.bounds.L:Math.ceil(Math.sqrt(k));
+        if((before&&!before.valid)||candidate.L<oldL-1e-12){
+          if(!evaluate(candidate.tiles).valid)throw Error(`n=${k} 构造未通过本地检查`);
+          layouts.set(k,candidate.tiles);tags.set(k,`旋转构造 · ${candidate.method} · 来源 n=${candidate.sourceN}`);changed++;
+        }
+        if(k%20===0){colorMessage(`正在逐题比较：${k}/1000，已替换 ${changed} 个实例…`);await nextFrame();}
+      }
+      selected=-1;layoutTag=tags.get(n)||'赛题网格基线';fit();
+      colorMessage(`已替换 ${changed} 个实例；保留其余更优布局。完整 CSV 可直接导出，最终文件仍需官方检查。`);
+    }catch(error){colorMessage('构造处理停止：'+error.message);}
+    finally{setBusy(false);draw();}
+  }
   async function downloadCsv(onlyN=null){
     if(running)return;setBusy(true);colorMessage('正在检查布局并生成 CSV…');
     try{
@@ -438,6 +496,8 @@
   $('exportTop').addEventListener('click',()=>downloadCsv());
   $('importCSV').addEventListener('click',()=>$('fileInput').click());$('fileInput').addEventListener('change',async e=>{try{await loadCsv(e.target.files[0]);}finally{e.target.value='';}});
   $('optimize').addEventListener('click',compactExperiment);
+  $('constructOne').addEventListener('click',()=>useConstructions());
+  $('constructAll').addEventListener('click',()=>useConstructions(true));
   window.addEventListener('resize',resize);changeCount(1000);resize();
 })();
 

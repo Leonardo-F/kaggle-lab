@@ -13,7 +13,7 @@
 <div class="app-shell">
   <header class="topbar">
     <div class="brand"><span class="brand-mark">▧</span><div><strong>KAGGLE LAB</strong><small>SQUARES IN SQUARES</small></div></div>
-    <div class="top-title"><span class="trail">离线工具 / 单文件 HTML</span><h1>正方形装箱模拟器 <span class="beta">v0.2</span></h1></div>
+    <div class="top-title"><span class="trail">离线工具 / 单文件 HTML</span><h1>正方形装箱模拟器 <span class="beta">v0.3</span></h1></div>
     <div class="top-actions"><button class="action accent" id="exportTop">↓ 下载 submission.csv</button><a href="https://www.kaggle.com/competitions/squares-in-squares" target="_blank" rel="noopener noreferrer">赛题 ↗</a></div>
   </header>
   <main class="workspace">
@@ -34,6 +34,9 @@
         <input id="countRange" class="wide-slider" type="range" min="1" max="1000" value="1000" aria-label="实例数量滑块">
         <div class="presets"><button class="preset" data-count="5">5</button><button class="preset" data-count="17">17</button><button class="preset" data-count="64">64</button><button class="preset" data-count="100">100</button><button class="preset active" data-count="1000">1000</button></div>
         <button class="action primary" id="resetLayout">↺ 当前实例恢复网格基线</button>
+        <button class="action secondary" id="constructOne">◇ 当前实例：尝试旋转构造</button>
+        <button class="action secondary" id="constructAll">◇ 全部实例：逐题择优构造</button>
+        <p class="hint">可选：比较旋转核心、四角阶梯和删块迁移，只替换更好的有效布局。默认仍为赛题网格基线，导出始终覆盖 1–1000。</p>
       </section>
       <section class="control-section">
         <div class="section-heading"><h3>手动调整</h3><span id="selectedLabel" class="subtle">未选择</span></div>
