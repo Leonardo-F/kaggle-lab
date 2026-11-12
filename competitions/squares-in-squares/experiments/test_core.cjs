@@ -5,6 +5,20 @@ const P = require('../simulator/packing-core.js');
 const tile = (x,y=.5,angle=0)=>({x,y,angle});
 const header = 'id,n,square_id,x,y,angle\n';
 
+test('constructive family improves n=5 and n=65; all counts stay feasible and no worse than grid',()=>{
+  assert.equal(typeof P.makeConstructive,'function');
+  for(let n=1;n<=1000;n++){
+    const c=P.makeConstructive(n),e=P.evaluate(c.tiles);
+    assert.equal(c.tiles.length,n);assert.equal(e.valid,true,`n=${n}`);
+    assert.ok(e.bounds.L<=Math.ceil(Math.sqrt(n)),`n=${n}`);
+  }
+  assert.ok(P.makeConstructive(5).L<2.708);
+  assert.ok(P.makeConstructive(65).L<8.54);
+  assert.equal(P.makeConstructive(64).method,'grid');
+  const a=P.makeConstructive(5);a.tiles[0].x=100;
+  assert.ok(P.makeConstructive(5).L<2.708,'returned layouts must not share mutable tiles');
+});
+
 test('all 1000 grid layouts contain n distinct unrotated unit cells within ceil(sqrt(n))',()=>{
   let score=0, rows=0;
   for(let n=1;n<=1000;n++){
