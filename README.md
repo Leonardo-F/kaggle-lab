@@ -83,7 +83,22 @@ New competitions should get their own folder under `competitions/`; do not combi
 
 ## Publish to GitHub
 
-Repository: https://github.com/Leonardo-F/kaggle-lab . See [`GITHUB_SETUP.md`](GITHUB_SETUP.md) for local cloning and future contribution instructions.
+Repository: https://github.com/Leonardo-F/kaggle-lab
+
+```bash
+git clone https://github.com/Leonardo-F/kaggle-lab.git
+cd kaggle-lab
+# ... edit, then ...
+git add .
+git commit -m "Improve Kaggle solution"
+git push origin main
+```
+
+Run the local checks listed above before pushing; CI (`.github/workflows/test.yml`) runs the Python and JavaScript tests on every push and pull request.
+
+**Optional GitHub Pages / 网页部署:** the packing simulator in `competitions/squares-in-squares/simulator/` can be published as a static site, but Pages deployment is **not** enabled automatically by this repository. The portable `SquarePackingStudio-standalone.html` opens locally without a build step.
+
+This repository is public. Competition outputs, credentials, large datasets and experimental logs stay local (`.gitignore`). Before publishing optimized solutions, review Kaggle's rules on shared code and prize eligibility; cite third-party components and respect their licenses.
 
 ## License
 
