@@ -38,7 +38,8 @@ def grid_layout(n: int) -> list[Tile]:
     return [Tile((i % columns) + 0.5, (i // columns) + 0.5, 0.0) for i in range(n)]
 
 
-def extent(tiles: Iterable[Tile]) -> float:
+def layout_bounds(tiles: Iterable[Tile]) -> tuple[float, float, float, float]:
+    """Return the left, bottom, right and top edges of the tiles."""
     min_x = min_y = math.inf
     max_x = max_y = -math.inf
     for tile in tiles:
@@ -47,6 +48,11 @@ def extent(tiles: Iterable[Tile]) -> float:
         max_x = max(max_x, tile.x + half)
         min_y = min(min_y, tile.y - half)
         max_y = max(max_y, tile.y + half)
+    return min_x, min_y, max_x, max_y
+
+
+def extent(tiles: Iterable[Tile]) -> float:
+    min_x, min_y, max_x, max_y = layout_bounds(tiles)
     return max(max_x - min_x, max_y - min_y)
 
 
