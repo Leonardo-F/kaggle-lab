@@ -11,6 +11,10 @@ A geometric packing challenge: place **n=1…1000** unit squares, optionally rot
 - Missing/invalid puzzles receive their trivial-grid penalty from the official scorer.
 - One CSV with columns **`id,n,square_id,x,y,angle`**; center coordinates and angles in **radians**. Complete n=1…1000 produces **500,500 data rows**.
 
+## Latest verified portfolio
+
+The rotated rectangular core with four independent corner staircases reaches **23.040802440** in the local official v20 scorer. Both validation paths accepted all 1,000 puzzles. See the [Chinese experiment notes and reproduction commands](submissions/rectangular_core.md), the [complete CSV](submissions/rectangular_core.csv) and the [per-puzzle certificate](submissions/rectangular_core-certification.json).
+
 ## Interactive simulator (v0.3)
 
 **Easiest:** download [`SquarePackingStudio-standalone.html`](simulator/SquarePackingStudio-standalone.html) and open it in a modern desktop browser. All JavaScript and CSS are embedded; no install, server, account, or network assets are needed. The Chinese interface also adapts to narrow screens.
