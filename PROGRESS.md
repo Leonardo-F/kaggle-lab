@@ -34,9 +34,9 @@
 
 ## 复现与历史记录
 
-- [11-12 的实验记录](docs/competition-strategies/implementation-status.md)和[网格、旋转构造的认证摘要](docs/competition-strategies/2026-11-12-results.json)记录了最初的两组完整结果。
-- [偏置对角带与外扩实验](docs/competition-strategies/strip-search.md)提供推导、三种构造开关和复现命令，[认证摘要](docs/competition-strategies/strip-search-results.json)保存各组的 CSV 指纹。
-- [最新构造与 29 块实验](competitions/squares-in-squares/submissions/rectangular_core.md)提供生成命令和逐题验证入口。`core_search.py --mode baseline` 可以重建 23.445523069 版，`tilt_search.py` 的清单字段 `score_strip_with_border` 记录变角度斜带单独合并后的值。
+[装箱 README](competitions/squares-in-squares/README.md#重建和验证最佳解)提供当前最佳解的生成和认证命令。用 `constructions.py` 可复现 26.993155239 版，用 `strip_search.py` 可复现 23.634514815 版（`--method border` 和 `--method diagonal` 分别重跑单项对照）。`tilt_search.py` 的清单字段 `score_strip_with_border` 记录 23.592926108 版。各生成器的参数可用 `--help` 查看。
+
+早期推导和认证摘要见[历史策略资料](https://github.com/Leonardo-F/kaggle-lab/tree/355e887c9edd1eaa105f25e96996c91373009ede/docs/competition-strategies)。
 
 在仓库根目录执行下列命令可用模拟器核心重算当前 CSV 的总分。对照时可更换 CSV 路径。
 
@@ -52,14 +52,7 @@ console.log(total.toFixed(9));
 JS
 ```
 
-### 矩形内的 45° 斜带与整数边框
-
-固定外边长后，枚举一侧整数宽的网格边框、斜带行数和两个角的余量，在长方形内部按行计算容量。令整数网格边长为 k，扫描 k = 2…31。394 个方块数有容量超过 k² 的候选。按既有中心外扩系数 1.00000004 和 10⁻⁶ 的改进门槛逐题比较，新增改进 **0 题**，继续使用上版 CSV，总分 **23.040802440**。在装箱目录运行以下命令可重新生成候选表，各列依次为题号、理想边长、容量、边框宽、斜带行数、下侧余量。[枚举器](competitions/squares-in-squares/algorithms/framed_strip_sweep.cpp)
-
-~~~bash
-c++ -O3 -std=c++17 algorithms/framed_strip_sweep.cpp -o /tmp/framed-strip
-/tmp/framed-strip > /tmp/framed-strip.tsv
-~~~
+矩形内的 45° 斜带与整数边框实验覆盖 394 个候选题。在既有数值间距和 10⁻⁶ 改进门槛下改善 0 题，总分仍为 **23.040802440**。这次实验和上面的 29 块局部搜索都可在[清理前的版本](https://github.com/Leonardo-F/kaggle-lab/tree/355e887c9edd1eaa105f25e96996c91373009ede/competitions/squares-in-squares)中重跑。
 
 ## 量子电路编译
 

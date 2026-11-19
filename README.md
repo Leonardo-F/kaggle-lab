@@ -2,7 +2,7 @@
 
 A single home for **independent Kaggle competition solutions, algorithms, visualizations, experiments, and reproducible submissions**.
 
-> Status: initial scaffold / baseline implementations. The packing studio is an **original implementation** written for this repository, not a derivative of an existing packing simulator. No competitive leaderboard claims are made.
+> Scores and verification results in this repository come from local runs.
 
 ## Competitions
 
@@ -18,28 +18,8 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 
 ## Quick start / 快速开始
 
-**中文解题笔记（2026-11-11）：** 从 [阅读指南](docs/competition-strategies/README.md) 开始，依次阅读 [正方形装箱的构造、搜索与验证](docs/competition-strategies/01-square-packing.md) 和 [量子编译三个子题的思路与实验路线](docs/competition-strategies/02-quantum-compilation.md)。文档区分已有功能、公开方法与拟开展实验；尚未实现的优化不会被当作已有成绩。
-
-**项目进展**见 [PROGRESS.md](PROGRESS.md)，汇总每轮装箱方案、模拟器重跑得分、官方 v20 本地得分和复现记录。当前最好总分为 **23.040802440**，全部 1,000 题通过两条本地验证路径。量子部分记录了 123 比特的逆平方根候选及逐版本成本。
-
-**Square Packing Studio (no build tools or dependencies):** download and open the standalone HTML below. The Chinese UI defaults to n=1000 and its main download button generates a complete `submission.csv` (n=1–1000, 500,500 rows). The default algorithm is the organizer-described unrotated grid baseline; a single-puzzle export is available for debugging.
-
-A portable all-in-one HTML version is also included at `competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html` (and supplied as a separate downloadable HTML).
-
-For a local HTTP server instead:
-
-```bash
-cd competitions/squares-in-squares/simulator
-python -m http.server 8000
-# Open http://localhost:8000
-```
-
-**Generate a full, *valid but unoptimized* Kaggle submission**:
-
-```bash
-python competitions/squares-in-squares/algorithms/packing.py generate --output submission.csv
-python competitions/squares-in-squares/algorithms/packing.py validate --input submission.csv --complete
-```
+- **正方形装箱**目前最佳本地官方 v20 总分为 **23.040802440**。离线模拟器、最新 CSV 和复现命令见[装箱 README](competitions/squares-in-squares/README.md)。
+- **两项竞赛的版本与实测记录**见 [PROGRESS.md](PROGRESS.md)。量子赛题的解题思路见[量子编译策略](docs/competition-strategies/02-quantum-compilation.md)。
 
 **Run all local tests**:
 
@@ -62,7 +42,7 @@ kaggle-lab/
 │   │   ├── simulator/            Independent HTML/CSS/JS visual workspace
 │   │   ├── algorithms/           Python generator & geometry validator
 │   │   ├── experiments/          Reproducibility tests
-│   │   └── submissions/          Local CSV outputs (gitignored)
+│   │   └── submissions/          Best CSV and certificate
 │   └── google-quantum-circuit-compilation/
 │       ├── README.md             Scoring, three tasks & constraints
 │       ├── algorithms/           Cost-model helper
@@ -79,7 +59,7 @@ New competitions should get their own folder under `competitions/`; do not combi
 - The packing `vendor/` directory now contains the **unmodified official v20 metric**, under its separate Apache 2.0 license and attribution notice. Its digest is pinned; original simulators and constructors remain independently implemented. References to other optimizers remain study links.
 - If a future algorithm or codebase is adapted from external work, document the exact source URL, original authors, license, modifications, and affected paths in that competition's README before committing it.
 - The local collision check is based on standard floating-point separating-axis geometry. **It does not replace** the organizers' interval-arithmetic validation and is not a guarantee of accepted Kaggle scoring.
-- Keep Kaggle API secrets, private datasets, large generated CSV/ZIPs and experimental checkpoints out of git. Verify active competition rules before making competition-specific solutions public.
+- Keep Kaggle API secrets, private datasets, and intermediate competition outputs out of git. Verify active competition rules before making competition-specific solutions public.
 
 ## Publish to GitHub
 
@@ -98,7 +78,7 @@ Run the local checks listed above before pushing; CI (`.github/workflows/test.ym
 
 **Optional GitHub Pages / 网页部署:** the packing simulator in `competitions/squares-in-squares/simulator/` can be published as a static site, but Pages deployment is **not** enabled automatically by this repository. The portable `SquarePackingStudio-standalone.html` opens locally without a build step.
 
-This repository is public. Competition outputs, credentials, large datasets and experimental logs stay local (`.gitignore`). Before publishing optimized solutions, review Kaggle's rules on shared code and prize eligibility; cite third-party components and respect their licenses.
+This repository is public. Intermediate outputs, credentials, and large datasets stay local (`.gitignore`). Before publishing optimized solutions, review Kaggle's rules on shared code and prize eligibility; cite third-party components and respect their licenses.
 
 ## License
 
