@@ -20,7 +20,7 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 
 **中文解题笔记（2026-11-11）：** 从 [阅读指南](docs/competition-strategies/README.md) 开始，依次阅读 [正方形装箱的构造、搜索与验证](docs/competition-strategies/01-square-packing.md) 和 [量子编译三个子题的思路与实验路线](docs/competition-strategies/02-quantum-compilation.md)。文档区分已有功能、公开方法与拟开展实验；尚未实现的优化不会被当作已有成绩。
 
-**实现进度（2026-11-12）：** [运行命令、已验证结果与下一步](docs/competition-strategies/implementation-status.md)。装箱构造组合的完整 CSV 在未修改的官方 v20 本地检查中通过全部 1000 个实例，总分 **26.9931552390**（网格为 28.9376699166）；这是本地验证结果。量子第一题已完成明确舍入规则的全输入整数实验，尚无通过官方验证的量子电路。
+**项目进展**见 [PROGRESS.md](PROGRESS.md)，汇总每轮装箱方案、模拟器重跑得分、官方 v20 本地得分和复现记录。当前最好总分为 **23.040802440**，全部 1,000 题通过两条本地验证路径。量子电路的整数精度实验和验证入口也有对应记录。
 
 **Square Packing Studio (no build tools or dependencies):** download and open the standalone HTML below. The Chinese UI defaults to n=1000 and its main download button generates a complete `submission.csv` (n=1–1000, 500,500 rows). The default algorithm is the organizer-described unrotated grid baseline; a single-puzzle export is available for debugging.
 
