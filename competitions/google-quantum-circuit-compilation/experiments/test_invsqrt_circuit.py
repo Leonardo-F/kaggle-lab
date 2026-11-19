@@ -8,14 +8,15 @@ from invsqrt_circuit import MAX_X, build, phase_fraction
 
 
 class LinearPhaseTests(unittest.TestCase):
-    def within_tolerance(self, x, bits, centered, precision, phase_bits):
-        y, e = phase_fraction(x, bits, centered, precision, phase_bits)
+    def within_tolerance(self, x, bits, centered, precision, phase_bits, integer_fit=False):
+        y, e = phase_fraction(x, bits, centered, precision, phase_bits, integer_fit)
         v = (x*y*y) << 48
         return (2**24-1)**2 << (2*e) <= v <= (2**24+1)**2 << (2*e)
 
     def test_midpoint_and_quantization_regressions(self):
         self.assertFalse(self.within_tolerance(4102, 10, False, 30, 64))
         self.assertFalse(self.within_tolerance(2107391, 10, True, 26, 39))
+        self.assertTrue(self.within_tolerance(2107391, 10, True, 26, 39, integer_fit=True))
         for x in (1, 2, 3, 4102, 2107391, 2170879, MAX_X):
             self.assertTrue(self.within_tolerance(x, 10, True, 27, 39))
 

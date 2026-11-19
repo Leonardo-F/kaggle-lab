@@ -1,0 +1,187 @@
+{
+  "invsqrt_full": {
+    "official_verifier_run": false,
+    "kaggle_scored": false,
+    "kickmix": "1.0.0",
+    "circuit_sha256": "666a841efadb72b7ed42fce047e23f7ce035d535ac90d87fa8eb8b5fa67d5708",
+    "prefix_bits": 10,
+    "centered": true,
+    "fraction_bits": 26,
+    "phase_bits": 39,
+    "integer_fit": true,
+    "qubits": 119,
+    "static_toffoli_like": 3507,
+    "t_like": 1,
+    "fine_rotations": 36,
+    "model": {
+      "inputs": 3133452,
+      "failures": 0,
+      "max_relative_error": 5.386717960575993e-08,
+      "worst_x": 131521,
+      "min_turn_margin": 3.961570757314671e-12,
+      "tightest_margin_x": 2104320
+    },
+    "circuit_replay": {
+      "distinct_inputs": 3133452,
+      "repetitions": 1,
+      "shots": 3133452,
+      "seed": 20261119,
+      "phase_mismatches": 0,
+      "input_or_scratch_mismatches": 0
+    },
+    "paper_formula_cost_estimate": 447866.41114575154
+  },
+  "invsqrt_repeated": {
+    "official_verifier_run": false,
+    "kaggle_scored": false,
+    "kickmix": "1.0.0",
+    "circuit_sha256": "666a841efadb72b7ed42fce047e23f7ce035d535ac90d87fa8eb8b5fa67d5708",
+    "prefix_bits": 10,
+    "centered": true,
+    "fraction_bits": 26,
+    "phase_bits": 39,
+    "integer_fit": true,
+    "qubits": 119,
+    "static_toffoli_like": 3507,
+    "t_like": 1,
+    "fine_rotations": 36,
+    "model": {
+      "inputs": 3133452,
+      "failures": 0,
+      "max_relative_error": 5.386717960575993e-08,
+      "worst_x": 131521,
+      "min_turn_margin": 3.961570757314671e-12,
+      "tightest_margin_x": 2104320
+    },
+    "circuit_replay": {
+      "distinct_inputs": 4342,
+      "repetitions": 4,
+      "shots": 17368,
+      "seed": 20261119,
+      "phase_mismatches": 0,
+      "input_or_scratch_mismatches": 0
+    },
+    "paper_formula_cost_estimate": 447866.41114575154
+  },
+  "dqi_classical": {
+    "mode": "classical synthetic errors with official field and syndrome parameters",
+    "seed": 20261120,
+    "cases": 52,
+    "weights": [
+      0,
+      1,
+      2,
+      16,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ],
+    "decode_and_phase_mismatches": 0,
+    "polynomial_recovery_mismatches": 0,
+    "polynomial_recovery_inversions_inside_chien_scan": 0,
+    "arithmetic_per_fixed_position_scan": [
+      {
+        "window": 1,
+        "inversions": 4095,
+        "extra_field_multiplications": 0
+      },
+      {
+        "window": 4,
+        "inversions": 1024,
+        "extra_field_multiplications": 9213
+      },
+      {
+        "window": 8,
+        "inversions": 512,
+        "extra_field_multiplications": 10749
+      },
+      {
+        "window": 16,
+        "inversions": 256,
+        "extra_field_multiplications": 11517
+      }
+    ]
+  },
+  "dfthcsos_synthetic_angle": {
+    "kickmix": "1.0.0",
+    "seed": 20261120,
+    "addresses": 1024,
+    "words": 4,
+    "word_bits": 12,
+    "results": {
+      "synthetic_piecewise_constant": {
+        "direct": {
+          "qubits": 68,
+          "toffoli_like": 1022,
+          "kickmix_shots": 2048,
+          "mismatches": 0
+        },
+        "pruned": {
+          "qubits": 68,
+          "toffoli_like": 254,
+          "kickmix_shots": 2048,
+          "mismatches": 0
+        }
+      },
+      "synthetic_random": {
+        "direct": {
+          "qubits": 68,
+          "toffoli_like": 1022,
+          "kickmix_shots": 2048,
+          "mismatches": 0
+        },
+        "pruned": {
+          "qubits": 68,
+          "toffoli_like": 1022,
+          "kickmix_shots": 2048,
+          "mismatches": 0
+        }
+      }
+    }
+  }
+}

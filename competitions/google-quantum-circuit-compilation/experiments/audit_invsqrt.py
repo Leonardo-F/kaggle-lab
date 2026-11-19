@@ -14,11 +14,11 @@ from invsqrt_circuit import (DEFAULT_FRACTION, DEFAULT_PHASE, MAX_X, WIDTH,
                              phase_fraction)
 
 
-def scan(bits, centered, fraction_bits, phase_bits):
+def scan(bits, centered, fraction_bits, phase_bits, integer_fit=False):
     failures = 0
     worst, min_margin = 0., math.inf
     for x in range(1, MAX_X+1):
-        num, exp = phase_fraction(x, bits, centered, fraction_bits, phase_bits)
+        num, exp = phase_fraction(x, bits, centered, fraction_bits, phase_bits, integer_fit)
         # For a nonnegative unwrapped phase, squaring preserves both inequalities.
         value = (x*num*num) << 48
         if not ((2**24-1)**2 << (2*exp)) <= value <= ((2**24+1)**2 << (2*exp)):
@@ -83,6 +83,7 @@ def main():
     parser.add_argument('--bits', type=int, choices=(10,11), default=10)
     parser.add_argument('--fraction-bits', type=int, choices=range(26,31), default=DEFAULT_FRACTION)
     parser.add_argument('--phase-bits', type=int, choices=range(32,65), default=DEFAULT_PHASE)
+    parser.add_argument('--integer-fit', action='store_true')
     parser.add_argument('--secant', action='store_true')
     parser.add_argument('--seed', type=int, default=20261119)
     parser.add_argument('--all-inputs', action='store_true', help='replay every legal x in Kickmix')
@@ -92,7 +93,7 @@ def main():
     if args.output.resolve() == args.input.resolve() or not (1 <= args.draws <= MAX_X and args.repetitions > 0):
         parser.error('Use separate paths and positive sample sizes within the input domain')
     circuit = km.Circuit.from_file(args.input, format='kmb')
-    model = (args.bits, not args.secant, args.fraction_bits, args.phase_bits)
+    model = (args.bits, not args.secant, args.fraction_bits, args.phase_bits, args.integer_fit)
     ranges = scan(*model)
     tests = replay(circuit, model, args.seed, args.draws, args.repetitions, args.all_inputs)
     stats = circuit.operation_statistics()
@@ -105,7 +106,7 @@ def main():
     report = dict(official_verifier_run=False, kaggle_scored=False, kickmix=version('kickmix'),
                   circuit_sha256=hashlib.sha256(args.input.read_bytes()).hexdigest(),
                   prefix_bits=args.bits, centered=not args.secant, fraction_bits=args.fraction_bits,
-                  phase_bits=args.phase_bits, qubits=circuit.num_qubits,
+                  phase_bits=args.phase_bits, integer_fit=args.integer_fit, qubits=circuit.num_qubits,
                   static_toffoli_like=stats.num_toffoli_like, t_like=stats.num_t_like,
                   fine_rotations=fine, model=ranges, circuit_replay=tests,
                   paper_formula_cost_estimate=estimate)
