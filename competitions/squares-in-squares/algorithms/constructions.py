@@ -27,7 +27,7 @@ class Candidate:
     side: float
 
 
-def _finish(tiles: list[Tile], side: float) -> list[Tile]:
+def finish_template(tiles: list[Tile], side: float) -> list[Tile]:
     # Move centres, never resize the unit squares. A strict gap makes these
     # bounded, float-generated families robust to CSV decimal transport.
     return sorted((Tile((t.x-side/2)*CLEARANCE_SCALE,
@@ -48,7 +48,7 @@ def four_corners(k: int) -> list[Tile]:
     for i in range(k):
         for j in range(k):
             tiles.extend(_corners(i+.5, j+.5, side))
-    return _finish(tiles, side)
+    return finish_template(tiles, side)
 
 
 def diamond_staircase(m: int, b: int) -> list[Tile]:
@@ -71,7 +71,7 @@ def diamond_staircase(m: int, b: int) -> list[Tile]:
     for i in range(m-1):
         for j in range(m-1-i):
             tiles.extend(_corners(i+.5, j+.5, side))
-    return _finish(tiles, side)
+    return finish_template(tiles, side)
 
 
 def build_portfolio(max_n: int = 1000) -> dict[int, Candidate]:

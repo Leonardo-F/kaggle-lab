@@ -11,6 +11,10 @@ A geometric packing challenge: place **n=1…1000** unit squares, optionally rot
 - Missing/invalid puzzles receive their trivial-grid penalty from the official scorer.
 - One CSV with columns **`id,n,square_id,x,y,angle`**; center coordinates and angles in **radians**. Complete n=1…1000 produces **500,500 data rows**.
 
+## Latest verified portfolio
+
+The rotated rectangular core with four independent corner staircases reaches **23.040802440** in the local official v20 scorer. Both validation paths accepted all 1,000 puzzles. See the [Chinese experiment notes and reproduction commands](submissions/rectangular_core.md), the [complete CSV](submissions/rectangular_core.csv) and the [per-puzzle certificate](submissions/rectangular_core-certification.json).
+
 ## Interactive simulator (v0.3)
 
 **Easiest:** download [`SquarePackingStudio-standalone.html`](simulator/SquarePackingStudio-standalone.html) and open it in a modern desktop browser. All JavaScript and CSS are embedded; no install, server, account, or network assets are needed. The Chinese interface also adapts to narrow screens.
@@ -70,10 +74,13 @@ The certifier checks final decimal strings and a pandas numeric read/write round
 
 On 2026-11-12, all 1,000 generated puzzles passed both routes. The portfolio improved 162 puzzles, lowering the local official score from 28.93766991655 to **26.99315523903**. See [results and limitations](../../docs/competition-strategies/implementation-status.md).
 
+The follow-up [`algorithms/strip_search.py`](algorithms/strip_search.py) adds offset diagonal rows and L-shaped border transfer. See the [geometry, benchmark and reproduction commands](../../docs/competition-strategies/strip-search.md).
+
 **Original code in this project:**
 - `simulator/index.html`, `simulator/styles.css`, `simulator/packing-core.js`, `simulator/app.js`, `simulator/build_standalone.py`: designed and implemented from scratch for Kaggle Lab, with no third-party script, CSS, artwork, source material or layout algorithm copied.
 - `algorithms/packing.py`: independently implemented deterministic grid layout, geometric projections, separating-axis collision checks, CSV writer, CSV reader and score calculation.
 - `algorithms/constructions.py` and the matching browser function: independent implementation of classical rotated-core/corner families and per-puzzle deletion transfer. Mathematical inspiration is documented in the strategy notes; no external coordinates or optimizer code were imported.
+- `algorithms/strip_search.py`: independent enumeration of variable-length diagonal rows and border transfer from tighter seeds.
 - `algorithms/certify.py`: original strict CSV wrapper around the third-party metric in `vendor/`.
 - `experiments/test_packing.py`: independent sanity checks.
 
