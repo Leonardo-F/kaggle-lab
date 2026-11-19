@@ -72,3 +72,5 @@ c++ -O3 -std=c++17 algorithms/framed_strip_sweep.cpp -o /tmp/framed-strip
 | 2,048 项中点校正，成对查表 | **123** | **3,555** | **0** | **468,566** |
 
 最后一步多用 4 个逻辑比特，节省 893 个 Toffoli 类门，估算成本再降 **16.27%**，较本仓库第一版降低 **46.30%**。对最终电路的全部 3,133,452 个输入各做一次 Kickmix 回放，输出相位、输入恢复和辅助位清零均通过。另对 4,342 个输入各回放四次，共 17,368 次，也全部通过。最高相对误差约为 5.18052 × 10⁻⁸，容限约为 5.96046 × 10⁻⁸。官方每输入 64 次的完整验证和 Kaggle 线上总分仍待取得。[七个版本的参数、成本与复现命令](competitions/google-quantum-circuit-compilation/README.md#已编译的逆平方根相位电路) · [逐版本实测记录](competitions/google-quantum-circuit-compilation/experiments/linear-phase-audit.json)
+
+第二轮用联合拟合的 26 位定点系数将逆平方根估算成本降至 **447,866**。最终电路用 119 个逻辑比特、3,507 个 Toffoli 类门，全输入回放通过。DQI 已完成经典多项式预计算对照，DFTHCSOS 已完成合成角度表的可逆查表实验。[三题结果与下一轮计划](competitions/google-quantum-circuit-compilation/NEXT.md)
