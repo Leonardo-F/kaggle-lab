@@ -1,6 +1,6 @@
 # Kaggle Lab 项目进展
 
-更新日期 2026-11-19
+更新日期 2026-11-20
 
 正方形装箱目前的最好总分是 **23.040802440**。相对最初的整数网格 **28.937669917**，下降 **5.896867477**（约 **20.38%**）。最终 CSV 包含 500,500 行，模拟器与官方 v20 本地评分均接受了全部 1,000 题。[最新版提交 CSV](competitions/squares-in-squares/submissions/rectangular_core.csv) · [逐题认证报告](competitions/squares-in-squares/submissions/rectangular_core-certification.json)
 
@@ -52,6 +52,23 @@ console.log(total.toFixed(9));
 JS
 ```
 
+### 矩形内的 45° 斜带与整数边框
+
+固定外边长后，枚举一侧整数宽的网格边框、斜带行数和两个角的余量，在长方形内部按行计算容量。令整数网格边长为 k，扫描 k = 2…31。394 个方块数有容量超过 k² 的候选。按既有中心外扩系数 1.00000004 和 10⁻⁶ 的改进门槛逐题比较，新增改进 **0 题**，继续使用上版 CSV，总分 **23.040802440**。在装箱目录运行以下命令可重新生成候选表，各列依次为题号、理想边长、容量、边框宽、斜带行数、下侧余量。[枚举器](competitions/squares-in-squares/algorithms/framed_strip_sweep.cpp)
+
+~~~bash
+c++ -O3 -std=c++17 algorithms/framed_strip_sweep.cpp -o /tmp/framed-strip
+/tmp/framed-strip > /tmp/framed-strip.tsv
+~~~
+
 ## 量子电路编译
 
-已有成本模型、`invsqrt` 整数精度扫描和三项官方验证入口。部分定点候选通过数值误差阈值，完整量子电路提交分数还没有记录。[量子编译实验与复现](competitions/google-quantum-circuit-compilation/README.md) · [三个子题的研究路线](docs/competition-strategies/02-quantum-compilation.md)
+已生成首个完整的 `invsqrt.kmb` 子题电路。用每段中点修正割线误差，查表项数从 4,096 降到 2,048。进一步一次读取相邻两项，选中一项后提前清理另一项。三个阶段按相同口径估算的单题成本如下。
+
+| 阶段 | 逻辑比特 | Toffoli 类门 | 全输入模型超限数 | 单题成本估算 ↓ |
+| --- | ---: | ---: | ---: | ---: |
+| 4,096 项普通割线 | 127 | 6,551 | 0 | 872,599 |
+| 2,048 项中点校正，单项查表 | 119 | 4,448 | 0 | 559,595 |
+| 2,048 项中点校正，成对查表 | **123** | **3,555** | **0** | **468,566** |
+
+最后一步多用 4 个逻辑比特，节省 893 个 Toffoli 类门，估算成本再降 **16.27%**，较本仓库第一版降低 **46.30%**。对最终电路的全部 3,133,452 个输入各做一次 Kickmix 回放，输出相位、输入恢复和辅助位清零均通过。另对 4,342 个输入各回放四次，共 17,368 次，也全部通过。最高相对误差约为 5.18052 × 10⁻⁸，容限约为 5.96046 × 10⁻⁸。官方每输入 64 次的完整验证和 Kaggle 线上总分仍待取得。[七个版本的参数、成本与复现命令](competitions/google-quantum-circuit-compilation/README.md#已编译的逆平方根相位电路) · [逐版本实测记录](competitions/google-quantum-circuit-compilation/experiments/linear-phase-audit.json)

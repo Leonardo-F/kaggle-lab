@@ -9,18 +9,18 @@ A single home for **independent Kaggle competition solutions, algorithms, visual
 | Project | Problem | What works now | Official page |
 | --- | --- | --- | --- |
 | [`squares-in-squares`](competitions/squares-in-squares/) | Pack 1–1,000 unit squares into the smallest enclosing square | Offline HTML, rotated constructions, per-puzzle selection, CSV, pinned official interval certification | [Kaggle](https://www.kaggle.com/competitions/squares-in-squares) |
-| [`google-quantum-circuit-compilation`](competitions/google-quantum-circuit-compilation/) | Reduce resources for three verifiable quantum-circuit tasks | Cost model, exhaustive integer invsqrt experiments, official-verifier entry pending data access | [Kaggle](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation) |
+| [`google-quantum-circuit-compilation`](competitions/google-quantum-circuit-compilation/) | Reduce resources for three verifiable quantum-circuit tasks | Compiled inverse-square-root phase circuit, full-domain Kickmix replay, cost comparisons | [Kaggle](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation) |
 
 ## 竞赛项目概览（中文）
 
 - **Squares in Squares（正方形装箱）：** 为 `n = 1…1000` 的每个实例排列 n 个单位正方形，允许旋转、不得重叠，目标是尽量减小外包正方形边长；可运行原创的 2D 网页模拟器并导出 `id,n,square_id,x,y,angle` 六列 CSV。
-- **Google Quantum AI（容错量子电路优化）：** 独立研究 `invsqrt`（逆平方根相位）、`dqi`（可逆 Reed–Solomon 解码）、`dfthcsos`（FeMoCo Hamiltonian / QROM）三个 benchmark。当前提供官方规则详解及成本公式测试，**尚无有效量子电路提交文件**。详情见 [量子比赛 README](competitions/google-quantum-circuit-compilation/README.md)。
+- **Google Quantum AI（容错量子电路优化）：** 独立研究 `invsqrt`（逆平方根相位）、`dqi`（可逆 Reed–Solomon 解码）、`dfthcsos`（FeMoCo Hamiltonian / QROM）三个 benchmark。已有可生成的逆平方根相位电路，全域本地回放通过，官方三题总分待取得。详情见 [量子比赛 README](competitions/google-quantum-circuit-compilation/README.md)。
 
 ## Quick start / 快速开始
 
 **中文解题笔记（2026-11-11）：** 从 [阅读指南](docs/competition-strategies/README.md) 开始，依次阅读 [正方形装箱的构造、搜索与验证](docs/competition-strategies/01-square-packing.md) 和 [量子编译三个子题的思路与实验路线](docs/competition-strategies/02-quantum-compilation.md)。文档区分已有功能、公开方法与拟开展实验；尚未实现的优化不会被当作已有成绩。
 
-**项目进展**见 [PROGRESS.md](PROGRESS.md)，汇总每轮装箱方案、模拟器重跑得分、官方 v20 本地得分和复现记录。当前最好总分为 **23.040802440**，全部 1,000 题通过两条本地验证路径。量子电路的整数精度实验和验证入口也有对应记录。
+**项目进展**见 [PROGRESS.md](PROGRESS.md)，汇总每轮装箱方案、模拟器重跑得分、官方 v20 本地得分和复现记录。当前最好总分为 **23.040802440**，全部 1,000 题通过两条本地验证路径。量子部分记录了 123 比特的逆平方根候选及逐版本成本。
 
 **Square Packing Studio (no build tools or dependencies):** download and open the standalone HTML below. The Chinese UI defaults to n=1000 and its main download button generates a complete `submission.csv` (n=1–1000, 500,500 rows). The default algorithm is the organizer-described unrotated grid baseline; a single-puzzle export is available for debugging.
 
