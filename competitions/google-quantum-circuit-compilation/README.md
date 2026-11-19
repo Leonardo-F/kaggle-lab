@@ -2,7 +2,7 @@
 
 > Google 量子计算电路编译优化赛（Kaggle，2026–2027）
 >
-> **项目状态：成本计算器 + 可复现整数近似实验 + 官方验证入口。尚无通过官方验证的参赛电路；官方数据接入需要 Kaggle 登录和赛规确认。**
+> **项目状态：已编译首个逆平方根相位电路。推荐版使用 123 个逻辑量子比特，全域 Kickmix 逐输入回放通过。三题官方验证和 Kaggle 线上成绩待取得。**
 
 - 官方比赛：[Google Quantum AI — Verifiable Quantum Circuit Compilation](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation)
 - 组织方：Google Quantum AI
@@ -107,6 +107,37 @@ python competitions/google-quantum-circuit-compilation/algorithms/verify_officia
 
 入口提供 `--task invsqrt` / `dqi` / `dfthcsos`，默认验证三题，保留官方完整抽样预算。缺少数据或失败时写入失败回执并返回非零状态；不会沿用旧的成功报告。任务本地验证仍不等于 Kaggle 完整提交检查或私有 salt 评分。参见 [当前实测结果和接入限制](../../docs/competition-strategies/implementation-status.md)。
 
+## 已编译的逆平方根相位电路
+
+生成器把 22 位输入按前导零个数归一化，保留指数的奇偶性。从 QROM 一次取出截距和整段下降量，用余下的输入位作线性插值，施加相位后逆向恢复输入并清理工作位。默认参数使用每种指数奇偶性 1,024 段、27 位系数和 39 位最终相位。为了抵消凸函数割线在区间内部的系统偏高，每段直线下移该段中点误差的一半。系数独立计算。[生成器](algorithms/invsqrt_circuit.py)
+
+| 方案 | 查表项数 | 系数位 | 相位位上限 | Q | Toffoli 类门 | 全域数值超限数 | 单题成本估算 ↓ |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 普通割线 | 4,096 | 30 | 64 | 127 | 6,551 | 0 | 872,599 |
+| 普通割线，表减半 | 2,048 | 30 | 64 | 130 | 4,666 | 370,227 | — |
+| 中点校正 | 2,048 | 30 | 64 | 128 | 4,598 | 0 | 631,524 |
+| 中点校正 | 2,048 | 28 | 39 | 122 | 4,500 | 0 | 579,758 |
+| 中点校正，单项查表 | 2,048 | 27 | 39 | 119 | 4,448 | 0 | 559,595 |
+| 中点校正 | 2,048 | 26 | 39 | 116 | 4,402 | 51 | — |
+| **中点校正，成对查表** | **2,048** | **27** | **39** | **123** | **3,555** | **0** | **468,566** |
+
+成对查表版把相邻两个条目存为一个宽字，一次遍历 1,024 个地址。用地址最低位选择所需条目，再凭原地址和测量结果清理另外一个条目，供后续乘法复用这些工作位。与相同系数的单项查表版相比，增加 4 个逻辑比特，减少 893 个 Toffoli 类门，单题成本估算再降 16.27%。两版对每个输入给出的数学相位相同。
+
+各行均用整数不等式检查全部 3,133,452 个输入，并在实际保存的二进制上做固定种子的边界与随机抽查。推荐版另做了两组电路回放。第一组让每个合法输入经过 Kickmix 一次，共 3,133,452 次。第二组对 4,342 个输入各跑四次，共 17,368 次。两组均逐次检查输入寄存器、全部辅助位和模一周的输出相位，差错数均为零。最大相对误差约 5.18052 × 10⁻⁸，出现在 x = 2,170,879，容限为 2⁻²⁴ ≈ 5.96046 × 10⁻⁸。[逐版本实测记录](experiments/linear-phase-audit.json)
+
+表中成本按论文的旋转合成公式估算，使用编译文件的静态门数与全输入模型的最小剩余相位误差余量。推荐版有 36 个细角度旋转和 1 个 T 类旋转。逆平方根单题成本越小越好。官方验证要对每个输入执行 64 次带随机测量的模拟。运行官方验证器及获取三题 Kaggle 总分仍需官方数据。[比赛论文 §III.1.3](https://arxiv.org/html/2610.23832v2)
+
+在本赛题目录安装依赖后，可生成和检查与实验记录同一 SHA-256 的二进制。默认运行整数全域检查和重复抽查，加上最后一行可重放全部输入各一次。
+
+~~~bash
+python -m pip install -r requirements.txt
+python algorithms/invsqrt_circuit.py --output submissions/invsqrt.kmb
+python experiments/audit_invsqrt.py submissions/invsqrt.kmb --output /tmp/invsqrt-sample.json
+python experiments/audit_invsqrt.py submissions/invsqrt.kmb --all-inputs --repetitions 1 --output /tmp/invsqrt-full.json
+~~~
+
+复现对照组时，生成器和检查器使用相同选项。前六行的生成器均加 `--single-lookup`，检查器只需要匹配数值参数。普通割线加 `--secant`，地址精度用 `--bits 10` 或 `--bits 11`，系数和相位精度分别用 `--fraction-bits` 和 `--phase-bits`。超出精度的对照组会写入失败数并返回非零状态。[Kickmix 公开实现](https://github.com/quantumlib/Qualtran/tree/main/kickmix)
+
 ## 推荐实现路线 / Engineering roadmap
 
 1. **官方基准复现：** 研究 Qualtran/kickmix 的文件格式、验证器和基础电路生成方法；先生成三项都能通过校验的官方等价 baseline。
@@ -123,4 +154,4 @@ python competitions/google-quantum-circuit-compilation/algorithms/verify_officia
 2. T. Khattar et al., *Leveraging verifiable structure in quantum circuits to find more efficient compilations with agentic AI*, [arXiv:2610.23832](https://arxiv.org/abs/2610.23832)
 3. [Google Qualtran 开源仓库](https://github.com/quantumlib/Qualtran) — **引用与未来依赖候选，并非此仓库已拷贝的代码**。
 
-本仓库的 `cost_model.py` 是根据公开评分公式独立编写的；目前**没有复用第三方量子编译器实现**。未来如引用外部库、论文算法、Notebook 或适配他人代码，应注明作者、链接、许可证、变更说明与具体使用位置。
+本仓库的 `cost_model.py` 是根据公开评分公式独立编写的；相位电路生成器调用开源 Kickmix 1.0.0 的寄存器、QROM、算术、旋转和清理接口。未来如引用外部库、论文算法、Notebook 或适配他人代码，应注明作者、链接、许可证、变更说明与具体使用位置。
