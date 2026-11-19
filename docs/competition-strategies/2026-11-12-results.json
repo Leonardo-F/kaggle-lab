@@ -1,32 +1,4 @@
 {
-  "grid": {
-    "valid": true,
-    "metric_version": 20,
-    "metric_sha256": "d269f24b02d5f33fbd2149f76b83414b3b446be4d02776560e04631af3365ccf",
-    "csv_sha256": "1da76d105167c9991dcd41d99e9b7d17a78e3e58e59fd84a9a7b912b7f0b4980",
-    "pandas_version": "2.2.3",
-    "mpmath_version": "1.4.1",
-    "rows": 500500,
-    "puzzles": 1000,
-    "accepted_literal": 1000,
-    "accepted_transport": 1000,
-    "score_literal": 28.937669916550586,
-    "score_transport": 28.937669916550586
-  },
-  "constructed": {
-    "valid": true,
-    "metric_version": 20,
-    "metric_sha256": "d269f24b02d5f33fbd2149f76b83414b3b446be4d02776560e04631af3365ccf",
-    "csv_sha256": "4d026dd8aa53b64b0f8ab761297251e7c55f8b232cfbadf40aab7a7513e1e893",
-    "pandas_version": "2.2.3",
-    "mpmath_version": "1.4.1",
-    "rows": 500500,
-    "puzzles": 1000,
-    "accepted_literal": 1000,
-    "accepted_transport": 1000,
-    "score_literal": 26.99315523902542,
-    "score_transport": 26.99315523902542
-  },
   "invsqrt": {
     "python": "3.12.14",
     "numpy": "2.3.5",

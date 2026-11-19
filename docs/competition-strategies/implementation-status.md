@@ -1,47 +1,6 @@
-# 从思路到实现：2026-11-12 进度
+# 量子电路编译实现记录（2026-11-12）
 
-本页记录沿两篇解题笔记实际完成的工作。[机器可读结果摘要](2026-11-12-results.json) 包含最终 CSV、官方验证器和数值代码的 SHA-256。完整逐题日志和大 CSV 可用下列命令重建，不放入 git。
-
-## 正方形装箱
-
-| 产物 | 本次证据 |
-| --- | --- |
-| 官方检查接入 | 固定 Kaggle metric v20，原代码不修改；保留 Apache 2.0 许可和 NOTICE |
-| 网格完整 CSV | 500,500 行，1000/1000 实例通过原始十进制与 pandas 数值传输两条检查 |
-| 旋转构造与删块迁移 | 独立实现旋转核心、四角方阵/阶梯；逐题与网格取优 |
-| 构造完整 CSV | 两条检查均 1000/1000 通过，162 个实例改善 |
-| 本地官方总分 | 网格 28.937669916550586 → 构造组合 **26.99315523902542**，减少约 1.9445146775 |
-| 离线 HTML | 默认仍为 n=1000 网格；新增当前实例和全部实例的可选构造按钮；完整导出继续覆盖所有 n |
-
-离线 HTML 的功能只经过无头 DOM 冒烟测试（完整 CSV 下载、导入/导出、忙碌锁、旋转、非法导出、小数点保留）；真实浏览器的视觉检查与 `file://` 本地下载未复验。
-
-这是固定版本官方 metric 的**本地验证结果**，没有向 Kaggle 上传参赛作品，也没有得到平台榜单成绩。
-
-几何构造分为两族：
-
-1. 四角各 `k×k` 个方块，中间一个 45° 方块：容量 `4k²+1`，理想边长 `2k+1/√2`。
-2. 中心旋转 `b×b` 核心，四角各 `m(m-1)/2` 个阶梯方块：容量 `b²+2m(m-1)`，理想边长 `m+b/√2`。条件 `2(m-2)²≤b²≤2m²` 保证阶梯和核心在相应区域内。
-
-第二族左下角阶梯的每个方块顶点满足 `x+y≤m`，恰在中心菱形外；另三角由反射得到。删除任意方块保持几何有效，按离中心距离排序得到不同规模的前缀，再逐题比较。中心坐标稍作外扩以留出十进制传输余量，**最终有效性仍由实际导出文件的官方检查决定**。
-
-实现没有下载他人的坐标库。数学构造受经典旋转核心思想启发，来源见原解题笔记；不把这些构造称为新纪录或全局最优解。
-
-在仓库根目录复现：
-
-```bash
-python -m venv .venv
-# macOS / Linux
-source .venv/bin/activate
-python -m pip install -r competitions/squares-in-squares/requirements.txt
-python competitions/squares-in-squares/algorithms/constructions.py --output competitions/squares-in-squares/submissions/constructed.csv --manifest competitions/squares-in-squares/experiments/results/constructions.json
-python competitions/squares-in-squares/algorithms/certify.py --input competitions/squares-in-squares/submissions/constructed.csv --complete --workers 4 --report competitions/squares-in-squares/experiments/results/certification.json
-```
-
-Windows 可用 `.venv\Scripts\python.exe` 代替 `python`。HTML 直接打开即可使用，不需要这些 Python 依赖。大文件认证耗时数分钟；退出码 0 且 `valid=true` 才表示两条本地检查均通过，单看总分不能判断有效。
-
-对应路线：P0、P1、P2 已完成；P3 的删块迁移已实现，局部压缩/搜索预算比较仍待继续。接触图精修、结构拼接和 GPU 搜索仍是后续工作。
-
-## 量子电路编译
+[早期数值实验数据](2026-11-12-results.json)记录了模型参数、结果和文件 SHA-256。当前进展见[量子项目 README](../../competitions/google-quantum-circuit-compilation/README.md)。
 
 首先补上此前未保存代码的数值实验。新模型明确采用：`[1,4)` 等距分段、两端点割线作为线性初值、一次 Newton 迭代、每个乘法 nearest-even 舍入、单独保留尺度指数。它不沿用旧笔记中来源代码缺失的数值表。
 

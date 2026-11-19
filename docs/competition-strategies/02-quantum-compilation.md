@@ -1,6 +1,6 @@
 # Google 量子电路编译：三个子题的数学与资源优化
 
-整理：2026-11-11（UTC）｜[阅读指南](README.md)｜[正方形装箱笔记](01-square-packing.md)｜[本项目 README](../../competitions/google-quantum-circuit-compilation/README.md)
+整理：2026-11-11（UTC）｜[阅读指南](README.md)｜[本项目 README](../../competitions/google-quantum-circuit-compilation/README.md)
 
 **建议主线：先复现三项官方参考提交，再从 `invsqrt` 建立完整优化流程；随后重点研究 DQI 的空间和解码结构，化学题先优化加载电路，再做联合设计。**
 
