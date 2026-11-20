@@ -2,11 +2,11 @@
 
 把 `n=1…1000` 个可旋转的单位正方形放进尽可能小的轴对齐正方形，两两不得重叠。每题得分为 `L / sqrt(n) - 1`，其中 `L` 是外包边长。1,000 题得分求和，越低越好。[Kaggle 赛题](https://www.kaggle.com/competitions/squares-in-squares)
 
-目前最佳布局的**本地官方 v20 总分为 23.040802440**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core.csv) · [逐题认证报告](submissions/rectangular_core-certification.json) · [各版方案与得分](../../PROGRESS.md)
+目前最佳布局的**本地官方 v20 总分为 23.040802440**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core.csv) · [逐题认证报告](submissions/rectangular_core-certification.json) · [各版方案与得分](../../docs/squares-in-squares.md)
 
 ## 查看和导出布局
 
-下载并打开 [离线模拟器 HTML](simulator/SquarePackingStudio-standalone.html)，导入上面的 CSV 查看最佳布局。模拟器默认使用整数网格，内置旋转构造和小规模局部搜索。完整导出始终覆盖全部 1,000 题，含 500,500 行数据，字段为 `id,n,square_id,x,y,angle`，坐标取方块中心，角度用弧度。模拟器会拦截不确定的旋转接触。提交前用官方评分器验证最终 CSV。
+下载并打开 [离线模拟器 HTML](simulator/SquarePackingStudio-standalone.html)，导入上面的 CSV 查看最佳布局。模拟器默认使用整数网格，内置旋转构造和小规模局部搜索。完整导出始终覆盖全部 1,000 题，含 500,500 行数据，字段为 `id,n,square_id,x,y,angle`，坐标取方块中心，角度用弧度。模拟器会拦截不确定的旋转接触。操作保存在页面内存中，关闭前请导出。提交前用官方评分器验证最终 CSV。
 
 ## 重建和验证最佳解
 
@@ -18,11 +18,11 @@ python -m pip install -r requirements.txt
 python algorithms/certify.py --input /tmp/rectangular_core.csv --complete --workers 4 --report /tmp/core_certification.json
 ```
 
-生成器逐题比较网格、旋转方形核心、偏置与变角度斜带、旋转矩形核心。矩形核心由 `p × q` 个方块整体旋转 45°，四角分别填入轴对齐的阶梯，外侧可补整行或整列。枚举器消去核心中心坐标，求出固定构造的最小外包边长。删去外围方块可把布局用于较小的题，沿右边和上边补成 L 形可把布局迁移到较大的题。
-
-`core_search.py --mode baseline` 可重建 23.445523069 版，`--mode square` 可重建只允许方形核心的对照。需要重新枚举参数时，编译运行 `algorithms/core_sweep.cpp` 和 `algorithms/tilt_sweep.cpp`，将输出分别通过 `--core-witnesses` 和 `--tilt-witnesses` 传给生成器。
+认证器用原始十进制文本和 pandas 数值读写两条路径验证完整 CSV。两条路径都通过时，报告的 `valid` 为 `true`。需要重新枚举参数时，编译运行 `algorithms/core_sweep.cpp` 和 `algorithms/tilt_sweep.cpp`，将输出分别通过 `--core-witnesses` 和 `--tilt-witnesses` 传给生成器。
 
 ## 开发与来源
+
+整数网格可以用 `python algorithms/packing.py generate --output submissions/submission.csv` 生成，再用 `python algorithms/packing.py validate --input submissions/submission.csv --complete` 检查。开发测试使用上面的依赖。
 
 ```bash
 python -m unittest discover -s experiments -v
