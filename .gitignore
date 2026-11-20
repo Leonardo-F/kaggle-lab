@@ -10,13 +10,11 @@ __pycache__/
 # Local Kaggle credentials
 kaggle.json
 # Generated large submissions and experimental intermediate results
-**/submissions/*.csv
-**/submissions/*.zip
-**/submissions/*.npz
-**/submissions/*.kmx
-**/submissions/*.kmb
-**/submissions/*/angle_k_*.kmb
-**/submissions/*/angle_k_*.kmx
+**/submissions/**/*.csv
+**/submissions/**/*.zip
+**/submissions/**/*.npz
+**/submissions/**/*.kmx
+**/submissions/**/*.kmb
 **/experiments/results/
 # Local root CSV
 /submission.csv
