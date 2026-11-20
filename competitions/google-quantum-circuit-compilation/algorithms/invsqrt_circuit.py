@@ -14,13 +14,30 @@ DEFAULT_FRACTION = 27
 DEFAULT_PHASE = 39
 
 
+def fit_integer_line(intercept, drop, start, step, parity, scale):
+    """Minimize the worst relative error over the entire quantized segment."""
+    def error(pair):
+        a, d = pair
+        # The derivative of (a - d*t) * sqrt(start + step*t) vanishes here.
+        stationary = (a*step - 2*d*start) / (3*d*step)
+        points = (0, min(1, max(0, stationary)), 1)
+        return max(abs((a - d*t)*((start + step*t)*(1 << parity)).sqrt()/scale - 1)
+                   for t in points)
+
+    # Search a small neighborhood of the independently rounded coefficients.
+    return min(((intercept+da, drop+dd) for da in range(-2, 3) for dd in range(-2, 3)), key=error)
+
+
 @lru_cache
-def coefficients(bits: int, centered: bool, fraction_bits: int) -> tuple[list[int], list[int]]:
+def coefficients(bits: int, centered: bool, fraction_bits: int, integer_fit: bool = False) -> tuple[list[int], list[int]]:
     if bits not in (10, 11):
         raise ValueError('Supported address widths are 10 and 11')
     if not 26 <= fraction_bits <= 30:
         raise ValueError('Coefficient precision must be in 26..30')
+    if integer_fit and not centered:
+        raise ValueError('Integer fitting requires midpoint-corrected coefficients')
     count = 1 << bits
+    scale = 1 << fraction_bits
     intercept, drop = [], []
     with localcontext() as ctx:
         ctx.prec = 70
@@ -34,16 +51,21 @@ def coefficients(bits: int, centered: bool, fraction_bits: int) -> tuple[list[in
                 # Convex f lies below its secant. Split the midpoint gap between
                 # endpoints and interior before independently quantizing A and D.
                 shift = ((a + b)/2 - value((start + end)/2))/2 if centered else 0
-                intercept.append(round((a-shift) * (1 << fraction_bits)))
-                drop.append(round((a-b) * (1 << fraction_bits)))
+                rounded_a, rounded_d = round((a-shift)*scale), round((a-b)*scale)
+                if integer_fit:
+                    rounded_a, rounded_d = fit_integer_line(
+                        rounded_a, rounded_d, start, end-start, parity, scale)
+                intercept.append(rounded_a)
+                drop.append(rounded_d)
     return intercept, drop
 
 
-def phase_fraction(x: int, bits: int, centered: bool, fraction_bits: int, phase_bits: int) -> tuple[int, int]:
+def phase_fraction(x: int, bits: int, centered: bool, fraction_bits: int, phase_bits: int,
+                   integer_fit: bool = False) -> tuple[int, int]:
     """Unwrapped phase as an exact integer divided by 2**exponent."""
     if not 1 <= x <= MAX_X:
         raise ValueError('x outside benchmark domain')
-    a, d = coefficients(bits, centered, fraction_bits)
+    a, d = coefficients(bits, centered, fraction_bits, integer_fit)
     zeros = WIDTH - x.bit_length()
     rbits = TOP-bits
     normalized = x << zeros
@@ -55,12 +77,12 @@ def phase_fraction(x: int, bits: int, centered: bool, fraction_bits: int, phase_
 
 
 def build(bits: int = 10, centered: bool = True, fraction_bits: int = DEFAULT_FRACTION,
-          phase_bits: int = DEFAULT_PHASE, paired_lookup: bool = True):
+          phase_bits: int = DEFAULT_PHASE, paired_lookup: bool = True, integer_fit: bool = False):
     import kickmix as km
 
     if not 32 <= phase_bits <= 64:
         raise ValueError('Phase precision must be in 32..64')
-    intercept, drop = coefficients(bits, centered, fraction_bits)
+    intercept, drop = coefficients(bits, centered, fraction_bits, integer_fit)
     rbits = TOP-bits
     builder = km.CircuitBuilder()
     x = builder.create_quantum_register(WIDTH, 'x')
@@ -134,13 +156,14 @@ def main():
     parser.add_argument('--fraction-bits', type=int, choices=range(26,31), default=DEFAULT_FRACTION)
     parser.add_argument('--phase-bits', type=int, choices=range(32,65), default=DEFAULT_PHASE)
     parser.add_argument('--single-lookup', action='store_true', help='use the one-word QROM baseline')
+    parser.add_argument('--integer-fit', action='store_true', help='jointly fit quantized slope and intercept')
     parser.add_argument('--secant', action='store_true', help='omit the midpoint correction')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.output.suffix != '.kmb':
         parser.error('Specify a .kmb output file')
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    circuit = build(args.bits, not args.secant, args.fraction_bits, args.phase_bits, not args.single_lookup)
+    circuit = build(args.bits, not args.secant, args.fraction_bits, args.phase_bits, not args.single_lookup, args.integer_fit)
     circuit.to_file(args.output, format='kmb')
     print(f'{circuit.num_qubits} qubits; {circuit.operation_statistics().num_toffoli_like} Toffoli-like gates')
 
