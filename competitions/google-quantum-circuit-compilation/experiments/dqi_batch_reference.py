@@ -157,10 +157,10 @@ def polynomial_division(dividend, divisor):
     return trim(quotient), remainder
 
 
-def precomputed_symbols(locator, evaluator):
+def symbol_polynomial(locator, evaluator):
     """Solve locator'(z)*result(z) = evaluator(z) mod locator(z)."""
     if locator == [1]:
-        return {}
+        return []
     derivative = trim([locator[j] if j % 2 else 0 for j in range(1,len(locator))])
     a,b = locator,derivative
     u,v = [],[1]
@@ -173,6 +173,11 @@ def precomputed_symbols(locator, evaluator):
     scale = inverse(a[0])
     scaled_inverse = [mul(scale,coefficient) for coefficient in u]
     _, symbol = polynomial_division(polynomial_product(evaluator,scaled_inverse),locator)
+    return symbol
+
+
+def precomputed_symbols(locator, evaluator):
+    symbol = symbol_polynomial(locator, evaluator)
     # The fixed Chien scan needs only fixed-scalar field multiplications and
     # additions to evaluate these two polynomials. There is no division here.
     errors = {}

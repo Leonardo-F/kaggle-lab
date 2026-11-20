@@ -1,0 +1,82 @@
+{
+  "radius_two": {
+    "field": "GF(16), modulus 0x13",
+    "radius": 2,
+    "weight_counts": [
+      1,
+      225,
+      23625
+    ],
+    "masks_per_pattern": "60 one-hot + zero + seeded random",
+    "seed": 20261120,
+    "kickmix": "1.0.0",
+    "official_verifier_run": false,
+    "runs": {
+      "pointwise": {
+        "sha256": "8c74db048e841143fb85f9ab9d9112e476101ef5d1b6117d6eb1a9f059fac3de",
+        "qubits": 46,
+        "toffoli_like": 289,
+        "qubits_squared_times_toffoli": 611524,
+        "shots": 1478762,
+        "phase_errors": 0,
+        "syndrome_errors": 0,
+        "scratch_errors": 0,
+        "mask_errors": 0
+      },
+      "precomputed": {
+        "sha256": "f9f2c6e8258a0f2d707d1146633eae9124fce6cfc1c73b104f9ed1b7936c545e",
+        "qubits": 50,
+        "toffoli_like": 172,
+        "qubits_squared_times_toffoli": 430000,
+        "shots": 1478762,
+        "phase_errors": 0,
+        "syndrome_errors": 0,
+        "scratch_errors": 0,
+        "mask_errors": 0
+      }
+    }
+  },
+  "full_field_scan": {
+    "sha256": "f3fe38643b27abca9be24d028bda0e13ef5eed348ddef4b8a349192a34b545ba",
+    "kickmix": "1.0.0",
+    "field": "GF(4096), modulus 0x1053",
+    "radius": 35,
+    "positions": 4095,
+    "scope": "Chien phase scan only, with classically precomputed locator and symbol inputs",
+    "weights": [
+      0,
+      1,
+      2,
+      3,
+      8,
+      16,
+      25,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      35,
+      35,
+      35
+    ],
+    "seed": 20261120,
+    "lanes": 224,
+    "position_lane_checks": 917280,
+    "coefficient_checkpoints": [
+      1,
+      97,
+      2047,
+      4095
+    ],
+    "qubits": 863,
+    "toffoli_like_per_step": 11,
+    "toffoli_like_full_scan": 45045,
+    "phase_errors": 0,
+    "scratch_errors": 0,
+    "mask_errors": 0,
+    "coefficient_errors": 0,
+    "official_verifier_run": false
+  }
+}
