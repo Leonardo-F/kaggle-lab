@@ -2,7 +2,7 @@
 
 [项目进展](../PROGRESS.md) · [赛题 README](../competitions/squares-in-squares/README.md) · [早期策略笔记](competition-strategies/01-square-packing.md)
 
-正方形装箱目前的最好总分是 **23.040802440**。相对最初的整数网格 **28.937669917**，下降 **5.896867477**（约 **20.38%**）。最终 CSV 包含 500,500 行，模拟器重算了全部 1,000 题，官方 v20 评分器也在原始十进制和 pandas 数值读写两条本地路径上接受了全部布局。[最新版提交 CSV](../competitions/squares-in-squares/submissions/rectangular_core.csv) · [逐题认证报告](../competitions/squares-in-squares/submissions/rectangular_core-certification.json)
+正方形装箱目前的最好总分是 **22.994307851**。相对最初的整数网格 **28.937669917**，下降 **5.943362066**（约 **20.54%**）。最终 CSV 包含 500,500 行，模拟器重算了全部 1,000 题，官方 v20 评分器也在原始十进制和 pandas 数值读写两条本地路径上接受了全部布局。[最新版提交 CSV](../competitions/squares-in-squares/submissions/rectangular_core.csv) · [逐题认证报告](../competitions/squares-in-squares/submissions/rectangular_core-certification.json)
 
 ## 方案与历次总分
 
@@ -18,7 +18,8 @@
 | 11-19 · 偏置对角带 + L 形外扩 | 枚举 45° 斜排带、偏置和两角阶梯，用右边与上边的方块把有效布局迁移到更大的题。较上版改善 352 题。 | 23.634514815 | 23.634514815 |
 | 11-19 · 变角度斜带 + L 形外扩 | 扫描不同倾角，允许各行沿斜带方向平移，并逐题保留更紧的布局。较上版改善 74 题。 | 23.592926108 | 23.592926108 |
 | 11-19 · 再加偏心方形核心 | 把旋转方阵移到内矩形，四角填阶梯，补一列形成方形容器。与变角度斜带取优，较 23.634515 版累计改善 144 题。 | 23.445523069 | 23.445523069 |
-| 11-19 · 矩形核心 + 独立四角阶梯 | 将核心推广为旋转的长方形，四角阶梯深度分别枚举。消去中心坐标求出固定构造的最小边长，再尝试删块和外扩。较上版改善 231 题。 | **23.040802440** | **23.040802440** |
+| 11-19 · 矩形核心 + 独立四角阶梯 | 将核心推广为旋转的长方形，四角阶梯深度分别枚举。消去中心坐标求出固定构造的最小边长，再尝试删块和外扩。较上版改善 231 题。 | 23.040802440 | 23.040802440 |
+| 11-20 · 变长 45° 斜排 | 四角保留阶梯，每行斜排按剩余宽度独立取长并居中。较上版改善 54 题，其中 271 块首次小于边长 17。 | **22.994307851** | **22.994307851** |
 
 模拟器 v0.3 自带网格和旋转构造。后续版本由 Python/C++ 生成，模拟器可以导入 CSV，查看每道题的摆放和本地分数。「模拟器重跑」用同一套几何接口复测了这些 CSV。
 
@@ -41,7 +42,8 @@
 | 偏置对角带与 L 形外扩 | `algorithms/strip_search.py`，默认 `--method combined`。用 `--method border` 或 `--method diagonal` 重现单项对照。也可查看[该版完整 CSV](https://github.com/Leonardo-F/kaggle-lab/blob/2829780ec757ee92970173512dcadb26e0eff887/competitions/squares-in-squares/submissions/strip_search.csv)。 |
 | 变角度斜带 | `algorithms/tilt_search.py` 的清单字段 `score_strip_with_border` 记录该阶段的独立得分。 |
 | 偏心方形核心及方形对照 | `algorithms/core_search.py --mode baseline` 与 `--mode square` |
-| 矩形核心 | `algorithms/core_search.py`，默认 `--mode rectangular` |
+| 矩形核心 | `algorithms/core_search.py --mode rectangular` |
+| 四角阶梯与变长斜排 | `algorithms/core_search.py`，默认 `--mode clipped`。用 `clipped_sweep.cpp` 重新搜索各行的相位和四角深度。 |
 
 各生成器的输入、输出与参数见 `--help`。也可查看[早期网格与旋转构造认证](competition-strategies/2026-11-12-results.json)和[斜带与外扩认证](competition-strategies/strip-search-results.json)。
 

@@ -2,7 +2,7 @@
 
 把 `n=1…1000` 个可旋转的单位正方形放进尽可能小的轴对齐正方形，两两不得重叠。每题得分为 `L / sqrt(n) - 1`，其中 `L` 是外包边长。1,000 题得分求和，越低越好。[Kaggle 赛题](https://www.kaggle.com/competitions/squares-in-squares)
 
-目前最佳布局的**本地官方 v20 总分为 23.040802440**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core.csv) · [逐题认证报告](submissions/rectangular_core-certification.json) · [各版方案与得分](../../docs/squares-in-squares.md)
+目前最佳布局的**本地官方 v20 总分为 22.994307851**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core.csv) · [逐题认证报告](submissions/rectangular_core-certification.json) · [各版方案与得分](../../docs/squares-in-squares.md)
 
 ## 查看和导出布局
 
@@ -10,7 +10,7 @@
 
 ## 重建和验证最佳解
 
-在本目录运行。生成器使用 Python 标准库和仓库内的两份参数表。安装依赖仅用于官方认证。
+在本目录运行。生成器使用 Python 标准库和仓库内的参数表。安装依赖仅用于官方认证。
 
 ```bash
 python algorithms/core_search.py --output /tmp/rectangular_core.csv --manifest /tmp/core_manifest.json
@@ -18,7 +18,7 @@ python -m pip install -r requirements.txt
 python algorithms/certify.py --input /tmp/rectangular_core.csv --complete --workers 4 --report /tmp/core_certification.json
 ```
 
-认证器用原始十进制文本和 pandas 数值读写两条路径验证完整 CSV。两条路径都通过时，报告的 `valid` 为 `true`。需要重新枚举参数时，编译运行 `algorithms/core_sweep.cpp` 和 `algorithms/tilt_sweep.cpp`，将输出分别通过 `--core-witnesses` 和 `--tilt-witnesses` 传给生成器。
+认证器用原始十进制文本和 pandas 数值读写两条路径验证完整 CSV。两条路径都通过时，报告的 `valid` 为 `true`。需要重新枚举参数时，用 C++17 编译运行 `algorithms/` 下的 `core_sweep.cpp`、`tilt_sweep.cpp` 或 `clipped_sweep.cpp`，将标准输出保存为参数表，再用相应的 `--core-witnesses`、`--tilt-witnesses` 或 `--clipped-witnesses` 指定该表。
 
 ## 开发与来源
 
