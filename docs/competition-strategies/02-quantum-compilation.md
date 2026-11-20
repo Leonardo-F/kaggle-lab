@@ -1,10 +1,10 @@
 # Google 量子电路编译：三个子题的数学与资源优化
 
-整理：2026-11-11（UTC）｜[阅读指南](README.md)｜[本项目 README](../../competitions/google-quantum-circuit-compilation/README.md)
+2026-11-11 的策略笔记。已有原型和验证范围见[量子电路编译进展](../google-quantum-circuit-compilation.md)。
 
 **建议主线：先复现三项官方参考提交，再从 `invsqrt` 建立完整优化流程；随后重点研究 DQI 的空间和解码结构，化学题先优化加载电路，再做联合设计。**
 
-本文区分三类内容：官方任务和论文已经明确的要求、外部作者公开的方法、我们拟开展的实验。当前仓库只有成本计算器和笔记，尚无经过官方验证的参赛电路。以下路线不是已实现结果。
+本文区分三类内容：官方任务和论文已经明确的要求、外部作者公开的方法、我们拟开展的实验。当时仓库已有成本计算器和笔记。各路线的实施情况见页首链接。
 
 ## 1. 比赛到底在优化什么
 
@@ -63,13 +63,13 @@ $$
 
 资源数字必须来自官方口径。例如 `invsqrt` 的细角度旋转还会产生解析估算的合成成本；只数文件中的 CCX 和显式 T 指令会漏项。量子比特数也应以验证器报告为准，不能拿自定义的活跃寄存器估计替代。
 
-## 3. 仓库现状与第一个必须补上的环节
+## 3. 官方基准与早期准备
 
-当前已有：
+写作时已有：
 
 - [`cost_model.py`](../../competitions/google-quantum-circuit-compilation/algorithms/cost_model.py)：成本公式小工具。
 - [`test_cost_model.py`](../../competitions/google-quantum-circuit-compilation/experiments/test_cost_model.py)：公式的基础测试。
-- [此前背景笔记](../../competitions/google-quantum-circuit-compilation/Google量子电路编译竞赛-背景与解题思路.md)：初步方向和待复现的数值试验。
+- [此前背景笔记](https://github.com/Leonardo-F/kaggle-lab/blob/2829780ec757ee92970173512dcadb26e0eff887/competitions/google-quantum-circuit-compilation/Google量子电路编译竞赛-背景与解题思路.md)：初步方向和待复现的数值试验。
 
 **公式计算器没有验证电路功能、寄存器契约、相位、失败率或化学分解误差。** 例如它能算出某组 `E_gap、Λ` 的正实数成本，并不意味着这组参数满足化学题的严格下界。
 
