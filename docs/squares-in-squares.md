@@ -81,21 +81,8 @@ JS
 
 从已生成的 28 或 29 块布局开始，每次重新插入一个小邻域的方块，允许方块独立转动。优化目标是分离轴检测得到的重叠量与越界量的平方和。对目标边长 5.9899 使用了 4 个随机种子，每个 128 次重启，最低目标函数值约为 7.29 × 10⁻⁶，仍存在重叠或越界，最终 CSV 保留边长 6 的格点布局。公开目录给出的已知可行边长约为 5.933833，适合作为后续多倾角拓扑搜索的参照。[29 块公开记录](https://squaremath.org/cases/29.html)
 
-在赛题目录将最佳 CSV 生成到 `/tmp/rectangular_core.csv` 后复现。
-
-```bash
-python -m pip install numpy==2.3.5 scipy==1.17.0
-for seed in 29 3029 4129 81129; do
-  python algorithms/refine_small.py /tmp/rectangular_core.csv "/tmp/n29-${seed}.json" \
-    --seed "$seed" --target 5.9899 --attempts 128
-done
-```
+[历史实验脚本](https://github.com/Leonardo-F/kaggle-lab/blob/9f975fecb9481afef8fa0976c76232b22bb22a9b/competitions/squares-in-squares/algorithms/refine_small.py)可用种子 29、3029、4129、81129 各重跑 128 次。
 
 ### 矩形内的 45° 斜带与整数边框
 
-固定外边长后，枚举一侧整数宽的网格边框、斜带行数和两个角的余量，在长方形内部按行计算容量。令整数网格边长为 k，扫描 k = 2…31。394 个方块数有容量超过 k² 的候选。按既有中心外扩系数 1.00000004 和 10⁻⁶ 的改进门槛逐题比较，新增改进 **0 题**，继续使用上版 CSV，总分 **23.040802440**。在装箱目录运行以下命令可重新生成候选表，各列依次为题号、理想边长、容量、边框宽、斜带行数、下侧余量。[枚举器](../competitions/squares-in-squares/algorithms/framed_strip_sweep.cpp)
-
-~~~bash
-c++ -O3 -std=c++17 algorithms/framed_strip_sweep.cpp -o /tmp/framed-strip
-/tmp/framed-strip > /tmp/framed-strip.tsv
-~~~
+固定外边长后，枚举一侧整数宽的网格边框、斜带行数和两个角的余量，在长方形内部按行计算容量。令整数网格边长为 k，扫描 k = 2…31。394 个方块数有容量超过 k² 的候选。按既有中心外扩系数 1.00000004 和 10⁻⁶ 的改进门槛逐题比较，新增改进 **0 题**，继续使用上版 CSV，总分 **23.040802440**。[历史枚举器](https://github.com/Leonardo-F/kaggle-lab/blob/9f975fecb9481afef8fa0976c76232b22bb22a9b/competitions/squares-in-squares/algorithms/framed_strip_sweep.cpp)保留了这次扫描的复现入口。
