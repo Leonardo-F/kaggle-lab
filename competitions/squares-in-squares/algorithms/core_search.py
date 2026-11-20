@@ -1,4 +1,4 @@
-"""Rebuild the certified portfolio and add the best 45-degree core witnesses."""
+"""Rebuild the packing portfolio from rotated cores and variable-length rows."""
 
 import argparse
 from dataclasses import asdict, dataclass
@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 
+from clipped_rows import add_clipped_rows
 from constructions import CLEARANCE_SCALE, Candidate, build_portfolio, finish_template, write_portfolio
 from packing import Tile, extent
 from strip_search import MIN_SIDE_GAIN, _add_borders, search_portfolio
@@ -106,7 +107,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tilt-witnesses', type=Path, default=directory / 'tilt_witnesses.tsv')
     parser.add_argument('--core-witnesses', type=Path, default=directory / 'core_witnesses.tsv')
-    parser.add_argument('--mode', choices=('baseline', 'square', 'rectangular'), default='rectangular')
+    parser.add_argument('--clipped-witnesses', type=Path, default=directory / 'clipped_witnesses.tsv')
+    parser.add_argument('--mode', choices=('baseline', 'square', 'rectangular', 'clipped'), default='clipped')
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     args = parser.parse_args()
@@ -116,7 +118,9 @@ def main():
     portfolio = baseline
     if args.mode != 'baseline':
         portfolio = add_cores(baseline, read_witnesses(args.core_witnesses),
-                              rectangles=args.mode == 'rectangular')
+                              rectangles=args.mode != 'square')
+    if args.mode == 'clipped':
+        portfolio = add_clipped_rows(portfolio, args.clipped_witnesses)
     report = write_portfolio(args.output, portfolio)
     report['mode'] = args.mode
     report['improved_over_baseline'] = [n for n in portfolio
