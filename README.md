@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | Squares in Squares · 正方形装箱 | [离线模拟器、最佳 CSV 与认证命令](competitions/squares-in-squares/README.md) | [Kaggle](https://www.kaggle.com/competitions/squares-in-squares) |
 | Google 量子电路编译 | [三个子题、提交格式与验证命令](competitions/google-quantum-circuit-compilation/README.md) | [Kaggle](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation) |
+| Santa 2026 · The Elf Calculator | [求解器和验证命令](competitions/santa-2026/README.md) | [Kaggle](https://www.kaggle.com/competitions/santa-2026/overview) |
 
 ## 目录
 
