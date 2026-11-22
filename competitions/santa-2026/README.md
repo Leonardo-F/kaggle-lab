@@ -7,10 +7,14 @@
 使用 Python 3.11+，仅需标准库。接受竞赛规则后从 Kaggle 下载数据，在本目录运行以下命令。
 
 ```bash
-python solve.py /path/to/puzzles.csv --reference /path/to/sample_submission.csv --output /path/to/submission.csv
+python solve.py /path/to/puzzles.csv --reference /path/to/sample_submission.csv --output /path/to/submission.csv --jobs 8
 python solve.py /path/to/puzzles.csv --check /path/to/submission.csv
 ```
 
+`--jobs` 控制并行进程数，默认 1。
+
 `--reference` 可选。给定参考 CSV 时，程序逐题选用更短的合法结果，指令数不会超过参考程序。练习时，将输入替换为 `practice_puzzles.csv` 并省略 `--reference`。
+
+用官方数据独立回放 1,000 道题，当前总指令数为 **285,288**。
 
 [解题思路和验证范围](../../docs/santa-2026.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)
