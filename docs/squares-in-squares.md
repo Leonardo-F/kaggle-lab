@@ -2,7 +2,7 @@
 
 [项目进展](../PROGRESS.md) · [赛题 README](../competitions/squares-in-squares/README.md) · [早期策略笔记](competition-strategies/01-square-packing.md)
 
-正方形装箱目前的自研最好总分是 **22.906698393**。相对最初的整数网格 **28.937669917**，下降 **6.030971524**（约 **20.84%**）。最终 CSV 包含 500,500 行，模拟器重算了全部 1,000 题，官方 v20 评分器也在原始十进制和 pandas 数值读写两条本地路径上接受了全部布局。[最新版提交 CSV](../competitions/squares-in-squares/submissions/rectangular_core-score-22.906698393.csv) · [逐题认证报告](../competitions/squares-in-squares/submissions/rectangular_core-score-22.906698393-certification.json)
+正方形装箱目前的自研最好总分是 **22.849664303**。相对最初的整数网格 **28.937669917**，下降 **6.088005614**（约 **21.04%**）。最终 CSV 包含 500,500 行，模拟器重算了全部 1,000 题，官方 v20 评分器也在原始十进制和 pandas 数值读写两条本地路径上接受了全部布局。[最新版提交 CSV](../competitions/squares-in-squares/submissions/rectangular_core-score-22.849664303.csv) · [逐题认证报告](../competitions/squares-in-squares/submissions/rectangular_core-score-22.849664303-certification.json)
 
 ## 方案与历次总分
 
@@ -24,7 +24,8 @@
 | 11-23 · 双倾斜边带 | 底边和左边分别排入倾斜方块，两端可保留轴对齐方块，右上角补整齐网格。逐题取优后缩短 46 题。 | 22.953899197 | 22.953899197 |
 | 11-23 · 旋转裁切与接触优化 | 从已有布局裁出更紧的子布局，再压紧接触与试加网格边框。逐题取优后缩短 14 题。 | 22.940511772 | 22.940511772 |
 | 11-23 · 行偏移与接缝匹配 | 枚举行容量变化的偏移点，允许两条边带交叠，并移除最少的冲突方块。较上版改善 67 题。 | 22.923849921 | 22.923849921 |
-| 11-23 · 双边带联合搜索 | 联合比较两侧边带的倾角、行偏移与交叠宽度，用二分图匹配处理接缝。较上版改善 59 题。 | **22.906698393** | **22.906698393** |
+| 11-23 · 双边带联合搜索 | 联合比较两侧边带的倾角、行偏移与交叠宽度，用二分图匹配处理接缝。较上版改善 59 题。 | 22.906698393 | 22.906698393 |
+| 11-23 · 接触约束压紧与扰动重启 | 固定角度修复几何接触，小题增加不同布局起点。两路自研输出逐题择优并外扩，改善 102 题。 | **22.849664303** | **22.849664303** |
 
 模拟器默认打开最新版认证 CSV，离线单文件内嵌同一文件。网页与 Node 共用双边带坐标生成、外扩和择优参数。已有 Python 接触优化的结果通过认证 CSV 载入。
 
@@ -56,7 +57,7 @@
 在仓库根目录执行下列命令可用模拟器核心重算当前 CSV 的总分。对照时可更换 CSV 路径。
 
 ```bash
-node - competitions/squares-in-squares/submissions/rectangular_core-score-22.906698393.csv <<'JS'
+node - competitions/squares-in-squares/submissions/rectangular_core-score-22.849664303.csv <<'JS'
 const fs = require('node:fs');
 const core = require('./competitions/squares-in-squares/simulator/packing-core.js');
 const layouts = core.parseCsv(fs.readFileSync(process.argv[2], 'utf8'));
@@ -115,3 +116,40 @@ JS
 ### 双边带联合搜索
 
 在 22.923849921 的自研基线上，为两侧边带保留多组倾角和行偏移，在不同交叠宽度下联合比较配对容量，再通过二分图匹配去除接缝冲突。新生成的构造改善 59 题，总分下降 0.017151528；其余题保留自研基线。生成器、参数和完整复现命令见[赛题 README](../competitions/squares-in-squares/README.md#重建和验证最佳解)。公开方案只用于比较和启发，不直接替换布局。
+
+### 公开布局诊断与独立搜索
+
+以 [GeiserX 公开的 22.1124018632 布局快照](https://github.com/GeiserX/squares-in-squares/tree/f822b34) 为参考，对比原自研基线 22.906698393。统计的是参考方案逐题可缩短的边长除以 `sqrt(n)` 后的合计。这个快照是公开对照，并非理论最优。
+
+| 方块数 | 我们与公开参考的正向分差 |
+| --- | ---: |
+| 1–100 | 0.09805 |
+| 101–324 | 0.16417 |
+| 325–576 | 0.19369 |
+| 577–1000 | 0.33838 |
+
+325 块及以上占约 67% 的可见差距。379 和 419 块的公开布局在靠近容器两条边的位置使用了倾斜排列，余下主要是轴对齐方块。参考 [Sergio Fernández Rubio（GeiserX）的双臂分析](https://github.com/GeiserX/squares-in-squares/blob/main/avenues/family.md)，我们从自己的基线检验了几个不同假设：
+
+- 分别给四条边带分配宽度与小数余量，在中间保留整数网格。用 `experiments/pinwheel_sweep.cpp` 比较不同分区的容量。
+- 把轴对齐方块和斜方块视为两套候选网格，再用二分图最大匹配得到可共存的子集。用 `experiments/lattice_matching.cpp` 枚举角度、相位和网格错位。
+- 用 `experiments/contact_repair.py` 先线性化中心和角度的变化，再固定角度，用精确的面分离约束修复中心位置。用 `experiments/pressure_search.py` 对小题扰动自研布局，允许一簇方块共同旋转，在更小的边长内最小化重叠，再恢复间隙并检查实际边长。
+
+求解器只读取仓库已有的自研 CSV。公开快照用于计算差距、挑选题号和观察结构。四边带扫描覆盖整数边长 2–31，双网格匹配覆盖 3–22，两者在本轮枚举范围内均未改善自研基线。接触约束压紧与扰动重启合并后改善 102 题，总分下降 0.057034090，其中 577–1,000 块的 73 道题贡献 0.025629069。11 块边长从 3.914213679 降至 3.886746085，69 块从 8.856211585 降至 8.827194845，503 块从 22.955000263 降至 22.930437841。
+
+在赛题目录运行以下命令。搜索额外需要 NumPy、SciPy 和支持 C++20 的编译器，本轮使用 NumPy 2.3.5 和 SciPy 1.17.0。输入只需要仓库自研基线，慢速压紧可用 `--min-n` 与 `--max-n` 分段运行。
+
+```bash
+base=submissions/rectangular_core-score-22.906698393.csv
+g++ -std=c++20 -O3 -fPIC -shared experiments/pressure_loss.cpp -o /tmp/packing-pressure.so
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python experiments/contact_repair.py \
+  "$base" /tmp/packing-repair.csv --workers 5 --steps 3
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python experiments/pressure_search.py \
+  "$base" /tmp/packing-pressure.csv --lib /tmp/packing-pressure.so --workers 4 --attempts 120 \
+  --targets 11 17 19 29 37 41 50 54 55 68 69 71 105 107 108 126 129 131 154 155
+OPENBLAS_NUM_THREADS=1 python experiments/choose_search_results.py \
+  "$base" /tmp/packing-combined.csv /tmp/packing-repair.csv /tmp/packing-pressure.csv
+python algorithms/certify.py --input /tmp/packing-combined.csv --complete --workers 8 \
+  --report /tmp/packing-combined-certification.json
+```
+
+大题剩余的改进需要让多个倾斜区域协同工作。[cdeotte 的公开构造](https://www.kaggle.com/code/cdeotte/squares-in-squares-multi-gadget-fault-dp-22-48)提供了一个可测试的方向：沿阶梯形分界组合多个小模块。独立生成模块后，可以用拼接前后的容量与容器边长决定哪些接缝值得交给压紧程序。
