@@ -2,23 +2,24 @@
 
 把 `n=1…1000` 个可旋转的单位正方形放进尽可能小的轴对齐正方形，两两不得重叠。每题得分为 `L / sqrt(n) - 1`，其中 `L` 是外包边长。1,000 题得分求和，越低越好。[Kaggle 赛题](https://www.kaggle.com/competitions/squares-in-squares)
 
-目前最佳布局的**本地官方 v20 总分为 22.979222174**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core.csv) · [逐题认证报告](submissions/rectangular_core-certification.json) · [各版方案与得分](../../docs/squares-in-squares.md)
+目前最佳布局的**本地官方 v20 总分为 22.953899197**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core.csv) · [逐题认证报告](submissions/rectangular_core-certification.json) · [各版方案与得分](../../docs/squares-in-squares.md)
 
 ## 查看和导出布局
 
-下载并打开 [离线模拟器 HTML](simulator/SquarePackingStudio-standalone.html)，导入上面的 CSV 查看最佳布局。模拟器默认使用整数网格，内置旋转构造和小规模局部搜索。完整导出始终覆盖全部 1,000 题，含 500,500 行数据，字段为 `id,n,square_id,x,y,angle`，坐标取方块中心，角度用弧度。模拟器会拦截不确定的旋转接触。操作保存在页面内存中，关闭前请导出。提交前用官方评分器验证最终 CSV。
+下载并打开[离线模拟器 HTML](simulator/SquarePackingStudio-standalone.html)，即可查看或导出已认证的 1,000 题和 500,500 行坐标。默认展示 810 块。点击「当前实例：重算并择优」可用命令行同款双边带构造重建布局。展开「实验性搜索」可现场枚举新的边带参数。未编辑时完整导出与仓库 CSV 逐字节相同。
 
 ## 重建和验证最佳解
 
-在本目录运行。先从参数表重建构造基线，再用 SciPy 的线性规划细调指定题目。官方认证所需的依赖在 `requirements.txt`。
+在本目录运行。先重建构造基线，再用 SciPy 细调指定题目，最后用与模拟器共享的 JavaScript 双边带构造逐题择优。官方认证所需的依赖在 `requirements.txt`。
 
 ```bash
 python algorithms/core_search.py --output /tmp/packing_base.csv --manifest /tmp/core_manifest.json
 python -m pip install scipy==1.17.0
 OPENBLAS_NUM_THREADS=1 python experiments/contact_polish.py \
-  --input /tmp/packing_base.csv --output /tmp/rectangular_core.csv \
+  --input /tmp/packing_base.csv --output /tmp/contact.csv \
   --targets 237 378 418 750 754 810 868 990 \
   --restart 70 88 123 129 146 153 179 181 236
+node algorithms/double_band.cjs /tmp/contact.csv /tmp/rectangular_core.csv
 python -m pip install -r requirements.txt
 python algorithms/certify.py --input /tmp/rectangular_core.csv --complete --workers 4 --report /tmp/core_certification.json
 ```

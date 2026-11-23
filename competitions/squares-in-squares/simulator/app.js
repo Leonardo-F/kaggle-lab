@@ -7,13 +7,21 @@
   const layouts = new Map();
   const {makeGrid,makeConstructive,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
   const tags=new Map();
+  const bandCandidate=PackingBands.portfolio(bandWitnesses);
+  let certified=null, cachedN=0, cachedTiles=null;
+  const defaultName=()=>certified?'已认证最佳布局':'赛题网格基线';
+  const baseTiles=k=>certified?certified.tiles(k):makeGrid(k);
   let viewL=32;
   const scoreFmt = v => Number.isFinite(v) ? v.toFixed(8) : '—';
   let n = 1000, selected = -1, dragging = null, dpr = 1;
   let zoom = 1, cameraX = 1.5, cameraY = 1.5, canvasW = 800, canvasH = 500;
   let layoutTag = '赛题网格基线', running = false;
 
-  function current() { if(!layouts.has(n)) layouts.set(n,makeGrid(n)); return layouts.get(n); }
+  function current() {
+    if(layouts.has(n))return layouts.get(n);
+    if(cachedN!==n){cachedTiles=baseTiles(n);cachedN=n;}
+    return cachedTiles;
+  }
   function colorMessage(text){$('message').textContent=text;}
   function syncMetrics() {
     const e=evaluate(current());
@@ -76,13 +84,13 @@
     if(running)return;
     const value=Math.max(1,Math.min(1000,Math.round(Number(next)||1)));
     const wasSaved=tags.has(value);
-    n=value;selected=-1;layoutTag=tags.get(n)||'赛题网格基线';
+    n=value;selected=-1;layoutTag=tags.get(n)||defaultName();
     $('count').value=value;$('countRange').value=value;
     const m=Math.ceil(Math.sqrt(n));
     $('baselineTitle').textContent=`当前实例 n = ${n} · 网格基线参照 L₀ = ${m}`;
     $('baselineText').textContent=`${m} × ${m} 网格，放入 ${n} 个单位正方形，余 ${m*m-n} 个空位。基线可行，不代表最优解。`;
     document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.count)===n));
-    fit();colorMessage(`n=${n}：${wasSaved?'已恢复此实例的编辑。':'已加载网格基线。'} 导出完整提交始终包含 1–1000。`);
+    fit();colorMessage(`n=${n}：${wasSaved?'已恢复此实例的编辑。':'已加载'+defaultName()+'。'} 导出完整提交始终包含 1–1000。`);
   }
   function hitTest(p) {
     const placed=current();
@@ -90,7 +98,7 @@
       if(Math.abs(dx*c+dy*t)<=.5&&Math.abs(-dx*t+dy*c)<=.5)return i;
     }return -1;
   }
-  function markEdited(){layoutTag='手动编辑';tags.set(n,layoutTag);}
+  function markEdited(){layouts.set(n,current());layoutTag='手动编辑';tags.set(n,layoutTag);}
   function changeAngle(delta){if(selected<0||running)return;const tile=current()[selected];updateTile(tile,{angle:tile.angle+delta});markEdited();draw();}
   function localPoint(evt){const box=canvas.getBoundingClientRect();return {x:evt.clientX-box.left,y:evt.clientY-box.top};}
   canvas.addEventListener('pointerdown',evt=>{
@@ -121,22 +129,28 @@
   function setBusy(value){
     running=value;dragging=null;
     document.querySelectorAll('button,input').forEach(el=>el.disabled=value);
-    if(!value)syncMetrics();
+    if(!value){syncMetrics();$('restoreBest').disabled=!certified;}
   }
   const nextFrame=()=>new Promise(resolve=>setTimeout(resolve,0));
   async function useConstructions(all=false){
     if(running)return;setBusy(true);let changed=0;
     try{
       for(let k=all?1:n;k<=(all?1000:n);k++){
-        const candidate=makeConstructive(k),old=layouts.get(k),before=old?evaluate(old):null;
-        const oldL=old?before.bounds.L:Math.ceil(Math.sqrt(k));
-        if((before&&!before.valid)||candidate.L<oldL-1e-12){
-          if(!evaluate(candidate.tiles).valid)throw Error(`n=${k} 构造未通过本地检查`);
-          layouts.set(k,candidate.tiles);tags.set(k,`旋转构造 · ${candidate.method} · 来源 n=${candidate.sourceN}`);changed++;
+        const old=layouts.get(k)||baseTiles(k);
+        const before=evaluate(old);
+        const certifiedTiles=certified && layouts.has(k)?certified.tiles(k):null;
+        const band=bandCandidate(k);
+        const legacy=makeConstructive(k);
+        let winner=null, limit=before.valid?before.bounds.L:Infinity;
+        for(const [name,tiles] of [['双倾斜边带',band],['旋转构造',legacy.tiles],['已认证最佳布局',certifiedTiles]]){
+          if(!tiles)continue;
+          const side=getBounds(tiles).L;
+          if(side < limit-1e-6 && evaluate(tiles).valid){winner={name,tiles};limit=side;}
         }
+        if(winner){layouts.set(k,winner.tiles);tags.set(k,winner.name);changed++;}
         if(k%20===0){colorMessage(`正在逐题比较：${k}/1000，已替换 ${changed} 个实例…`);await nextFrame();}
       }
-      selected=-1;layoutTag=tags.get(n)||'赛题网格基线';fit();
+      selected=-1;layoutTag=tags.get(n)||defaultName();fit();
       colorMessage(`已替换 ${changed} 个实例；保留其余更优布局。完整 CSV 可直接导出，最终文件仍需官方检查。`);
     }catch(error){colorMessage('构造处理停止：'+error.message);}
     finally{setBusy(false);draw();}
@@ -145,7 +159,8 @@
     if(running)return;setBusy(true);colorMessage('正在检查布局并生成 CSV…');
     try{
       await nextFrame();const parts=[];let bytes=0;
-      for(const part of csvChunks(layouts,{onlyN})){
+      const chunks=!onlyN && certified && !layouts.size?[certified.text]:csvChunks(layouts,{onlyN,base:baseTiles});
+      for(const part of chunks){
         parts.push(part);bytes+=part.length;
         colorMessage(`正在生成 CSV：${(bytes/1e6).toFixed(1)} MB…`);await nextFrame();
       }
@@ -153,7 +168,7 @@
       a.href=url;a.download=onlyN?`squares-n${String(onlyN).padStart(4,'0')}.csv`:'submission.csv';
       document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
       colorMessage(onlyN?`已导出 n=${onlyN} 的 ${onlyN} 行调试文件；完整参赛请使用 submission.csv。`:
-        '已导出 submission.csv：1000 个实例、500,500 行。未编辑实例使用网格基线。');
+        '已导出 submission.csv：1000 个实例、500,500 行。');
     }catch(error){colorMessage('导出已阻止：'+error.message);}
     finally{setBusy(false);}
   }
@@ -171,7 +186,7 @@
       $('baselineTitle').textContent=`当前实例 n = ${n} · 网格基线参照 L₀ = ${m}`;
       $('baselineText').textContent=`${m} × ${m} 网格可容纳该实例；画布显示导入的布局。`;
       document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('active',Number(b.dataset.count)===n));
-      layoutTag=tags.get(n)||'赛题网格基线';fit();
+      layoutTag=tags.get(n)||defaultName();fit();
       colorMessage(`已导入 ${temp.size} 个完整实例。未编辑的原始十进制精度会保留。完整导出自动补齐其余实例。`);
     }catch(error){colorMessage('导入已拒绝，原布局保留：'+error.message);}
     finally{setBusy(false);}
@@ -213,7 +228,7 @@
   }
   $('count').addEventListener('change',e=>changeCount(e.target.value));$('countRange').addEventListener('input',e=>changeCount(e.target.value));
   document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>changeCount(b.dataset.count)));
-  $('resetLayout').addEventListener('click',()=>{if(running)return;layouts.set(n,makeGrid(n));selected=-1;layoutTag='赛题网格基线';tags.delete(n);fit();colorMessage(`已将 n=${n} 恢复为无旋转网格基线。`);});
+  $('resetLayout').addEventListener('click',()=>{if(running)return;layouts.set(n,makeGrid(n));selected=-1;layoutTag='赛题网格基线';tags.set(n,layoutTag);fit();colorMessage(`已将 n=${n} 恢复为无旋转网格基线。`);});
   $('rotateLeft').addEventListener('click',()=>changeAngle(-Math.PI/36));$('rotateRight').addEventListener('click',()=>changeAngle(Math.PI/36));
   $('fitView').addEventListener('click',fit);$('zoomIn').addEventListener('click',()=>{zoom=Math.min(12,zoom*1.25);draw();});$('zoomOut').addEventListener('click',()=>{zoom=Math.max(.15,zoom/1.25);draw();});
   $('exportOne').addEventListener('click',()=>{if(!running)downloadCsv(n);});$('exportAll').addEventListener('click',()=>{if(!running)downloadCsv();});
@@ -222,5 +237,62 @@
   $('optimize').addEventListener('click',compactExperiment);
   $('constructOne').addEventListener('click',()=>useConstructions());
   $('constructAll').addEventListener('click',()=>useConstructions(true));
-  window.addEventListener('resize',resize);changeCount(1000);resize();
+  $('restoreBest').addEventListener('click',()=>{
+    if(!certified||running)return;
+    layouts.delete(n);tags.delete(n);cachedN=0;changeCount(n);
+  });
+  $('searchBand').addEventListener('click',async()=>{
+    if(running)return;
+    const k=Math.floor(Math.sqrt(n)), previous=evaluate(current());
+    if(k*k===n){colorMessage('完全平方数可直接用整数网格达到面积下界。');return;}
+    setBusy(true);colorMessage('正在枚举两条边带的宽度、倾角和位置…');
+    try {
+      await nextFrame();
+      const fraction=Math.min(.9999,previous.bounds.L-k-.001);
+      if(fraction<=0)return;
+      const result=PackingBands.search(k,fraction,[29,45,52,61,71,75,78,79,81,83,85],16);
+      if(result.count>=n && result.recipe){
+        const tiles=PackingBands.construct(result.recipe).slice(0,n), measured=evaluate(tiles);
+        if(measured.valid && (!previous.valid || measured.bounds.L<previous.bounds.L-1e-6)){
+          layouts.set(n,tiles);tags.set(n,'双倾斜边带 · 现场搜索');layoutTag=tags.get(n);selected=-1;fit();
+          colorMessage('已采用现场搜索得到的布局。');return;
+        }
+      }
+      colorMessage('本次枚举未缩小外框，已保留当前布局。');
+    }finally{setBusy(false);}
+  });
+
+  async function initialize(){
+    setBusy(true);
+    try{
+      const packed=$('certifiedCsv');
+      let buffer, expected;
+      if(packed){
+        const compressed=Uint8Array.from(atob(packed.textContent.trim()),ch=>ch.charCodeAt(0));
+        const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+        buffer=await new Response(stream).arrayBuffer();
+        expected=packed.dataset.sha256;
+      }else{
+        const [csv,report]=await Promise.all([
+          fetch('../submissions/rectangular_core.csv'),fetch('../submissions/rectangular_core-certification.json')]);
+        if(!csv.ok||!report.ok)throw Error('无法读取仓库的 CSV 或认证报告');
+        const cert=await report.json();
+        if(!cert.valid||cert.puzzles!==1000)throw Error('仓库认证报告不完整');
+        buffer=await csv.arrayBuffer();expected=cert.csv_sha256;
+      }
+      if(window.crypto?.subtle){
+        const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',buffer));
+        if(Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('')!==expected)
+          throw Error('CSV 与认证报告的 SHA-256 不一致');
+      }
+      certified=PackingCore.indexSubmission(new TextDecoder().decode(buffer));
+      cachedN=0;
+    }catch(error){
+      $('baselineText').textContent='最佳布局加载失败：'+error.message;
+    }finally{
+      setBusy(false);changeCount(810);resize();
+      if(!certified)colorMessage('已切换为网格。请导入已认证 CSV，或下载新版单文件 HTML。');
+    }
+  }
+  window.addEventListener('resize',resize);initialize();
 })();
