@@ -100,11 +100,30 @@ test('two-band reconstruction matches the published layouts for the four target 
     assert.equal(result.length,n);
     assert.ok(P.evaluate(result).valid);
     // The published portfolio can later gain an even smaller layout.
-    assert.ok(P.getBounds(expected).L<=P.getBounds(result).L+1e-9);
+    assert.ok(P.getBounds(result).L<=P.getBounds(expected).L+1e-9);
     assert.ok(P.getBounds(result).L < Math.ceil(Math.sqrt(n))-.015);
   }
   const scan=bands.search(9,.98,[30,52,72,79],8);
   assert.ok(scan.recipe);
   assert.equal(bands.construct(scan.recipe).length,scan.count);
   assert.ok(P.evaluate(bands.construct(scan.recipe)).valid);
+});
+
+test('enumerating row-offset events fits two more squares than sixteen samples',()=>{
+  const bands=require('../simulator/bands.js');
+  const angles=[51.9,75.9];
+  assert.equal(bands.search(17,.978,angles,16).count,302);
+  const scan=bands.search(17,.978,angles,0);
+  assert.equal(scan.count,304);
+  const measured=P.evaluate(bands.construct(scan.recipe));
+  assert.ok(measured.valid);
+  assert.ok(measured.bounds.L<17.979);
+});
+
+test('matching at the band seam generates a valid 551-square layout below side 24',()=>{
+  const {dock}=require('./band_phase_search.cjs');
+  const result=dock(551,5,5,70,70,.99,1.06);
+  assert.equal(result.tiles.length,551);
+  assert.ok(P.evaluate(result.tiles).valid);
+  assert.ok(result.side<24);
 });
