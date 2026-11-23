@@ -29,6 +29,7 @@ import sys
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from bisect import bisect_left
+import random
 from math import gcd, isqrt
 from pathlib import Path
 
@@ -430,7 +431,8 @@ class Polisher:
                     found = self.two_step(target, free, cheap_pool)
                     if found is not None:
                         split, intermediate, intermediate_split = found
-                        if split != current:
+                        if split != current and (intermediate in self.graph
+                                                 or len(self.graph) < 2500):
                             if intermediate not in self.graph:
                                 self.graph[intermediate] = intermediate_split
                             candidate = (2, split)
@@ -448,113 +450,119 @@ class Polisher:
         return changed
 
 
-    def anchor_pass(self, window: int = 1 << 26, nearest: int = 4) -> bool:
+    def walk(self, rounds: int = 400, seed: int = 0) -> bool:
+        """Neutral moves on the value graph, keeping the best length seen."""
+        rng = random.Random(seed)
+        order = sorted(self.targets)
+        best_graph = dict(self.graph)
+        best_total = self.total_nodes()
+        improved = False
+        for _ in range(rounds):
+            target = rng.choice(order)
+            if target not in self.graph:
+                continue
+            current = self.graph[target]
+            candidate = self.one_step(target, set(self.graph), list(self.graph))
+            if candidate is None:
+                position = bisect_left(order, target)
+                anchor = order[min(max(0, position + rng.choice((-1, 0, 1))), len(order) - 1)]
+                if anchor == target:
+                    continue
+                gap = abs(target - anchor)
+                if not 0 < gap <= (1 << 26):
+                    continue
+                snapshot = dict(self.graph)
+                if self.ensure(gap, 2, forbidden=target) >= INF or not self._defined():
+                    self.graph = snapshot
+                    continue
+                candidate = ("+" if anchor < target else "-", anchor, gap)
+            if candidate == current:
+                continue
+            self.graph[target] = candidate
+            total = self.total_nodes()
+            if total <= best_total:
+                if total < best_total:
+                    best_total = total
+                    best_graph = dict(self.graph)
+                    improved = True
+            else:
+                self.graph[target] = current
+        self.graph = best_graph
+        return improved
+
+    def total_nodes(self) -> int:
+        """Instructions the current graph needs for all targets."""
+        needed: set[int] = set()
+        stack = [t for t in self.targets if t in self.graph]
+        while stack:
+            value = stack.pop()
+            if value in needed:
+                continue
+            needed.add(value)
+            split = self.graph.get(value)
+            if split is not None:
+                stack.extend(split[1:])
+        return sum(1 for v in needed if self.graph.get(v) is not None)
+
+    def _defined(self) -> bool:
+        """Every operand of every used node exists."""
+        known = set(self.graph)
+        for value, split in self.graph.items():
+            if split is None:
+                continue
+            for operand in split[1:]:
+                if operand not in known:
+                    return False
+        return True
+
+    def anchor_pass(self, window: int = 1 << 26, nearest: int = 8,
+                    strict: bool = True) -> bool:
         """Re-derive targets as ``nearby graph value + small offset``."""
         changed = False
-        self._hot = self.cheapest_sets(120)
-        window = min(window, self.limit)
         ordered = sorted(self.graph)
+        baseline = self.total_nodes()
         for target in sorted(self.targets):
-            if target not in self.graph or self.node_cost(target) <= 3:
+            if target not in self.graph or self.node_cost(target) <= 2:
                 continue
             current = self.graph[target]
             position = bisect_left(ordered, target)
             around = []
-            span = 5
-            for index in range(max(0, position - span), min(len(ordered), position)):
+            span = 8
+            low = max(0, position - span)
+            high = min(len(ordered), position + span + 1)
+            for index in range(low, high):
                 value = ordered[index]
-                gap = target - value
+                gap = abs(target - value)
                 if 0 < gap <= window:
                     around.append((gap, value))
             around.sort()
             for gap, anchor in around[:nearest]:
                 snapshot = dict(self.graph)
                 cost = self.ensure(gap, 3, forbidden=target)
-                if cost >= INF:
+                if cost >= INF or not self._defined():
                     self.graph = snapshot
                     continue
-                if cost + 1 >= self.node_cost(target):
-                    self.graph = snapshot
-                    continue
-                split = ("+", anchor, gap)
+                split = ("+" if anchor < target else "-", anchor, gap)
                 if split == current:
                     self.graph = snapshot
                     continue
-                self.graph[target] = split
-                changed = True
-                break
-        return changed
-
-    def node_pass(self) -> bool:
-        """Re-derive expensive intermediate nodes (the shared anchors) from scratch."""
-        changed = False
-        for value in sorted(self.graph, key=lambda x: -x.bit_length()):
-            if value in self.starts:
-                continue
-            split = self.graph.get(value)
-            if split is None:
-                continue
-            current = self.node_cost(value)
-            if current <= 1:
-                continue
-            candidate = self._try_one(value)
-            if candidate is not None and candidate != split:
-                self.graph[value] = candidate
-                changed = True
-                continue
-            root = isqrt(value)
-            bases = [root, root + 1, 256, 1000, 4096, 10000, 65536]
-            bases.extend(b for b in self._hot[:8] if 2 <= b < value)
-            best: tuple[int, int, int, int] | None = None
-            for base in bases:
-                if not 2 <= base < value:
+                self.graph[target] = ("+" if anchor < target else "-", anchor, gap)
+                if not strict:
+                    if cost + 1 < self.node_cost(target):
+                        changed = True
+                        self.sweep()
+                        ordered = sorted(self.graph)
+                        break
+                    self.graph = snapshot
                     continue
-                snapshot = dict(self.graph)
-                q, r = divmod(value, base)
-                cost = self.ensure(base, 2) + self.ensure(q, 2)
-                cost += self.ensure(r, 2) + 2 if r else 1
+                total = self.total_nodes()
+                if total < baseline:
+                    baseline = total
+                    changed = True
+                    self.sweep()
+                    ordered = sorted(self.graph)
+                    break
                 self.graph = snapshot
-                if best is None or cost < best[0]:
-                    best = (cost, base, q, r)
-            if best is not None and best[0] < current:
-                _, base, q, r = best
-                self.ensure(base, 2)
-                self.ensure(q, 2)
-                if r:
-                    self.ensure(r, 2)
-                    self.graph[value] = ("+", q * base, r)
-                    if q * base not in self.graph:
-                        self.graph[q * base] = ("*", q, base)
-                else:
-                    self.graph[value] = ("*", q, base)
-                changed = True
-        return changed
-
-    def anchor_search(self, rounds: int = 8, pool_size: int = 80) -> bool:
-        """Discover a hidden anchor that explains several targets at once."""
-        changed = False
-        for _ in range(rounds):
-            hot = self.cheapest_sets(pool_size)
-            free = set(self.graph)
-            best: tuple[int, int, OpSplit, list[tuple[int, int]]] | None = None
-            for index, a in enumerate(hot):
-                for b in hot[index:]:
-                    for u, split in ((a + b, ("+", a, b)), (a * b, ("*", a, b)),
-                                     (a - b, ("-", a, b)), (b - a, ("-", b, a))):
-                        if not 1 <= u <= self.limit or u in free:
-                            continue
-                        hits = [(t, t - u) for t in self.targets
-                                if t > u and (t - u) in free]
-                        if len(hits) >= 2 and (best is None or len(hits) > best[0]):
-                            best = (len(hits), u, split, hits)
-            if best is None:
-                break
-            count, anchor, split, hits = best
-            self.graph[anchor] = split
-            for target, offset in hits:
-                self.graph[target] = ("+", anchor, offset)
-            changed = True
-            self.sweep()
         return changed
 
     def sweep(self) -> None:
@@ -587,20 +595,25 @@ def emit(puzzle: Puzzle, graph: dict[int, OpSplit | None]) -> Program:
     order = sorted(puzzle.targets, key=lambda t: (t.bit_length(), t))
     scheduled: list[int] = []
     done: set[int] = set()
-
-    def visit(value: int) -> None:
-        if value in done:
-            return
-        done.add(value)
-        split = graph.get(value)
-        if split is None:
-            return
-        for operand in (split[1], split[2]):
-            visit(operand)
-        scheduled.append(value)
-
     for target in order:
-        visit(target)
+        if target in done:
+            continue
+        stack = [(target, False)]
+        while stack:
+            value, expanded = stack.pop()
+            if expanded:
+                scheduled.append(value)
+                continue
+            if value in done:
+                continue
+            done.add(value)
+            split = graph.get(value)
+            if split is None:
+                continue
+            stack.append((value, True))
+            for operand in (split[1], split[2]):
+                if operand not in done:
+                    stack.append((operand, False))
 
     use_positions: dict[int, list[int]] = defaultdict(list)
     for index, value in enumerate(scheduled):
@@ -654,8 +667,11 @@ def emit(puzzle: Puzzle, graph: dict[int, OpSplit | None]) -> Program:
     return program
 
 
-def polish(puzzle: Puzzle, program: Program, rounds: int = 6) -> Program:
+def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
+           deep: bool = False, two_step: bool = False,
+           strict: bool = True) -> Program:
     """Iteratively shorten ``program`` inside its own value graph."""
+    sys.setrecursionlimit(20000)
     replay(puzzle, program)
     best = program
     for _ in range(rounds):
@@ -667,13 +683,19 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6) -> Program:
             while polisher.rewrite(use_two_step=False):
                 inner = True
                 polisher.sweep()
-            if polisher.node_pass():
+            if two_step and polisher.rewrite(use_two_step=True):
                 inner = True
                 polisher.sweep()
-            if polisher.anchor_search():
+            if deep and polisher.node_pass():
                 inner = True
                 polisher.sweep()
-            if polisher.anchor_pass():
+            if deep and polisher.anchor_search():
+                inner = True
+                polisher.sweep()
+            if polisher.anchor_pass(strict=strict):
+                inner = True
+                polisher.sweep()
+            if polisher.walk(rounds=300, seed=len(polisher.graph)):
                 inner = True
                 polisher.sweep()
             if not inner:
@@ -693,30 +715,40 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6) -> Program:
     return best
 
 
-def solve(puzzle: Puzzle, reference: Program | None = None) -> Program:
+def solve(puzzle: Puzzle, reference: Program | None = None,
+          rounds: int = 8, two_step: bool = True, strict: bool = True) -> Program:
+    """Polish ``reference`` repeatedly until it stops getting shorter."""
     if reference is None:
         raise ValueError("the polisher needs a reference program")
     replay(puzzle, reference)
     best = reference
-    candidate = polish(puzzle, reference)
-    if len(candidate) < len(best):
+    for _ in range(rounds):
+        candidate = polish(puzzle, best, two_step=two_step, rounds=4, strict=strict)
+        if len(candidate) >= len(best):
+            break
         best = candidate
     return best
 
 
 def solve_row(job):
-    puzzle, reference = job
-    return puzzle.id, solve(puzzle, reference)
+    puzzle, reference, two_step, strict = job
+    return puzzle.id, solve(puzzle, reference, two_step=two_step, strict=strict)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("puzzles", type=Path)
-    parser.add_argument("--reference", type=Path, required=True)
+    parser.add_argument("--reference", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--check", type=Path)
     parser.add_argument("--jobs", type=int, default=1)
+    parser.add_argument("--no-two-step", action="store_true",
+                        help="only rewrite with a single instruction per target")
+    parser.add_argument("--loose", action="store_true",
+                        help="accept anchor rewrites optimistically (explores more)")
     args = parser.parse_args()
+    if not args.check and not args.reference:
+        parser.error("--reference is required unless --check is used")
     try:
         puzzles = load_puzzles(args.puzzles)
         if args.check:
@@ -725,7 +757,8 @@ def main() -> None:
                   f"{sum(map(len, programs.values())):,}")
             return
         reference = load_programs(args.reference, puzzles)
-        jobs = ((puzzle, reference[pid]) for pid, puzzle in puzzles.items())
+        jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose)
+                for pid, puzzle in puzzles.items())
         if args.jobs == 1:
             programs = dict(map(solve_row, jobs))
         else:
