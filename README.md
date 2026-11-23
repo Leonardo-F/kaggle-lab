@@ -8,11 +8,17 @@
 | Google 量子电路编译 | [三个子题、提交格式与验证命令](competitions/google-quantum-circuit-compilation/README.md) | [Kaggle](https://www.kaggle.com/competitions/google-verifiable-quantum-circuit-compilation) |
 | Santa 2026 · The Elf Calculator | [求解器和验证命令](competitions/santa-2026/README.md) | [Kaggle](https://www.kaggle.com/competitions/santa-2026/overview) |
 
+## 模拟器
+
+[统一离线模拟器](simulation/index.html)包含正方形装箱和 Santa 计算器。下载此 HTML 后可在浏览器中打开；源码与更新说明见 [simulation/README.md](simulation/README.md)。
+
 ## 目录
 
 - `docs/` 收录各赛题的实验进展、版本结果和策略笔记。
 - `competitions/<赛题>/algorithms/` 存放求解器和验证入口。`experiments/` 存放实验脚本、结果和测试。
 - 装箱另含 `simulator/`、固定版本的官方评分器 `vendor/`，以及 `submissions/` 中的最佳 CSV 和逐题认证。量子电路和提交包在本地生成。
+
+项目协作约定见 [AGENTS.md](AGENTS.md)。
 
 ## 测试
 
