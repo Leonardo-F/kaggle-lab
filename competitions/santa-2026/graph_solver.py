@@ -172,7 +172,8 @@ class Polisher:
 
     def __init__(self, puzzle: Puzzle, graph: dict[int, OpSplit | None], *,
                  two_step_pairs: int = 90, anchor_offsets: int = 220,
-                 anchor_min_support: int = 3) -> None:
+                 anchor_min_support: int = 3, anchor_span: int = 8,
+                 anchor_nearest: int = 8) -> None:
         self.puzzle = puzzle
         self.limit = puzzle.limit
         self.starts = list(dict.fromkeys(puzzle.starting))
@@ -182,6 +183,8 @@ class Polisher:
         self.two_step_pairs = two_step_pairs
         self.anchor_offsets = anchor_offsets
         self.anchor_min_support = anchor_min_support
+        self.anchor_span = anchor_span
+        self.anchor_nearest = anchor_nearest
         self.tried: set[tuple[int, int, tuple]] = set()
         self._hot: list[int] = []
         self._anchor_cache: list[int] = []
@@ -515,10 +518,11 @@ class Polisher:
                     return False
         return True
 
-    def anchor_pass(self, window: int = 1 << 26, nearest: int = 8,
+    def anchor_pass(self, window: int = 1 << 26, nearest: int | None = None,
                     strict: bool = True, one_sided: bool = False) -> bool:
         """Re-derive targets as ``nearby graph value + small offset``."""
         changed = False
+        nearest = self.anchor_nearest if nearest is None else nearest
         ordered = sorted(self.graph)
         baseline = self.total_nodes()
         for target in sorted(self.targets):
@@ -528,6 +532,7 @@ class Polisher:
             position = bisect_left(ordered, target)
             around = []
             span = 8
+            span = self.anchor_span
             low = max(0, position - span)
             high = position + 1 if one_sided else min(len(ordered), position + span + 1)
             for index in range(low, high):
@@ -547,6 +552,68 @@ class Polisher:
                     self.graph = snapshot
                     continue
                 self.graph[target] = ("+" if anchor < target else "-", anchor, gap)
+                if not strict:
+                    if cost + 1 < self.node_cost(target):
+                        changed = True
+                        self.sweep()
+                        ordered = sorted(self.graph)
+                        break
+                    self.graph = snapshot
+                    continue
+                total = self.total_nodes()
+                if total < baseline:
+                    baseline = total
+                    changed = True
+                    self.sweep()
+                    ordered = sorted(self.graph)
+                    break
+                self.graph = snapshot
+        return changed
+
+    def scaled_anchor_pass(self, window: int = 1 << 22, nearest: int = 4,
+                           strict: bool = True) -> bool:
+        """Re-derive targets as ``anchor * k + gap`` for small ``k``."""
+        changed = False
+        ordered = sorted(self.graph)
+        baseline = self.total_nodes()
+        scales = (2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16)
+        for target in sorted(self.targets):
+            if target not in self.graph or self.node_cost(target) <= 2:
+                continue
+            current = self.graph[target]
+            position = bisect_left(ordered, target)
+            low = max(0, position - 6)
+            high = min(len(ordered), position + 7)
+            around = []
+            for index in range(low, high):
+                anchor = ordered[index]
+                for k in scales:
+                    product = anchor * k
+                    if product <= self.limit:
+                        gap = target - product
+                        if 0 < abs(gap) <= window:
+                            around.append((abs(gap), anchor, k, product, "*"))
+                    if anchor % k == 0:
+                        quotient = anchor // k
+                        gap = target - quotient
+                        if 0 < abs(gap) <= window:
+                            around.append((abs(gap), anchor, k, quotient, "/"))
+            around.sort()
+            for gap_size, anchor, k, scaled, op in around[:nearest]:
+                snapshot = dict(self.graph)
+                if self.ensure(k, 1, forbidden=target) >= INF:
+                    self.graph = snapshot
+                    continue
+                self.graph[scaled] = (op, anchor, k)
+                cost = self.ensure(gap_size, 3, forbidden=target) + 1
+                if cost >= INF or not self._defined():
+                    self.graph = snapshot
+                    continue
+                split = ("+" if scaled < target else "-", scaled, gap_size)
+                if split == current:
+                    self.graph = snapshot
+                    continue
+                self.graph[target] = split
                 if not strict:
                     if cost + 1 < self.node_cost(target):
                         changed = True
@@ -667,24 +734,42 @@ def emit(puzzle: Puzzle, graph: dict[int, OpSplit | None]) -> Program:
     return program
 
 
+VARIANTS = (
+    # (span, nearest, one_sided, two_step)
+    (8, 8, False, True),
+    (8, 8, True, True),
+    (4, 4, False, True),
+    (4, 2, True, True),
+    (12, 12, False, True),
+    (12, 6, True, True),
+    (6, 3, False, False),
+    (16, 16, False, True),
+)
+
+
 def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
            deep: bool = False, two_step: bool = False,
            strict: bool = True, seed: int = 0, walk: bool = False,
-           one_sided: bool = False) -> Program:
+           one_sided: bool = False, variant: int = 0,
+           scaled: bool = False) -> Program:
     """Iteratively shorten ``program`` inside its own value graph."""
     sys.setrecursionlimit(20000)
     replay(puzzle, program)
     best = program
     for _ in range(rounds):
         graph = graph_of(puzzle, best)
-        polisher = Polisher(puzzle, graph)
+        span, nearest, var_one_sided, var_two_step = VARIANTS[variant % len(VARIANTS)]
+        polisher = Polisher(puzzle, graph, anchor_span=span, anchor_nearest=nearest)
         changed = False
         for _ in range(3):
             inner = False
             while polisher.rewrite(use_two_step=False):
                 inner = True
                 polisher.sweep()
-            if two_step and polisher.rewrite(use_two_step=True):
+            if (two_step and var_two_step) and polisher.rewrite(use_two_step=True):
+                inner = True
+                polisher.sweep()
+            if scaled and polisher.scaled_anchor_pass(strict=strict):
                 inner = True
                 polisher.sweep()
             if deep and polisher.node_pass():
@@ -693,7 +778,8 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
             if deep and polisher.anchor_search():
                 inner = True
                 polisher.sweep()
-            if polisher.anchor_pass(strict=strict, one_sided=one_sided):
+            if polisher.anchor_pass(strict=strict,
+                                    one_sided=one_sided or var_one_sided):
                 inner = True
                 polisher.sweep()
             if walk and polisher.walk(rounds=300, seed=seed * 7919 + len(polisher.graph)):
@@ -718,7 +804,8 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
 
 def solve(puzzle: Puzzle, reference: Program | None = None,
           rounds: int = 8, two_step: bool = True, strict: bool = True,
-          seed: int = 0, walk: bool = False, one_sided: bool = False) -> Program:
+          seed: int = 0, walk: bool = False, one_sided: bool = False,
+          variant: int = 0, scaled: bool = False) -> Program:
     """Polish ``reference`` repeatedly until it stops getting shorter."""
     if reference is None:
         raise ValueError("the polisher needs a reference program")
@@ -727,7 +814,8 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
     for _ in range(rounds):
         candidate = polish(puzzle, best, two_step=two_step, rounds=4,
                            strict=strict, seed=seed, walk=walk,
-                           one_sided=one_sided)
+                           one_sided=one_sided, variant=variant,
+                           scaled=scaled)
         if len(candidate) >= len(best):
             break
         best = candidate
@@ -735,9 +823,10 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
 
 
 def solve_row(job):
-    puzzle, reference, two_step, strict, seed, one_sided = job
+    puzzle, reference, two_step, strict, seed, one_sided, variant, scaled = job
     return puzzle.id, solve(puzzle, reference, two_step=two_step,
-                            strict=strict, seed=seed, one_sided=one_sided)
+                            strict=strict, seed=seed, one_sided=one_sided,
+                            variant=variant, scaled=scaled)
 
 
 def main() -> None:
@@ -750,6 +839,10 @@ def main() -> None:
     parser.add_argument("--no-two-step", action="store_true",
                         help="only rewrite with a single instruction per target")
     parser.add_argument("--seed", type=int, default=0, help="randomised walk seed")
+    parser.add_argument("--scaled", action="store_true",
+                        help="also try anchor*k + gap rewrites with small k")
+    parser.add_argument("--variant", type=int, default=0,
+                        help="search variant (0-7) for anchor span/nearest/direction")
     parser.add_argument("--one-sided", action="store_true",
                         help="only use anchors below the target")
     parser.add_argument("--merge", type=Path, nargs="+", metavar="CSV",
@@ -781,7 +874,8 @@ def main() -> None:
             return
         reference = load_programs(args.reference, puzzles)
         jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose,
-                 args.seed, args.one_sided) for pid, puzzle in puzzles.items())
+                 args.seed, args.one_sided, args.variant, args.scaled)
+                for pid, puzzle in puzzles.items())
         if args.jobs == 1:
             programs = dict(map(solve_row, jobs))
         else:

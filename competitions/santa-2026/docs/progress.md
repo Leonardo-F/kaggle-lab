@@ -28,7 +28,8 @@
 | 混合进制、算术链重写与小题精确搜索 | 272,748 |
 | 官方示例起点压缩（自产结果连续三轮 `--refine`） | 270,450 |
 | 值图改写器（锚点 ± 偏移 + 双指令重推，迭代三轮） | 269,706 |
-| 值图改写器多轮 + 逐题取最短合并 | **269,611** |
+| 值图改写器多轮 + 逐题取最短合并 | 269,611 |
+| 锚点变体搜索（跨度/方向/倍增）+ 两轮合并 | **269,474** |
 
 本次从本地 285,288 步提交文件继续优化，少 12,540 步（4.40%）。有 951 道题变短。求解器和独立回放器均验证了全部 1,000 道题，最长程序 526 步。该分数为本地计数，待上传 Kaggle 核对。
 
@@ -38,7 +39,7 @@
 
 对公开前沿提交（128,513，见 [对比分析](frontier-analysis.md)）做了逐格阅读与差距测量：该 notebook 只校验并复制一份公开的"逐题最短程序"数据集，不含求解算法。按目标位宽分档对比，我们的每题目标平均指令数在各档都约为其 1.8 倍；对 1,000 题的随机性与共享结构检验显示目标基本是随机大整数，差距来自联合搜索而非某种解析结构。
 
-新增 `graph_solver.py`（值图改写器），把程序产出的所有值当作操作数做单/双指令重推、锚点 ± 偏移重推（偏移递归构造），每步回放校验、只保留更短结果；多轮结果再逐题取最短合并。修正"锚点改写只按整题长度择优"后，对正式集迭代打磨并逐题取最短合并，得到 **270,450 → 269,611**（少 839 步，−0.31%；240 题变短、760 题持平、0 题变长，最长程序 525 步），`solve.py --check` 独立回放 1,000 题通过。归档 [elf-calculator-score-269611.csv](../submissions/elf-calculator-score-269611.csv)（中间版本 `elf-calculator-score-269706.csv` 一并保留）。
+新增 `graph_solver.py`（值图改写器），把程序产出的所有值当作操作数做单/双指令重推、锚点 ± 偏移重推（偏移递归构造），每步回放校验、只保留更短结果；多轮结果再逐题取最短合并。修正"锚点改写只按整题长度择优"后，对正式集迭代打磨、再做锚点变体搜索（跨度 4–16、单向/双向、`anchor*k ± gap` 倍增锚点）并逐题取最短合并，得到 **270,450 → 269,474**（少 976 步，−0.36%；259 题变短、741 题持平、0 题变长，最长程序 525 步），`solve.py --check` 独立回放 1,000 题通过。归档 [elf-calculator-score-269474.csv](../submissions/elf-calculator-score-269474.csv)（中间版本 269,706、269,611 一并保留）。
 
 ```bash
 # 逐轮打磨：单指令 → 双指令 → 双向锚点 → 交替收敛
@@ -54,7 +55,25 @@ python graph_solver.py data/puzzles.csv --merge \
 python graph_solver.py data/puzzles.csv --check merged.csv
 ```
 
-各轮总步数：a=269,911 · b=269,804 · c=269,741 · d=e=269,739 · 合并=**269,611**。
+各轮总步数：a=269,911 · b=269,804 · c=269,741 · d=e=269,739 · 合并=269,611。
+
+```bash
+# 变体搜索（从 269,611 出发），再与前面的结果逐题取最短
+for v in 1 2 3 4 5; do
+    python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-269611.csv \
+        --variant $v --output v$v.csv --jobs 8
+done
+for v in 1 2 3; do
+    python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-269611.csv \
+        --scaled --variant $v --output sc$v.csv --jobs 8
+done
+python graph_solver.py data/puzzles.csv --reference merged.csv --scaled --variant 3 --output wsc.csv --jobs 8
+python graph_solver.py data/puzzles.csv --merge submissions/elf-calculator-score-270450.csv \
+    submissions/elf-calculator-score-269611.csv v*.csv sc*.csv merged.csv w*.csv --output best.csv
+python graph_solver.py data/puzzles.csv --check best.csv
+```
+
+变体表：跨度/最近邻/方向/是否双指令，见 `graph_solver.py` 的 `VARIANTS`；`--scaled` 额外尝试 `t = anchor*k ± gap`（k ≤ 16）改写。各变体单独结果 269,549–269,609，两轮逐题合并后 **269,474**。
 
 仍与公开前沿（128,513）差约 2.1 倍：该分数是社区逐题最优程序的并集，单算法难以匹配；剩余差距需要"全局共享中间值搜索"而非继续加局部改写规则。
 
