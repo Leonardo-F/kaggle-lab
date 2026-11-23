@@ -845,7 +845,8 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
            deep: bool = False, two_step: bool = False,
            strict: bool = True, seed: int = 0, walk: bool = False,
            one_sided: bool = False, variant: int = 0,
-           scaled: bool = False, rational: bool = False) -> Program:
+           scaled: bool = False, rational: bool = False,
+           rational_scales: int = 64) -> Program:
     """Iteratively shorten ``program`` inside its own value graph."""
     sys.setrecursionlimit(20000)
     replay(puzzle, program)
@@ -863,7 +864,8 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
             if (two_step and var_two_step) and polisher.rewrite(use_two_step=True):
                 inner = True
                 polisher.sweep()
-            if rational and polisher.rational_pass(strict=strict):
+            if rational and polisher.rational_pass(strict=strict,
+                                                   scales=rational_scales):
                 inner = True
                 polisher.sweep()
             if scaled and polisher.scaled_anchor_pass(strict=strict):
@@ -902,7 +904,8 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
 def solve(puzzle: Puzzle, reference: Program | None = None,
           rounds: int = 8, two_step: bool = True, strict: bool = True,
           seed: int = 0, walk: bool = False, one_sided: bool = False,
-          variant: int = 0, scaled: bool = False, rational: bool = False) -> Program:
+          variant: int = 0, scaled: bool = False, rational: bool = False,
+          rational_scales: int = 64) -> Program:
     """Polish ``reference`` repeatedly until it stops getting shorter."""
     if reference is None:
         raise ValueError("the polisher needs a reference program")
@@ -912,7 +915,8 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
         candidate = polish(puzzle, best, two_step=two_step, rounds=4,
                            strict=strict, seed=seed, walk=walk,
                            one_sided=one_sided, variant=variant,
-                           scaled=scaled, rational=rational)
+                           scaled=scaled, rational=rational,
+                           rational_scales=rational_scales)
         if len(candidate) >= len(best):
             break
         best = candidate
@@ -920,10 +924,12 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
 
 
 def solve_row(job):
-    puzzle, reference, two_step, strict, seed, one_sided, variant, scaled, rational = job
+    (puzzle, reference, two_step, strict, seed, one_sided, variant, scaled,
+     rational, scales) = job
     return puzzle.id, solve(puzzle, reference, two_step=two_step,
                             strict=strict, seed=seed, one_sided=one_sided,
-                            variant=variant, scaled=scaled, rational=rational)
+                            variant=variant, scaled=scaled, rational=rational,
+                            rational_scales=scales)
 
 
 def main() -> None:
@@ -936,6 +942,8 @@ def main() -> None:
     parser.add_argument("--no-two-step", action="store_true",
                         help="only rewrite with a single instruction per target")
     parser.add_argument("--seed", type=int, default=0, help="randomised walk seed")
+    parser.add_argument("--rational-scales", type=int, default=64,
+                        help="max p,q for --rational")
     parser.add_argument("--rational", action="store_true",
                         help="also try (anchor*p + c)/q rewrites")
     parser.add_argument("--scaled", action="store_true",
@@ -973,8 +981,8 @@ def main() -> None:
             return
         reference = load_programs(args.reference, puzzles)
         jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose,
-                 args.seed, args.one_sided, args.variant, args.scaled, args.rational)
-                for pid, puzzle in puzzles.items())
+                 args.seed, args.one_sided, args.variant, args.scaled, args.rational,
+                 args.rational_scales) for pid, puzzle in puzzles.items())
         if args.jobs == 1:
             programs = dict(map(solve_row, jobs))
         else:
