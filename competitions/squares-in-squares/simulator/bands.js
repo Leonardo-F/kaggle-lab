@@ -1,6 +1,6 @@
 /* Two tilted bands beside an upright grid. Shared by the browser and Node CLI. */
 'use strict';
-const PackingBands = (() => {
+const PackingBands = (core => {
   const eps = 1e-10;
   const floor = value => Math.floor(value + eps);
 
@@ -10,6 +10,20 @@ const PackingBands = (() => {
       for (let y = 1; y <= floor(height); y++)
         distances.push(x * sine + y * cosine);
     return distances.sort((a, b) => a - b);
+  }
+
+  // Between these offsets, the integer row lengths and corner counts are
+  // constant. At an endpoint a square can become exactly tangent to a seam.
+  function phaseEvents(span, product, corners, wallLimit) {
+    const periodic = value => value - Math.floor(value);
+    const result = [0, periodic(span - 1)];
+    for (const distance of corners)
+      result.push(periodic(distance), periodic(span - 1 - distance));
+    for (let length = 1; length <= wallLimit; length++) {
+      const distance = length * product;
+      result.push(periodic(distance), periodic(span - 1 - distance));
+    }
+    return result;
   }
 
   // For row coordinate v (measured from the lower right corner), the two
@@ -22,8 +36,11 @@ const PackingBands = (() => {
       const wallLimit = Math.min(floor((width - s) / c), floor((height - c) / s));
       if (wallLimit <= 0) continue;
       const corners = cornerDistances(width, height, s, c);
-      for (let phase = 0; phase < phases; phase++) {
-        const firstV = .5 + phase / phases;
+      const offsets = phases === 0
+        ? phaseEvents(span, product, corners, wallLimit)
+        : Array.from({length:phases}, (_, i) => i / phases);
+      for (const phase of offsets) {
+        const firstV = .5 + phase;
         let left = 0, right = corners.length, sum = 0, offset = -Infinity, start = 0;
         for (let j = 0; firstV + j <= span - .5 + eps; j++) {
           const lower = firstV + j - .5, upper = span - firstV - j - .5;
@@ -33,7 +50,7 @@ const PackingBands = (() => {
           sum += Math.min(wallLimit, floor(lower / product), floor(upper / product));
           if (offset + sum + right > count) {
             count = offset + sum + right;
-            witness = [degrees, phase / phases, start, j];
+            witness = [degrees, phase, start, j];
           }
         }
       }
@@ -69,18 +86,54 @@ const PackingBands = (() => {
     return tiles;
   }
 
-  function construct([k, fraction, a, b, bottomSpec, leftSpec]) {
+  // The bands are feasible individually. Across their seam, maximum matching
+  // gives a minimum vertex cover of the collision graph. Keep its complement.
+  function joinBands(bottom, left) {
+    const size = bottom.length;
+    const both = bottom.concat(left);
+    const edges = Array.from({length:size}, () => []);
+    for (const [i,j] of core.collisions(both,true).pairs)
+      if (i < size && j >= size) edges[i].push(j - size);
+    const partner = new Int32Array(left.length).fill(-1);
+    function augment(i, seen) {
+      for (const j of edges[i]) {
+        if (seen.has(j)) continue;
+        seen.add(j);
+        if (partner[j] < 0 || augment(partner[j], seen)) {
+          partner[j] = i;
+          return true;
+        }
+      }
+      return false;
+    }
+    const unmatched = edges.map((_,i) => i).filter(i => !augment(i,new Set()));
+    const reachableBottom = new Set(), reachableLeft = new Set();
+    function visit(i) {
+      if (reachableBottom.has(i)) return;
+      reachableBottom.add(i);
+      for (const j of edges[i]) {
+        if (partner[j] === i || reachableLeft.has(j)) continue;
+        reachableLeft.add(j);
+        if (partner[j] >= 0) visit(partner[j]);
+      }
+    }
+    unmatched.forEach(visit);
+    return bottom.filter((_,i) => reachableBottom.has(i))
+      .concat(left.filter((_,j) => !reachableLeft.has(j)));
+  }
+
+  function construct([k, fraction, a, b, bottomSpec, leftSpec, overlap = 0]) {
     const side = k + fraction;
-    const tiles = rectangle(side, b + fraction, bottomSpec);
-    for (const t of rectangle(k - b, a + fraction, leftSpec))
-      tiles.push({x:t.y, y:t.x + b + fraction, angle:-t.angle});
+    const seam = b + fraction;
+    const scale = 1.000000012;
+    const center = (x,y,angle) => ({x:(x-side/2)*scale, y:(y-side/2)*scale, angle});
+    const bottom = rectangle(side, seam, bottomSpec).map(t => center(t.x,t.y,t.angle));
+    const left = rectangle(k - b + overlap, a + fraction, leftSpec)
+      .map(t => center(t.y,t.x + seam - overlap,-t.angle));
+    const tiles = overlap ? joinBands(bottom,left) : bottom.concat(left);
     for (let x = a; x < k; x++)
       for (let y = b; y < k; y++)
-        tiles.push({x:x + fraction + .5, y:y + fraction + .5, angle:0});
-    for (const t of tiles) {
-      t.x = (t.x - side / 2) * 1.000000012;
-      t.y = (t.y - side / 2) * 1.000000012;
-    }
+        tiles.push(center(x + fraction + .5,y + fraction + .5,0));
     return tiles.sort((a,b) => Math.hypot(a.x,a.y) - Math.hypot(b.x,b.y));
   }
 
@@ -135,5 +188,5 @@ const PackingBands = (() => {
   }
 
   return {construct, search, scanRectangle, portfolio};
-})();
+})(typeof module === 'object' && module.exports ? require('./packing-core.js') : globalThis.PackingCore);
 if (typeof module === 'object' && module.exports) module.exports = PackingBands;
