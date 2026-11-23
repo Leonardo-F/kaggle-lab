@@ -127,3 +127,13 @@ test('matching at the band seam generates a valid 551-square layout below side 2
   assert.ok(P.evaluate(result.tiles).valid);
   assert.ok(result.side<24);
 });
+
+test('joint pairing fits 933 squares that independently optimal bands cannot fit',()=>{
+  const {dock,joint}=require('./band_phase_search.cjs');
+  const params=[933,7,7,75,75.25,.991,3.14];
+  assert.equal(dock(...params),null);
+  const result=joint(...params);
+  assert.equal(result.tiles.length,933);
+  assert.ok(P.evaluate(result.tiles).valid);
+  assert.ok(result.side<31);
+});
