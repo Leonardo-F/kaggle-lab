@@ -2,7 +2,7 @@
 
 把 `n=1…1000` 个可旋转的单位正方形放进尽可能小的轴对齐正方形，两两不得重叠。每题得分为 `L / sqrt(n) - 1`，其中 `L` 是外包边长。1,000 题得分求和，越低越好。[Kaggle 赛题](https://www.kaggle.com/competitions/squares-in-squares)
 
-目前最佳布局的**本地官方 v20 总分为 22.906698393**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core-score-22.906698393.csv) · [逐题认证报告](submissions/rectangular_core-score-22.906698393-certification.json) · [上版 CSV](submissions/rectangular_core-score-22.923849921.csv) · [各版方案与得分](../../docs/squares-in-squares.md)
+目前最佳布局的**本地官方 v20 总分为 22.849664303**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core-score-22.849664303.csv) · [逐题认证报告](submissions/rectangular_core-score-22.849664303-certification.json) · [上版 CSV](submissions/rectangular_core-score-22.906698393.csv) · [各版方案与得分](../../docs/squares-in-squares.md)
 
 ## 查看和导出布局
 
@@ -10,7 +10,9 @@
 
 ## 重建和验证最佳解
 
-本版以 22.923849921 的自研 CSV 为基线，改善 59 题。搜索时为两条边带分别保留多组倾角与行偏移，在不同交叠宽度下用二分图匹配比较配对后的方块数。几何参数足以重新生成坐标。公开 Notebook 用于比较分数和了解构造思路。
+当前版本从 22.906698393 的自研 CSV 出发，使用接触约束压紧和扰动重启改善 102 题。[当前版本的复现命令](../../docs/squares-in-squares.md#公开布局诊断与独立搜索)。
+
+以下保留上一版双边带联合搜索的复现方法。该版本以 22.923849921 的自研 CSV 为基线，改善 59 题。搜索时为两条边带分别保留多组倾角与行偏移，在不同交叠宽度下用二分图匹配比较配对后的方块数。几何参数足以重新生成坐标。公开 Notebook 用于比较分数和了解构造思路。
 
 在本目录生成完整 CSV 并复核。
 
