@@ -2,7 +2,7 @@
 
 [项目进展](../PROGRESS.md) · [赛题 README](../competitions/squares-in-squares/README.md) · [早期策略笔记](competition-strategies/01-square-packing.md)
 
-正方形装箱目前的最好总分是 **22.923849921**。相对最初的整数网格 **28.937669917**，下降 **6.013819996**（约 **20.79%**）。最终 CSV 包含 500,500 行，模拟器重算了全部 1,000 题，官方 v20 评分器也在原始十进制和 pandas 数值读写两条本地路径上接受了全部布局。[最新版提交 CSV](../competitions/squares-in-squares/submissions/rectangular_core-score-22.923849921.csv) · [逐题认证报告](../competitions/squares-in-squares/submissions/rectangular_core-score-22.923849921-certification.json)
+正方形装箱目前的自研最好总分是 **22.906698393**。相对最初的整数网格 **28.937669917**，下降 **6.030971524**（约 **20.84%**）。最终 CSV 包含 500,500 行，模拟器重算了全部 1,000 题，官方 v20 评分器也在原始十进制和 pandas 数值读写两条本地路径上接受了全部布局。[最新版提交 CSV](../competitions/squares-in-squares/submissions/rectangular_core-score-22.906698393.csv) · [逐题认证报告](../competitions/squares-in-squares/submissions/rectangular_core-score-22.906698393-certification.json)
 
 ## 方案与历次总分
 
@@ -23,7 +23,8 @@
 | 11-23 · 多起点接触优化 | 用接触约束的线性化压紧已有布局，17 题直接改善，删块和 L 形外扩再改善 4 题。 | 22.979222174 | 22.979222174 |
 | 11-23 · 双倾斜边带 | 底边和左边分别排入倾斜方块，两端可保留轴对齐方块，右上角补整齐网格。逐题取优后缩短 46 题。 | 22.953899197 | 22.953899197 |
 | 11-23 · 旋转裁切与接触优化 | 从已有布局裁出更紧的子布局，再压紧接触与试加网格边框。逐题取优后缩短 14 题。 | 22.940511772 | 22.940511772 |
-| 11-23 · 行偏移与接缝匹配 | 枚举行容量变化的偏移点，允许两条边带交叠，并移除最少的冲突方块。较上版改善 67 题。 | **22.923849921** | **22.923849921** |
+| 11-23 · 行偏移与接缝匹配 | 枚举行容量变化的偏移点，允许两条边带交叠，并移除最少的冲突方块。较上版改善 67 题。 | 22.923849921 | 22.923849921 |
+| 11-23 · 双边带联合搜索 | 联合比较两侧边带的倾角、行偏移与交叠宽度，用二分图匹配处理接缝。较上版改善 59 题。 | **22.906698393** | **22.906698393** |
 
 模拟器默认打开最新版认证 CSV，离线单文件内嵌同一文件。网页与 Node 共用双边带坐标生成、外扩和择优参数。已有 Python 接触优化的结果通过认证 CSV 载入。
 
@@ -55,7 +56,7 @@
 在仓库根目录执行下列命令可用模拟器核心重算当前 CSV 的总分。对照时可更换 CSV 路径。
 
 ```bash
-node - competitions/squares-in-squares/submissions/rectangular_core-score-22.923849921.csv <<'JS'
+node - competitions/squares-in-squares/submissions/rectangular_core-score-22.906698393.csv <<'JS'
 const fs = require('node:fs');
 const core = require('./competitions/squares-in-squares/simulator/packing-core.js');
 const layouts = core.parseCsv(fs.readFileSync(process.argv[2], 'utf8'));
@@ -109,3 +110,8 @@ JS
 固定一个长方形和倾角。每行沿法向移动时，只有碰到边界、角落方块或能容纳下一块时，行容量才会改变。把这些位置对 1 取余，枚举对应的整组排布偏移。以 304 块为例，边长取 17.978、倾角取 51.9° 和 75.9°，等距采样 16 个偏移只能排下 302 块，枚举偏移断点可以排下 304 块。
 
 底边与左边的倾斜排布也可以在接缝处交叠。冲突图的两侧分别对应两条边带的方块。计算最大匹配，再求最小点覆盖，移除该覆盖中的方块，即可在给定两组排布中保留最多的方块。551 块由边长 24 缩至 23.990000，650 块由 26 缩至 25.982000。整份 CSV 的 67 道新布局均由这两类构造生成，其余 933 道沿用上一版自研布局。[单题生成命令](../competitions/squares-in-squares/README.md#重建和验证最佳解)
+
+
+### 双边带联合搜索
+
+在 22.923849921 的自研基线上，为两侧边带保留多组倾角和行偏移，在不同交叠宽度下联合比较配对容量，再通过二分图匹配去除接缝冲突。新生成的构造改善 59 题，总分下降 0.017151528；其余题保留自研基线。生成器、参数和完整复现命令见[赛题 README](../competitions/squares-in-squares/README.md#重建和验证最佳解)。公开方案只用于比较和启发，不直接替换布局。
