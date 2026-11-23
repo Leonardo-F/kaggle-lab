@@ -20,3 +20,7 @@ kaggle.json
 /submission.csv
 # Download competition data separately; never publish it or credentials.
 competitions/google-quantum-circuit-compilation/official/
+
+# Official Santa 2026 data (accept-rules download; do not redistribute) and local working CSVs
+competitions/santa-2026/data/
+competitions/santa-2026/*submission*.csv

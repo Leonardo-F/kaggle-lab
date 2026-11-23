@@ -12,7 +12,7 @@
 
 ## 生成和回放逆平方根电路
 
-在本赛题目录用 Python 3.11+ 运行。以下命令生成 26 位联合拟合候选，对 3,133,452 个合法输入各回放一次。[各版本成本、量子比特和其他两题的实验](../../docs/google-quantum-circuit-compilation.md)
+在本赛题目录用 Python 3.11+ 运行。以下命令生成 26 位联合拟合候选，对 3,133,452 个合法输入各回放一次。[各版本成本、量子比特和其他两题的实验](docs/progress.md)
 
 ```bash
 python -m pip install -r requirements.txt

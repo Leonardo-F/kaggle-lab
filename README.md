@@ -14,7 +14,7 @@
 
 ## 目录
 
-- `docs/` 收录各赛题的实验进展、版本结果和策略笔记。
+- 各赛题的实验进展、版本结果和策略笔记放在 `competitions/<赛题>/docs/`。
 - `competitions/<赛题>/algorithms/` 存放求解器和验证入口。`experiments/` 存放实验脚本、结果和测试。
 - 装箱另含 `simulator/`、固定版本的官方评分器 `vendor/`，以及 `submissions/` 中的最佳 CSV 和逐题认证。量子电路和提交包在本地生成。
 
