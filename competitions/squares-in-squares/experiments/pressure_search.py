@@ -14,10 +14,12 @@ from rotated_windows import Windows, layout_side
 from packing_batch import load_batch, write_updates
 
 LOSS = None
+SEED_OFFSET = 0
 
 
-def init(lib):
-    global LOSS
+def init(lib, offset=0):
+    global LOSS, SEED_OFFSET
+    SEED_OFFSET = offset
     native = ctypes.CDLL(str(lib))
     LOSS = native.pressure_loss
     array = np.ctypeslib.ndpointer(dtype=np.float64, flags='C_CONTIGUOUS')
@@ -46,7 +48,7 @@ def starts_for(n, seeds):
 def search(work):
     n, starts, attempts = work
     best, side = enclosing_box(starts[0])
-    rng = np.random.default_rng(20261123 + n)
+    rng = np.random.default_rng(20261123 + n + SEED_OFFSET)
     for restart in range(attempts):
         pattern = restart % 5
         seed = (best if pattern < 3 else starts[restart % len(starts)]).copy()
@@ -85,13 +87,14 @@ def main():
     parser.add_argument('--targets', type=int, nargs='+', required=True)
     parser.add_argument('--attempts', type=int, default=80)
     parser.add_argument('--workers', type=int, default=4)
+    parser.add_argument('--seed-offset', type=int, default=0, help='shift the restart seeds to run a new campaign')
     args = parser.parse_args()
     if args.output.exists() or args.attempts < 1 or any(not 2 <= n <= 999 for n in args.targets):
         parser.error('Use a new output, positive attempts and targets in 2..999')
     rows, seeds = load_batch(args.input)
     targets = [(n, starts_for(n, seeds), args.attempts) for n in args.targets]
     updates = {}
-    with ProcessPoolExecutor(max_workers=args.workers, initializer=init, initargs=(args.lib.resolve(),)) as pool:
+    with ProcessPoolExecutor(max_workers=args.workers, initializer=init, initargs=(args.lib.resolve(), args.seed_offset)) as pool:
         for n, poses, side in pool.map(search, targets):
             if side < layout_side(seeds[n]) - 2e-6:
                 updates[n] = poses
