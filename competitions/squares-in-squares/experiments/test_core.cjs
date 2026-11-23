@@ -89,3 +89,22 @@ test('one-puzzle export is separate; full export incorporates edits and blocks i
   layouts.set(2,[tile(0),tile(0)]);
   assert.throws(()=>[...P.csvChunks(layouts)]);
 });
+
+test('two-band reconstruction matches the published layouts for the four target sizes',()=>{
+  const fs=require('node:fs'), path=require('node:path');
+  const bands=require('../simulator/bands.js');
+  const candidate=bands.portfolio(require('../simulator/band-witnesses.js'));
+  const source=P.indexSubmission(fs.readFileSync(path.resolve(__dirname,'../submissions/rectangular_core.csv'),'utf8'));
+  for(const n of [378,418,754,810]){
+    const expected=source.tiles(n), result=candidate(n);
+    assert.equal(result.length,n);
+    assert.ok(P.evaluate(result).valid);
+    // The published portfolio can later gain an even smaller layout.
+    assert.ok(P.getBounds(expected).L<=P.getBounds(result).L+1e-9);
+    assert.ok(P.getBounds(result).L < Math.ceil(Math.sqrt(n))-.015);
+  }
+  const scan=bands.search(9,.98,[30,52,72,79],8);
+  assert.ok(scan.recipe);
+  assert.equal(bands.construct(scan.recipe).length,scan.count);
+  assert.ok(P.evaluate(bands.construct(scan.recipe)).valid);
+});
