@@ -91,16 +91,16 @@ test('one-puzzle export is separate; full export incorporates edits and blocks i
 });
 
 test('two-band reconstruction matches the published layouts for the four target sizes',()=>{
-  const fs=require('node:fs'), path=require('node:path');
   const bands=require('../simulator/bands.js');
   const candidate=bands.portfolio(require('../simulator/band-witnesses.js'));
-  const source=P.indexSubmission(fs.readFileSync(path.resolve(__dirname,'../submissions/rectangular_core.csv'),'utf8'));
+  // Sides published in the 22.923849921 portfolio; its CSV now lives in git history.
+  const published={378:19.979694127756,418:20.982990039796,754:27.958465023502,810:28.958464835502};
   for(const n of [378,418,754,810]){
-    const expected=source.tiles(n), result=candidate(n);
+    const result=candidate(n);
     assert.equal(result.length,n);
     assert.ok(P.evaluate(result).valid);
     // The published portfolio can later gain an even smaller layout.
-    assert.ok(P.getBounds(result).L<=P.getBounds(expected).L+1e-9);
+    assert.ok(P.getBounds(result).L<=published[n]+1e-9);
     assert.ok(P.getBounds(result).L < Math.ceil(Math.sqrt(n))-.015);
   }
   const scan=bands.search(9,.98,[30,52,72,79],8);
