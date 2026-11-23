@@ -1,0 +1,238 @@
+{
+ "source": {
+  "document": "EXACT_FORMS.md, search/exact/ in github.com/evand/square-packing (MIT)",
+  "note": "Published best-known side lengths, used only as search targets; no coordinates were copied.",
+  "captured": "2026-11-24"
+ },
+ "puzzles": [
+  {
+   "n": 17,
+   "ours": 4.707106929,
+   "published": 4.675530093604551,
+   "gain_if_matched": 0.007659
+  },
+  {
+   "n": 18,
+   "ours": 4.82842728,
+   "published": 4.822875655532295,
+   "gain_if_matched": 0.001309
+  },
+  {
+   "n": 28,
+   "ours": 5.828427318,
+   "published": 5.824444616674059,
+   "gain_if_matched": 0.000753
+  },
+  {
+   "n": 37,
+   "ours": 6.621320568,
+   "published": 6.59861960924436,
+   "gain_if_matched": 0.003732
+  },
+  {
+   "n": 39,
+   "ours": 6.828427358,
+   "published": 6.810722083068649,
+   "gain_if_matched": 0.002835
+  },
+  {
+   "n": 41,
+   "ours": 6.949747708,
+   "published": 6.926693094468802,
+   "gain_if_matched": 0.003601
+  },
+  {
+   "n": 50,
+   "ours": 7.621320608,
+   "published": 7.571428571428571,
+   "gain_if_matched": 0.007056
+  },
+  {
+   "n": 51,
+   "ours": 7.707107049,
+   "published": 7.700799235417012,
+   "gain_if_matched": 0.000883
+  },
+  {
+   "n": 53,
+   "ours": 7.828427398,
+   "published": 7.822875655532295,
+   "gain_if_matched": 0.000763
+  },
+  {
+   "n": 54,
+   "ours": 7.851093274,
+   "published": 7.84666719284349,
+   "gain_if_matched": 0.000602
+  },
+  {
+   "n": 70,
+   "ours": 8.893954884,
+   "published": 8.881666757009004,
+   "gain_if_matched": 0.001469
+  },
+  {
+   "n": 86,
+   "ours": 9.827194885,
+   "published": 9.822875655532295,
+   "gain_if_matched": 0.000466
+  },
+  {
+   "n": 87,
+   "ours": 9.851975513,
+   "published": 9.838815269948261,
+   "gain_if_matched": 0.001411
+  },
+  {
+   "n": 102,
+   "ours": 10.611388295,
+   "published": 10.607174680176051,
+   "gain_if_matched": 0.000417
+  },
+  {
+   "n": 106,
+   "ours": 10.82842752,
+   "published": 10.822908044132847,
+   "gain_if_matched": 0.000536
+  },
+  {
+   "n": 107,
+   "ours": 10.888153463,
+   "published": 10.84666719284349,
+   "gain_if_matched": 0.004011
+  },
+  {
+   "n": 127,
+   "ours": 11.82842756,
+   "published": 11.822875655532295,
+   "gain_if_matched": 0.000493
+  },
+  {
+   "n": 128,
+   "ours": 11.82842756,
+   "published": 11.825091968213687,
+   "gain_if_matched": 0.000295
+  },
+  {
+   "n": 129,
+   "ours": 11.911069042,
+   "published": 11.881306218090003,
+   "gain_if_matched": 0.00262
+  },
+  {
+   "n": 146,
+   "ours": 12.601486759,
+   "published": 12.600907778513019,
+   "gain_if_matched": 4.8e-05
+  },
+  {
+   "n": 151,
+   "ours": 12.8284276,
+   "published": 12.822875655532295,
+   "gain_if_matched": 0.000452
+  },
+  {
+   "n": 152,
+   "ours": 12.863961523,
+   "published": 12.83071880097661,
+   "gain_if_matched": 0.002696
+  },
+  {
+   "n": 153,
+   "ours": 12.901776783,
+   "published": 12.881666757009004,
+   "gain_if_matched": 0.001626
+  },
+  {
+   "n": 171,
+   "ours": 13.601486799,
+   "published": 13.571428571428571,
+   "gain_if_matched": 0.002299
+  },
+  {
+   "n": 176,
+   "ours": 13.82842764,
+   "published": 13.822875655532295,
+   "gain_if_matched": 0.000418
+  },
+  {
+   "n": 177,
+   "ours": 13.863961545,
+   "published": 13.822979734169449,
+   "gain_if_matched": 0.00308
+  },
+  {
+   "n": 178,
+   "ours": 13.863961545,
+   "published": 13.84666719284349,
+   "gain_if_matched": 0.001296
+  },
+  {
+   "n": 198,
+   "ours": 14.601486839,
+   "published": 14.571428571428571,
+   "gain_if_matched": 0.002136
+  },
+  {
+   "n": 204,
+   "ours": 14.82842768,
+   "published": 14.822875655532295,
+   "gain_if_matched": 0.000389
+  },
+  {
+   "n": 205,
+   "ours": 14.82842768,
+   "published": 14.824451146124089,
+   "gain_if_matched": 0.000278
+  },
+  {
+   "n": 230,
+   "ours": 15.684707178,
+   "published": 15.682926829268293,
+   "gain_if_matched": 0.000117
+  },
+  {
+   "n": 234,
+   "ours": 15.82842772,
+   "published": 15.822875655532295,
+   "gain_if_matched": 0.000363
+  },
+  {
+   "n": 261,
+   "ours": 16.684707218,
+   "published": 16.682926829268293,
+   "gain_if_matched": 0.00011
+  },
+  {
+   "n": 266,
+   "ours": 16.82842776,
+   "published": 16.823062082837804,
+   "gain_if_matched": 0.000329
+  },
+  {
+   "n": 267,
+   "ours": 16.893955114,
+   "published": 16.84666719284349,
+   "gain_if_matched": 0.002894
+  },
+  {
+   "n": 291,
+   "ours": 17.571068475,
+   "published": 17.535533905932738,
+   "gain_if_matched": 0.002083
+  },
+  {
+   "n": 299,
+   "ours": 17.8284278,
+   "published": 17.822875655532297,
+   "gain_if_matched": 0.000321
+  },
+  {
+   "n": 300,
+   "ours": 17.849243081,
+   "published": 17.824123388478544,
+   "gain_if_matched": 0.00145
+  }
+ ],
+ "total_gain_if_matched": 0.063296
+}
