@@ -25,7 +25,7 @@ python solve.py data/puzzles.csv --reference submission.csv --refine --output su
 
 `--refine` 跳过旧的构造策略，使用混合进制、小题精确搜索和算术链重写压缩参考程序。`--reference` 可选。给定参考 CSV 时，程序逐题选用更短的合法结果，指令数不会超过参考程序。练习时，将输入替换为 `data/practice_puzzles.csv` 并省略 `--reference`。
 
-用官方数据独立回放 1,000 道题，当前提交文件的总指令数为 **269,474**（本地计数，待上传 Kaggle 核对；上一版 270,450）。[完整 CSV](submissions/elf-calculator-score-269474.csv)
+用官方数据独立回放 1,000 道题，当前提交文件的总指令数为 **269,413**（本地计数，待上传 Kaggle 核对；上一版 270,450）。[完整 CSV](submissions/elf-calculator-score-269413.csv)
 
 ## 值图改写器
 
@@ -43,6 +43,6 @@ python graph_solver.py data/puzzles.csv --merge \
 python graph_solver.py data/puzzles.csv --check merged.csv
 ```
 
-对正式集 1,000 题迭代打磨、再做锚点变体搜索（`--variant`、`--scaled`）并逐题取最短合并，得到 **270,450 → 269,474**（少 976 步，259 题变短、0 题变长，最长程序 525 步），`--check` 独立回放全部通过。完整命令见[进展文档](docs/progress.md)。详细测量、与公开前沿（128,513）的分档差距和结构检验见[对比分析](docs/frontier-analysis.md)。
+对正式集 1,000 题迭代打磨、再做锚点变体搜索（`--variant`、`--scaled`）并逐题取最短合并，得到 **270,450 → 269,413**（少 1,037 步，276 题变短、0 题变长，最长程序 525 步），`--check` 独立回放全部通过。完整命令见[进展文档](docs/progress.md)。详细测量、与公开前沿（128,513）的分档差距和结构检验见[对比分析](docs/frontier-analysis.md)。
 
 [解题思路和验证范围](docs/progress.md) · [公开前沿对比与搜索实验](docs/frontier-analysis.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)

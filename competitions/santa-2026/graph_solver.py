@@ -507,6 +507,22 @@ class Polisher:
                 stack.extend(split[1:])
         return sum(1 for v in needed if self.graph.get(v) is not None)
 
+    def _reaches(self, start: int, goal: int) -> bool:
+        """True when ``goal`` is reachable from ``start`` in the value graph."""
+        stack = [start]
+        seen: set[int] = set()
+        while stack:
+            value = stack.pop()
+            if value == goal:
+                return True
+            if value in seen:
+                continue
+            seen.add(value)
+            split = self.graph.get(value)
+            if split is not None:
+                stack.extend(split[1:])
+        return False
+
     def _defined(self) -> bool:
         """Every operand of every used node exists."""
         known = set(self.graph)
