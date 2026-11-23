@@ -648,6 +648,84 @@ class Polisher:
                 self.graph = snapshot
         return changed
 
+    def rational_pass(self, scales: int = 64, strict: bool = True) -> bool:
+        """Re-derive targets as ``(anchor*p + c) / q`` for small ``p`` and ``q``.
+
+        Consecutive targets in the scored set are often linked by a small
+        rational ratio (measured 28.5% of pairs versus 8.5% for a uniform
+        control).  For each (p, q) the anchor nearest to ``target*q/p`` gives a
+        tiny residual ``c = target*q - anchor*p``, so the target costs one
+        multiply, one add and one divide plus the residual.
+        """
+        limit = self.limit
+        changed = False
+        baseline = self.total_nodes()
+        values = sorted(self.graph)
+        for target in sorted(self.targets):
+            if target not in self.graph or self.node_cost(target) <= 3:
+                continue
+            max_q = min(scales, limit // target)
+            if max_q < 2:
+                continue
+            current = self.graph[target]
+            best: tuple[int, int, int, int] | None = None
+            for q in range(2, max_q + 1):
+                scaled_target = target * q
+                for p in range(2, scales + 1):
+                    desired = scaled_target / p
+                    if desired < 2:
+                        break
+                    position = bisect_left(values, int(desired))
+                    for index in (position - 1, position, position + 1):
+                        if not 0 <= index < len(values):
+                            continue
+                        anchor = values[index]
+                        if anchor < 2 or anchor == target:
+                            continue
+                        product = anchor * p
+                        if product > limit:
+                            continue
+                        residual = scaled_target - product
+                        if best is None or abs(residual) < abs(best[3]):
+                            best = (anchor, p, q, residual)
+            if best is None:
+                continue
+            anchor, p, q, residual = best
+            if self.ensure(p, 1, forbidden=target) >= INF:
+                continue
+            if self.ensure(q, 1, forbidden=target) >= INF:
+                continue
+            snapshot = dict(self.graph)
+            product = anchor * p
+            shifted = product + residual
+            if not 1 <= shifted <= limit or shifted % q:
+                continue
+            self.graph[product] = ("*", anchor, p)
+            if residual:
+                if self.ensure(abs(residual), 2, forbidden=target) >= INF:
+                    self.graph = snapshot
+                    continue
+                self.graph[shifted] = ("+" if residual > 0 else "-", product, abs(residual))
+            self.graph[target] = ("/", shifted, q)
+            if not self._defined() or self._reaches(shifted, target) \
+                    or self._reaches(q, target) or self._reaches(product, target):
+                self.graph = snapshot
+                continue
+            if not strict:
+                changed = True
+                self.sweep()
+                values = sorted(self.graph)
+                continue
+            total = self.total_nodes()
+            if total < baseline:
+                baseline = total
+                changed = True
+                self.sweep()
+                values = sorted(self.graph)
+            else:
+                self.graph = snapshot
+        return changed
+
     def sweep(self) -> None:
         """Drop every node no target needs any more."""
         needed: set[int] = set()
@@ -767,7 +845,7 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
            deep: bool = False, two_step: bool = False,
            strict: bool = True, seed: int = 0, walk: bool = False,
            one_sided: bool = False, variant: int = 0,
-           scaled: bool = False) -> Program:
+           scaled: bool = False, rational: bool = False) -> Program:
     """Iteratively shorten ``program`` inside its own value graph."""
     sys.setrecursionlimit(20000)
     replay(puzzle, program)
@@ -783,6 +861,9 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
                 inner = True
                 polisher.sweep()
             if (two_step and var_two_step) and polisher.rewrite(use_two_step=True):
+                inner = True
+                polisher.sweep()
+            if rational and polisher.rational_pass(strict=strict):
                 inner = True
                 polisher.sweep()
             if scaled and polisher.scaled_anchor_pass(strict=strict):
@@ -821,7 +902,7 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
 def solve(puzzle: Puzzle, reference: Program | None = None,
           rounds: int = 8, two_step: bool = True, strict: bool = True,
           seed: int = 0, walk: bool = False, one_sided: bool = False,
-          variant: int = 0, scaled: bool = False) -> Program:
+          variant: int = 0, scaled: bool = False, rational: bool = False) -> Program:
     """Polish ``reference`` repeatedly until it stops getting shorter."""
     if reference is None:
         raise ValueError("the polisher needs a reference program")
@@ -831,7 +912,7 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
         candidate = polish(puzzle, best, two_step=two_step, rounds=4,
                            strict=strict, seed=seed, walk=walk,
                            one_sided=one_sided, variant=variant,
-                           scaled=scaled)
+                           scaled=scaled, rational=rational)
         if len(candidate) >= len(best):
             break
         best = candidate
@@ -839,10 +920,10 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
 
 
 def solve_row(job):
-    puzzle, reference, two_step, strict, seed, one_sided, variant, scaled = job
+    puzzle, reference, two_step, strict, seed, one_sided, variant, scaled, rational = job
     return puzzle.id, solve(puzzle, reference, two_step=two_step,
                             strict=strict, seed=seed, one_sided=one_sided,
-                            variant=variant, scaled=scaled)
+                            variant=variant, scaled=scaled, rational=rational)
 
 
 def main() -> None:
@@ -855,6 +936,8 @@ def main() -> None:
     parser.add_argument("--no-two-step", action="store_true",
                         help="only rewrite with a single instruction per target")
     parser.add_argument("--seed", type=int, default=0, help="randomised walk seed")
+    parser.add_argument("--rational", action="store_true",
+                        help="also try (anchor*p + c)/q rewrites")
     parser.add_argument("--scaled", action="store_true",
                         help="also try anchor*k + gap rewrites with small k")
     parser.add_argument("--variant", type=int, default=0,
@@ -890,7 +973,7 @@ def main() -> None:
             return
         reference = load_programs(args.reference, puzzles)
         jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose,
-                 args.seed, args.one_sided, args.variant, args.scaled)
+                 args.seed, args.one_sided, args.variant, args.scaled, args.rational)
                 for pid, puzzle in puzzles.items())
         if args.jobs == 1:
             programs = dict(map(solve_row, jobs))
