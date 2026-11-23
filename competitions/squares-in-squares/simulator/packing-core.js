@@ -150,10 +150,10 @@
       throw Error(`第 ${lineNo} 行：需有限十进制数（最多 2048 字符，指数绝对值 ≤ 2048）`);
     return raw;
   }
-  function parseCsv(text){
+  function parseCsv(text, firstId=0){
     const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
     if(parseLine(lines[0],1).join(',')!==HEADER)throw Error(`CSV 表头应为 ${HEADER}`);
-    const temp=new Map();let rowId=0;
+    const temp=new Map();let rowId=firstId;
     for(let i=1;i<lines.length;i++){
       if(!lines[i].trim())continue;
       const f=parseLine(lines[i],i+1);
@@ -171,12 +171,27 @@
       if(temp.get(n)[sid])throw Error(`第 ${i+1} 行：重复 square_id`);
       temp.get(n)[sid]=tile;
     }
-    if(!rowId)throw Error('CSV 没有数据行');
+    if(rowId===firstId)throw Error('CSV 没有数据行');
     for(const [n,placed] of temp){
       if(placed.some(s=>s===null))throw Error(`n=${n}：必须恰好有 ${n} 个正方形`);
       assertExportable(n,placed);
     }
     return temp;
+  }
+  // Index the certified CSV once and materialize only the requested puzzle.
+  // Custom imports still go through the full parser and geometry checks.
+  function indexSubmission(text){
+    const starts=[...text.matchAll(/^\d+,(\d+),0,/gm)];
+    if(text.slice(0,text.indexOf('\n')).trimEnd()!==HEADER || starts.length!==MAX_N ||
+       starts.some((m,i)=>Number(m[1])!==i+1 || Number(m[0].split(',')[0])!==i*(i+1)/2))
+      throw Error('最佳 CSV 的实例编号或表头不完整');
+    return {text, tiles(n){
+      checkN(n);
+      const part=text.slice(starts[n-1].index,starts[n]?.index??text.length);
+      const groups=parseCsv(HEADER+'\n'+part,n*(n-1)/2);
+      if(groups.size!==1 || !groups.has(n))throw Error('最佳 CSV 的实例顺序有误');
+      return groups.get(n);
+    }};
   }
   function assertExportable(n,placed){
     if(placed.length!==n)throw Error(`n=${n}：正方形数量错误`);
@@ -184,7 +199,7 @@
     if(!e.valid)throw Error(`n=${n}：存在重叠或无法确定的接触（${e.hits.uncertainCount} 对不确定接触），请调整后再导出`);
     return e;
   }
-  function* csvChunks(layouts=new Map(),{maxN=MAX_N,onlyN=null}={}){
+  function* csvChunks(layouts=new Map(),{maxN=MAX_N,onlyN=null,base=makeGrid}={}){
     checkN(maxN);if(onlyN!==null)checkN(onlyN);
     const start=onlyN??1,end=onlyN??maxN;
     // Validate every edit before yielding any file content. Unchanged grids have
@@ -192,7 +207,7 @@
     for(const [n,placed] of layouts)if(n>=start&&n<=end)assertExportable(n,placed);
     yield HEADER+'\n';let id=0,chunk='';
     for(let n=start;n<=end;n++){
-      const placed=layouts.get(n)||makeGrid(n);
+      const placed=layouts.get(n)||base(n);
       for(let k=0;k<n;k++){
         const s=placed[k];chunk+=`${id++},${n},${k},${numericText(s,'x')},${numericText(s,'y')},${numericText(s,'angle')}\n`;
       }
@@ -200,5 +215,5 @@
     }
     if(chunk)yield chunk;
   }
-  return {MAX_N,HEADER,makeGrid,makeConstructive,getBounds,penetration,collisions,evaluate,parseCsv,csvChunks,numericText,updateTile};
+  return {MAX_N,HEADER,makeGrid,makeConstructive,getBounds,penetration,collisions,evaluate,parseCsv,indexSubmission,csvChunks,numericText,updateTile};
 });
