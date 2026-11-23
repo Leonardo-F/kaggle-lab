@@ -31,3 +31,5 @@ jobs:
         run: |
           python competitions/squares-in-squares/simulator/build_standalone.py
           git diff --exit-code -- competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html
+      - name: Verify unified offline simulator is current
+        run: python -m unittest discover -s simulation -p 'test_*.py' -v
