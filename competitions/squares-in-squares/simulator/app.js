@@ -8,7 +8,7 @@
   const {makeGrid,makeConstructive,getBounds,collisions,evaluate,parseCsv,csvChunks,updateTile}=PackingCore;
   const tags=new Map();
   const bandCandidate=PackingBands.portfolio(bandWitnesses);
-  let certified=null, cachedN=0, cachedTiles=null;
+  let certified=null, certifiedScore=null, cachedN=0, cachedTiles=null;
   const defaultName=()=>certified?'已认证最佳布局':'赛题网格基线';
   const baseTiles=k=>certified?certified.tiles(k):makeGrid(k);
   let viewL=32;
@@ -158,17 +158,22 @@
   async function downloadCsv(onlyN=null){
     if(running)return;setBusy(true);colorMessage('正在检查布局并生成 CSV…');
     try{
-      await nextFrame();const parts=[];let bytes=0;
-      const chunks=!onlyN && certified && !layouts.size?[certified.text]:csvChunks(layouts,{onlyN,base:baseTiles});
+      await nextFrame();const parts=[];let bytes=0,totalScore=0;
+      const unchanged=!onlyN && certified && !layouts.size;
+      const recordScore=(n,tiles)=>{totalScore+=getBounds(tiles).L/Math.sqrt(n)-1;};
+      const chunks=unchanged?[certified.text]:csvChunks(layouts,{onlyN,base:baseTiles,
+        onLayout:onlyN?undefined:recordScore});
       for(const part of chunks){
         parts.push(part);bytes+=part.length;
         colorMessage(`正在生成 CSV：${(bytes/1e6).toFixed(1)} MB…`);await nextFrame();
       }
       const blob=new Blob(parts,{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-      a.href=url;a.download=onlyN?`squares-n${String(onlyN).padStart(4,'0')}.csv`:'submission.csv';
+      const fileName=unchanged?'rectangular_core-score-'+certifiedScore+'.csv':
+        'rectangular_core-score-'+totalScore.toFixed(9)+'-edited.csv';
+      a.href=url;a.download=onlyN?`squares-n${String(onlyN).padStart(4,'0')}.csv`:fileName;
       document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
       colorMessage(onlyN?`已导出 n=${onlyN} 的 ${onlyN} 行调试文件；完整参赛请使用 submission.csv。`:
-        '已导出 submission.csv：1000 个实例、500,500 行。');
+        '已导出 '+a.download+'，包含 1,000 个实例。');
     }catch(error){colorMessage('导出已阻止：'+error.message);}
     finally{setBusy(false);}
   }
@@ -266,27 +271,33 @@
     setBusy(true);
     try{
       const packed=$('certifiedCsv');
-      let buffer, expected;
+      let buffer, expected, totalScore;
       if(packed){
         const compressed=Uint8Array.from(atob(packed.textContent.trim()),ch=>ch.charCodeAt(0));
         const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
         buffer=await new Response(stream).arrayBuffer();
-        expected=packed.dataset.sha256;
+        expected=packed.dataset.sha256;totalScore=packed.dataset.score;
       }else{
+        const manifest=await fetch('../submissions/latest.json');
+        if(!manifest.ok)throw Error('无法读取当前版本');
+        const version=await manifest.json();
+        totalScore=version.simulator_score;
         const [csv,report]=await Promise.all([
-          fetch('../submissions/rectangular_core.csv'),fetch('../submissions/rectangular_core-certification.json')]);
+          fetch('../submissions/'+version.csv),fetch('../submissions/'+version.report)]);
         if(!csv.ok||!report.ok)throw Error('无法读取仓库的 CSV 或认证报告');
         const cert=await report.json();
-        if(!cert.valid||cert.puzzles!==1000)throw Error('仓库认证报告不完整');
+        if(!cert.valid||cert.puzzles!==1000||cert.score_literal.toFixed(9)!==totalScore)
+          throw Error('仓库认证报告与当前版本不一致');
         buffer=await csv.arrayBuffer();expected=cert.csv_sha256;
       }
+      if(!/^\d+\.\d{9}$/.test(totalScore))throw Error('当前版本缺少模拟器总分');
       if(window.crypto?.subtle){
         const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',buffer));
         if(Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('')!==expected)
           throw Error('CSV 与认证报告的 SHA-256 不一致');
       }
       certified=PackingCore.indexSubmission(new TextDecoder().decode(buffer));
-      cachedN=0;
+      certifiedScore=totalScore;cachedN=0;
     }catch(error){
       $('baselineText').textContent='最佳布局加载失败：'+error.message;
     }finally{
