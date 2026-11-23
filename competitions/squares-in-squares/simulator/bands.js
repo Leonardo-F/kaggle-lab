@@ -28,7 +28,7 @@ const PackingBands = (core => {
 
   // For row coordinate v (measured from the lower right corner), the two
   // corner triangles and the two opposite wall pairs bound its length.
-  function scanRectangle(width, height, angles, phases) {
+  function scanRectangle(width, height, angles, phases, visit) {
     let count = floor(width) * floor(height), witness = null;
     for (const degrees of angles) {
       const angle = degrees * Math.PI / 180, s = Math.sin(angle), c = Math.cos(angle);
@@ -42,17 +42,23 @@ const PackingBands = (core => {
       for (const phase of offsets) {
         const firstV = .5 + phase;
         let left = 0, right = corners.length, sum = 0, offset = -Infinity, start = 0;
+        let phaseCount = 0, phaseWitness = null;
         for (let j = 0; firstV + j <= span - .5 + eps; j++) {
           const lower = firstV + j - .5, upper = span - firstV - j - .5;
           while (left < corners.length && corners[left] <= lower + eps) left++;
           while (right > 0 && corners[right - 1] > upper + eps) right--;
           if (left - sum > offset) { offset = left - sum; start = j; }
           sum += Math.min(wallLimit, floor(lower / product), floor(upper / product));
+          if (visit && offset + sum + right > phaseCount) {
+            phaseCount = offset + sum + right;
+            phaseWitness = [degrees, phase, start, j];
+          }
           if (offset + sum + right > count) {
             count = offset + sum + right;
             witness = [degrees, phase, start, j];
           }
         }
+        if (visit && phaseWitness) visit(phaseCount,phaseWitness);
       }
     }
     return {count, witness};
@@ -88,17 +94,13 @@ const PackingBands = (core => {
 
   // The bands are feasible individually. Across their seam, maximum matching
   // gives a minimum vertex cover of the collision graph. Keep its complement.
-  function joinBands(bottom, left) {
-    const size = bottom.length;
-    const both = bottom.concat(left);
-    const edges = Array.from({length:size}, () => []);
-    for (const [i,j] of core.collisions(both,true).pairs)
-      if (i < size && j >= size) edges[i].push(j - size);
-    const partner = new Int32Array(left.length).fill(-1);
+  function maximumMatching(edges, rightSize) {
+    const partner = new Int32Array(rightSize).fill(-1);
+    const visited = new Int32Array(rightSize);
     function augment(i, seen) {
       for (const j of edges[i]) {
-        if (seen.has(j)) continue;
-        seen.add(j);
+        if (visited[j] === seen) continue;
+        visited[j] = seen;
         if (partner[j] < 0 || augment(partner[j], seen)) {
           partner[j] = i;
           return true;
@@ -106,7 +108,16 @@ const PackingBands = (core => {
       }
       return false;
     }
-    const unmatched = edges.map((_,i) => i).filter(i => !augment(i,new Set()));
+    const unmatched = edges.map((_,i) => i).filter(i => !augment(i,i+1));
+    return {partner, unmatched};
+  }
+
+  function joinBands(bottom, left) {
+    const size = bottom.length;
+    const edges = Array.from({length:size}, () => []);
+    for (const [i,j] of core.collisions(bottom.concat(left),true).pairs)
+      if (i < size && j >= size) edges[i].push(j - size);
+    const {partner, unmatched} = maximumMatching(edges,left.length);
     const reachableBottom = new Set(), reachableLeft = new Set();
     function visit(i) {
       if (reachableBottom.has(i)) return;
@@ -120,6 +131,62 @@ const PackingBands = (core => {
     unmatched.forEach(visit);
     return bottom.filter((_,i) => reachableBottom.has(i))
       .concat(left.filter((_,j) => !reachableLeft.has(j)));
+  }
+
+  // Retain multiple row offsets at each angle. A band can lose a square on
+  // its own and still gain one after both bands are fitted at their seam.
+  function rectangleOptions(width,height,angles,phases,limit) {
+    const groups = new Map();
+    const consider = (count,witness) => {
+      const key = witness ? `${witness[0]}:${Math.floor(8*witness[1])}` : 'grid';
+      if (!groups.has(key) || groups.get(key).count < count)
+        groups.set(key,{count,witness});
+    };
+    scanRectangle(width,height,angles,phases,consider);
+    consider(floor(width)*floor(height),null);
+    return [...groups.values()].sort((a,b)=>b.count-a.count).slice(0,limit);
+  }
+
+  function searchSeam(k,fraction,a,b,overlap,bottomAngles,leftAngles,phases=24,limit=20) {
+    const side = k + fraction, seam = b + fraction, leftWidth = a + fraction;
+    if (overlap <= 0 || overlap > seam) return {count:k*k,recipe:null};
+    const scale = 1.000000012;
+    const bottom = rectangleOptions(side,seam,bottomAngles,phases,limit);
+    const left = rectangleOptions(k-b+overlap,leftWidth,leftAngles,phases,limit);
+    const gridCount = (k-a)*(k-b);
+    let count = k*k, recipe = null;
+    if (bottom[0].count+left[0].count+gridCount<=count) return {count,recipe};
+    const shift = (x,y,angle)=>({x:(x-side/2)*scale,y:(y-side/2)*scale,angle});
+    for (const band of bottom) {
+      band.edge = rectangle(side,seam,band.witness)
+        .filter(t=>t.x<leftWidth+1 && t.y>seam-overlap-1)
+        .map(t=>shift(t.x,t.y,t.angle));
+    }
+    for (const band of left) {
+      band.edge = rectangle(k-b+overlap,leftWidth,band.witness)
+        .filter(t=>t.x<overlap+1)
+        .map(t=>shift(t.y,t.x+seam-overlap,-t.angle));
+    }
+    for (const lower of bottom) {
+      if (lower.count+left[0].count+gridCount<=count) break;
+      for (const upper of left) {
+        const capacity = lower.count+upper.count+gridCount;
+        if (capacity<=count) break;
+        const graph = lower.edge.map(t=>[]);
+        for (let i=0;i<lower.edge.length;i++) {
+          for (let j=0;j<upper.edge.length;j++) {
+            if (core.penetration(lower.edge[i],upper.edge[j])) graph[i].push(j);
+          }
+        }
+        const {unmatched} = maximumMatching(graph,upper.edge.length);
+        const combined = capacity - graph.length + unmatched.length;
+        if (combined>count) {
+          count = combined;
+          recipe = [k,fraction,a,b,lower.witness,upper.witness,overlap];
+        }
+      }
+    }
+    return {count,recipe};
   }
 
   function construct([k, fraction, a, b, bottomSpec, leftSpec, overlap = 0]) {
@@ -187,6 +254,6 @@ const PackingBands = (core => {
     };
   }
 
-  return {construct, search, scanRectangle, portfolio};
+  return {construct, search, scanRectangle, searchSeam, portfolio};
 })(typeof module === 'object' && module.exports ? require('./packing-core.js') : globalThis.PackingCore);
 if (typeof module === 'object' && module.exports) module.exports = PackingBands;

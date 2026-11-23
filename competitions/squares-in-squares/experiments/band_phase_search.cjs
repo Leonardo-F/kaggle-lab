@@ -74,14 +74,31 @@ function dock(n, a, b, bottomAngle, leftAngle, fraction, overlap) {
   return best;
 }
 
+function joint(n,a,b,bottomAngle,leftAngle,fraction,overlap) {
+  const k = checkInputs(n,a,b,bottomAngle,leftAngle);
+  if (!(fraction > 0 && fraction < 1 && overlap > 0 && overlap <= b + fraction))
+    throw Error('Use fractional side in (0, 1) and overlap in (0, bottom band height]');
+  const nearby = angle => angle === 0 ? [] : [-1.25,-.75,-.5,-.25,0,.25,.5,.75,1.25]
+    .map(offset=>angle+offset).filter(value=>value>0&&value<90);
+  const result = bands.searchSeam(k,fraction,a,b,overlap,nearby(bottomAngle),nearby(leftAngle),24,22);
+  if (result.count < n || !result.recipe) return null;
+  const all = bands.construct(result.recipe);
+  if (all.length !== result.count) throw Error('The seam search and construction disagree on square count');
+  const tiles = all.slice(0,n), checked = core.evaluate(tiles);
+  if (!checked.valid) throw Error('Construction failed the simulator check');
+  return {...result, tiles, side:checked.bounds.L};
+}
+
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const overlapping = args[0] === '--dock';
+  const method = args[0];
+  const overlapping = method === '--dock' || method === '--joint';
   if (overlapping) args.shift();
   const output = args.pop();
   if (!output || args.length !== (overlapping ? 7 : 5))
-    throw Error('Usage: node experiments/band_phase_search.cjs [--dock] n a b bottom-deg left-deg [fraction overlap] output.csv');
-  const result = (overlapping ? dock : search)(...args.map(Number));
+    throw Error('Usage: node experiments/band_phase_search.cjs [--dock|--joint] n a b bottom-deg left-deg [fraction overlap] output.csv');
+  const generate = method === '--joint' ? joint : overlapping ? dock : search;
+  const result = generate(...args.map(Number));
   if (!result) throw Error('These parameters do not fit the requested square count');
   const {tiles, recipe, side} = result;
   const n = Number(args[0]);
@@ -89,4 +106,4 @@ if (require.main === module) {
   fs.writeFileSync(output, [core.HEADER,...rows].join('\n')+'\n', {flag:'wx'});
   console.log(JSON.stringify({n:Number(n),side,recipe}));
 }
-module.exports = {search, dock};
+module.exports = {search, dock, joint};

@@ -2,7 +2,7 @@
 
 把 `n=1…1000` 个可旋转的单位正方形放进尽可能小的轴对齐正方形，两两不得重叠。每题得分为 `L / sqrt(n) - 1`，其中 `L` 是外包边长。1,000 题得分求和，越低越好。[Kaggle 赛题](https://www.kaggle.com/competitions/squares-in-squares)
 
-目前最佳布局的**本地官方 v20 总分为 22.923849921**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core-score-22.923849921.csv) · [逐题认证报告](submissions/rectangular_core-score-22.923849921-certification.json) · [上版 CSV](submissions/rectangular_core-score-22.940511772.csv) · [各版方案与得分](../../docs/squares-in-squares.md)
+目前最佳布局的**本地官方 v20 总分为 22.906698393**。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core-score-22.906698393.csv) · [逐题认证报告](submissions/rectangular_core-score-22.906698393-certification.json) · [上版 CSV](submissions/rectangular_core-score-22.923849921.csv) · [各版方案与得分](../../docs/squares-in-squares.md)
 
 ## 查看和导出布局
 
@@ -10,13 +10,13 @@
 
 ## 重建和验证最佳解
 
-本版从上版自研 CSV 出发，用双边带构造改善 67 题。首先枚举斜排容量发生变化的行偏移。在两条边带的接缝处也允许排布区域交叠，再通过二分图最大匹配移除最少的冲突方块。程序由几何参数计算坐标。公开 Notebook 用于了解构造思路和比较逐题边长。
+本版以 22.923849921 的自研 CSV 为基线，改善 59 题。搜索时为两条边带分别保留多组倾角与行偏移，在不同交叠宽度下用二分图匹配比较配对后的方块数。几何参数足以重新生成坐标。公开 Notebook 用于比较分数和了解构造思路。
 
 在本目录生成完整 CSV 并复核。
 
 ```bash
 python -m pip install -r requirements.txt
-node algorithms/double_band.cjs submissions/rectangular_core-score-22.940511772.csv /tmp/packing-next.csv
+node algorithms/double_band.cjs submissions/rectangular_core-score-22.923849921.csv /tmp/packing-next.csv
 python algorithms/certify.py --input /tmp/packing-next.csv --complete --workers 4 \
   --report /tmp/packing-next-certification.json
 ```
@@ -25,7 +25,7 @@ python algorithms/certify.py --input /tmp/packing-next.csv --complete --workers 
 
 ```bash
 node experiments/band_phase_search.cjs 304 2 8 76 52 /tmp/packing-304.csv
-node experiments/band_phase_search.cjs --dock 551 5 5 70 70 .99 1.06 /tmp/packing-551.csv
+node experiments/band_phase_search.cjs --joint 933 7 7 75 75.25 .991 3.14 /tmp/packing-933.csv
 ```
 
 ## 开发与来源
