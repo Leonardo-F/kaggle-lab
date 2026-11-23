@@ -157,3 +157,16 @@ python solve.py data/puzzles.csv --check submissions/elf-calculator-score-270450
 python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv --output polished.csv --jobs 8
 python graph_solver.py data/puzzles.csv --check polished.csv
 ```
+
+### 实现进展：`product_pass`（2026-11-24）
+
+已在 `graph_solver.py` 增加 `product_pass`：对每个目标尝试 `t = a·round(t/a) + c`（`a` 取图上最便宜的值，`c` 为残差），并按整题长度择优。**单独启用时实测 0 收益**——因为 `round(t/a)` 与 `c` 在当前图里都不存在，`ensure` 会按 radix 现造，成本与现有分解持平。
+
+这验证了前面的判断：**收益不来自"乘积形式"本身，而来自共享池**——frontier 的 `M1`、`M2`、`c` 都由同一个约 200 节点的中层池拼出，跨目标复用。因此下一步必须实现"池的选择"（集合覆盖/LNS），而不是再加一种单目标分解形式：
+
+1. 候选池 `C`：`L1`（起始值 1 步组合，~30 个）两两乘积（~20–26 位，~800 个），再与 `L1` 求和/差（~20–26 位）；
+2. 解释枚举：对每个目标 `t`，对每个 `a ∈ C` 取 `M2 = round(t/a)`、`c = t − a·M2`；若 `M2`、`c` 也能在 `C` 中找到（或由 `C` 中两元素一步得到），则该目标可被 `a`、`M2`、`c` 三个池值解释（增量 2 步）；
+3. 贪心集合覆盖：统计每个候选池值服务多少目标，按 (服务数 / 构建成本) 从高到低选入池，直到边际收益为负；
+4. 物化池与目标，交给现有 `emit` 调度；再用 LNS（删除低利用率池值、重修补受影响目标）迭代。
+
+预计这一步能把 40–49 档从 11.64 压到 5–7，全量进入 18–20 万。

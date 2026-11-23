@@ -726,6 +726,68 @@ class Polisher:
                 self.graph = snapshot
         return changed
 
+    def product_pass(self, strict: bool = True, pool: int = 240) -> bool:
+        """Re-derive targets as ``a * round(t/a) + c`` with ``a`` from the graph.
+
+        This is the "near-square with a chosen factor" family that the public
+        frontier programs use heavily: ``t = M1*M2 - c`` where both factors are
+        themselves built from a shared pool of small blocks and ``c`` is small.
+        """
+        changed = False
+        limit = self.limit
+        baseline = self.total_nodes()
+        candidates = self.cheapest_sets(pool)
+        for target in sorted(self.targets):
+            if target not in self.graph or self.node_cost(target) <= 3:
+                continue
+            current = self.graph[target]
+            scored: list[tuple[int, int, int, int]] = []
+            for a in candidates:
+                if a < 2 or a >= target:
+                    continue
+                other = (target + a // 2) // a
+                if other < 2 or a * other > limit:
+                    continue
+                residual = target - a * other
+                estimate = abs(residual).bit_length() // 8 + 2
+                scored.append((estimate, a, other, residual))
+            scored.sort()
+            for _, a, other, residual in scored[:4]:
+                snapshot = dict(self.graph)
+                cost = 2
+                if other not in self.graph:
+                    cost += self.ensure(other, 3, forbidden=target)
+                if cost >= INF:
+                    self.graph = snapshot
+                    continue
+                product = a * other
+                self.graph[product] = ("*", a, other)
+                if residual:
+                    if self.ensure(abs(residual), 3, forbidden=target) >= INF:
+                        self.graph = snapshot
+                        continue
+                    self.graph[target] = ("+" if residual > 0 else "-", product,
+                                          abs(residual))
+                else:
+                    self.graph[target] = ("*", a, other)
+                if not self._defined() or self._reaches(product, target):
+                    self.graph = snapshot
+                    continue
+                if not strict:
+                    changed = True
+                    self.sweep()
+                    candidates = self.cheapest_sets(pool)
+                    break
+                total = self.total_nodes()
+                if total < baseline:
+                    baseline = total
+                    changed = True
+                    self.sweep()
+                    candidates = self.cheapest_sets(pool)
+                    break
+                self.graph = snapshot
+        return changed
+
     def sweep(self) -> None:
         """Drop every node no target needs any more."""
         needed: set[int] = set()
@@ -846,7 +908,7 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
            strict: bool = True, seed: int = 0, walk: bool = False,
            one_sided: bool = False, variant: int = 0,
            scaled: bool = False, rational: bool = False,
-           rational_scales: int = 64) -> Program:
+           rational_scales: int = 64, product: bool = False) -> Program:
     """Iteratively shorten ``program`` inside its own value graph."""
     sys.setrecursionlimit(20000)
     replay(puzzle, program)
@@ -862,6 +924,9 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
                 inner = True
                 polisher.sweep()
             if (two_step and var_two_step) and polisher.rewrite(use_two_step=True):
+                inner = True
+                polisher.sweep()
+            if product and polisher.product_pass(strict=strict):
                 inner = True
                 polisher.sweep()
             if rational and polisher.rational_pass(strict=strict,
@@ -905,7 +970,7 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
           rounds: int = 8, two_step: bool = True, strict: bool = True,
           seed: int = 0, walk: bool = False, one_sided: bool = False,
           variant: int = 0, scaled: bool = False, rational: bool = False,
-          rational_scales: int = 64) -> Program:
+          rational_scales: int = 64, product: bool = False) -> Program:
     """Polish ``reference`` repeatedly until it stops getting shorter."""
     if reference is None:
         raise ValueError("the polisher needs a reference program")
@@ -916,7 +981,7 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
                            strict=strict, seed=seed, walk=walk,
                            one_sided=one_sided, variant=variant,
                            scaled=scaled, rational=rational,
-                           rational_scales=rational_scales)
+                           rational_scales=rational_scales, product=product)
         if len(candidate) >= len(best):
             break
         best = candidate
@@ -925,11 +990,11 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
 
 def solve_row(job):
     (puzzle, reference, two_step, strict, seed, one_sided, variant, scaled,
-     rational, scales) = job
+     rational, scales, product) = job
     return puzzle.id, solve(puzzle, reference, two_step=two_step,
                             strict=strict, seed=seed, one_sided=one_sided,
                             variant=variant, scaled=scaled, rational=rational,
-                            rational_scales=scales)
+                            rational_scales=scales, product=product)
 
 
 def main() -> None:
@@ -942,6 +1007,8 @@ def main() -> None:
     parser.add_argument("--no-two-step", action="store_true",
                         help="only rewrite with a single instruction per target")
     parser.add_argument("--seed", type=int, default=0, help="randomised walk seed")
+    parser.add_argument("--product", action="store_true",
+                        help="also try a * round(t/a) + c rewrites")
     parser.add_argument("--rational-scales", type=int, default=64,
                         help="max p,q for --rational")
     parser.add_argument("--rational", action="store_true",
@@ -982,7 +1049,7 @@ def main() -> None:
         reference = load_programs(args.reference, puzzles)
         jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose,
                  args.seed, args.one_sided, args.variant, args.scaled, args.rational,
-                 args.rational_scales) for pid, puzzle in puzzles.items())
+                 args.rational_scales, args.product) for pid, puzzle in puzzles.items())
         if args.jobs == 1:
             programs = dict(map(solve_row, jobs))
         else:
