@@ -10,8 +10,9 @@ from pathlib import Path
 def build() -> Path:
     root = Path(__file__).resolve().parent
     submissions = root.parent / 'submissions'
-    csv = (submissions / 'rectangular_core.csv').read_bytes()
-    report = json.loads((submissions / 'rectangular_core-certification.json').read_text())
+    version = json.loads((submissions / 'latest.json').read_text())
+    csv = (submissions / version['csv']).read_bytes()
+    report = json.loads((submissions / version['report']).read_text())
     digest = hashlib.sha256(csv).hexdigest()
     if not report['valid'] or report['puzzles'] != 1000 or report['csv_sha256'] != digest:
         raise ValueError('Rebuild the official certification for the current CSV first')
@@ -28,7 +29,11 @@ def build() -> Path:
     with gzip.GzipFile(fileobj=stream, mode='wb', compresslevel=9, mtime=0) as archive:
         archive.write(csv)
     payload = base64.b64encode(stream.getvalue()).decode('ascii')
-    embedded = f'<script id="certifiedCsv" type="application/octet-stream" data-sha256="{digest}">{payload}</script>'
+    score = version['simulator_score']
+    if version['csv'] != f'rectangular_core-score-{score}.csv' or f"{report['score_literal']:.9f}" != score:
+        raise ValueError('The CSV name and the certification must agree with the simulator score')
+    embedded = (f'<script id="certifiedCsv" type="application/octet-stream" '
+                f'data-sha256="{digest}" data-score="{score}">{payload}</script>')
     html = html.replace('</body>', f'{embedded}\n<script>\n{scripts}\n</script>\n</body>')
     output = root / 'SquarePackingStudio-standalone.html'
     output.write_text(html, encoding='utf-8')

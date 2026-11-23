@@ -199,7 +199,7 @@
     if(!e.valid)throw Error(`n=${n}：存在重叠或无法确定的接触（${e.hits.uncertainCount} 对不确定接触），请调整后再导出`);
     return e;
   }
-  function* csvChunks(layouts=new Map(),{maxN=MAX_N,onlyN=null,base=makeGrid}={}){
+  function* csvChunks(layouts=new Map(),{maxN=MAX_N,onlyN=null,base=makeGrid,onLayout}={}){
     checkN(maxN);if(onlyN!==null)checkN(onlyN);
     const start=onlyN??1,end=onlyN??maxN;
     // Validate every edit before yielding any file content. Unchanged grids have
@@ -208,6 +208,7 @@
     yield HEADER+'\n';let id=0,chunk='';
     for(let n=start;n<=end;n++){
       const placed=layouts.get(n)||base(n);
+      onLayout?.(n,placed);
       for(let k=0;k<n;k++){
         const s=placed[k];chunk+=`${id++},${n},${k},${numericText(s,'x')},${numericText(s,'y')},${numericText(s,'angle')}\n`;
       }

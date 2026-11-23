@@ -20,6 +20,8 @@ VERTICES = np.array([[-.5, -.5], [-.5, .5], [.5, -.5], [.5, .5]])
 SIDE_GAIN = 1e-5
 CONTACT_GAP = 1e-9
 EXPORT_DILATION = 1 + 4e-9
+TRUST_RADII = (.006, .003, .0015, .00075, .00025, .00006, .00001)
+WIDE_RADII = (.025, .012, .005, .0015, .0003, .00005)
 
 
 def perpendicular(vectors):
@@ -118,10 +120,10 @@ def separate(poses):
     return enclosing_box(poses)
 
 
-def quench(poses, time_limit=0):
+def quench(poses, time_limit=0, *, radii=TRUST_RADII, steps=8):
     poses, side = enclosing_box(poses)
-    for trust in (.006, .003, .0015, .00075, .00025, .00006, .00001):
-        for _ in range(8):
+    for trust in radii:
+        for _ in range(steps):
             step = linear_step(poses, side, trust, time_limit)
             if step is None:
                 break
@@ -133,17 +135,32 @@ def quench(poses, time_limit=0):
 
 
 def polish(work):
-    n, baseline, restarts = work
+    n, baseline, restarts, wide = work
     poses = np.array([(tile.x, tile.y, tile.angle) for tile in baseline.tiles])
-    best, side = quench(poses)
-    if restarts:
-        initial, _ = enclosing_box(poses)
-        rng = np.random.default_rng(n)
-        for sigma in (.0001, .001, .003):
-            candidate, _ = separate(initial+rng.normal(0, sigma, initial.shape))
-            candidate, length = quench(candidate, time_limit=1.2)
+    if wide:
+        best, side = poses, baseline.side
+        rng = np.random.default_rng(n+20261123)
+        aligned = abs(np.sin(poses[:, 2]*2)) < .05
+        for sigma in (0, .001, .003, .006):
+            seed = poses.copy()
+            if sigma:
+                perturbation = rng.normal(0, sigma, poses.shape)
+                perturbation[aligned] *= .3
+                seed += perturbation
+            seed, _ = separate(seed)
+            candidate, length = quench(seed, .22, radii=WIDE_RADII, steps=6)
             if length < side:
                 best, side = candidate, length
+    else:
+        best, side = quench(poses)
+        if restarts:
+            initial, _ = enclosing_box(poses)
+            rng = np.random.default_rng(n)
+            for sigma in (.0001, .001, .003):
+                candidate, _ = separate(initial+rng.normal(0, sigma, initial.shape))
+                candidate, length = quench(candidate, time_limit=1.2)
+                if length < side:
+                    best, side = candidate, length
     best[:, :2] = (best[:, :2]-best[:, :2].mean(axis=0))*EXPORT_DILATION
     tiles = [Tile(*coordinates) for coordinates in best.tolist()]
     side = extent(tiles)
@@ -154,8 +171,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--targets', type=int, nargs='+', required=True)
+    parser.add_argument('--targets', type=int, nargs='+', default=[])
     parser.add_argument('--restart', type=int, nargs='*', default=[])
+    parser.add_argument('--wide', type=int, nargs='*', default=[], help='Allow greater changes to contacts and orientations')
     parser.add_argument('--workers', type=int, default=4)
     args = parser.parse_args()
     if args.input.resolve() == args.output.resolve():
@@ -169,7 +187,9 @@ def main():
             groups.setdefault(int(row['n']), []).append(row)
     if set(groups) != set(range(1, 1001)) or any(len(rows) != n for n, rows in groups.items()):
         parser.error('Expected all 1,000 packings with exactly n squares each')
-    targets = sorted(set(args.targets)|set(args.restart))
+    targets = sorted(set(args.targets)|set(args.restart)|set(args.wide))
+    if not targets:
+        parser.error('Select at least one puzzle with --targets, --restart or --wide')
     if any(n not in groups for n in targets):
         parser.error('All targets must be in 1..1000')
     base = {}
@@ -178,7 +198,7 @@ def main():
         base[n] = Candidate(tiles, 'baseline', n, {}, extent(tiles))
     best = base.copy()
     with ProcessPoolExecutor(max_workers=args.workers) as pool:
-        for n, candidate in pool.map(polish, ((n, base[n], n in args.restart) for n in targets)):
+        for n, candidate in pool.map(polish, ((n, base[n], n in args.restart, n in args.wide) for n in targets)):
             if candidate.side < base[n].side-SIDE_GAIN:
                 best[n] = candidate
 
@@ -189,7 +209,7 @@ def main():
             best[n] = Candidate(tiles, 'deletion', next_packing.source_n, {}, extent(tiles))
     best = _add_borders(best)
 
-    with args.output.open('w', newline='', encoding='utf-8') as handle:
+    with args.output.open('x', newline='', encoding='utf-8') as handle:
         writer = csv.DictWriter(handle, fieldnames=COLUMNS)
         writer.writeheader()
         for n, candidate in sorted(best.items()):
