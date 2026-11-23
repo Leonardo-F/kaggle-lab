@@ -250,18 +250,27 @@
     if(running)return;
     const k=Math.floor(Math.sqrt(n)), previous=evaluate(current());
     if(k*k===n){colorMessage('完全平方数可直接用整数网格达到面积下界。');return;}
-    setBusy(true);colorMessage('正在枚举边带宽度、倾角与行偏移，可能需要数秒…');
+    setBusy(true);colorMessage('正在联合搜索边带参数与接缝配对，可能需要数秒…');
     try {
       await nextFrame();
       const fraction=Math.min(.9999,previous.bounds.L-k-.001);
       if(fraction<=0)return;
-      const result=PackingBands.search(k,fraction,[29,45,52,61,71,75,78,79,81,83,85],0);
-      if(result.count>=n && result.recipe){
+      const candidates=[PackingBands.search(k,fraction,[29,45,52,61,71,75,78,79,81,83,85],0)];
+      const neighbors=bandWitnesses.filter(([,r])=>r[0]===k&&r[6]&&r[4]&&r[5])
+        .sort(([a],[b])=>Math.abs(a-n)-Math.abs(b-n)).slice(0,3);
+      const angles=theta=>[theta-.5,theta,theta+.5].filter(a=>a>0&&a<90);
+      for(const [,[,,a,b,bottom,left,overlap]] of neighbors){
+        candidates.push(PackingBands.searchSeam(k,fraction,a,b,overlap,angles(bottom[0]),angles(left[0])));
+      }
+      let best=null, side=previous.valid?previous.bounds.L:Infinity;
+      for(const result of candidates){
+        if(result.count<n||!result.recipe)continue;
         const tiles=PackingBands.construct(result.recipe).slice(0,n), measured=evaluate(tiles);
-        if(measured.valid && (!previous.valid || measured.bounds.L<previous.bounds.L-1e-6)){
-          layouts.set(n,tiles);tags.set(n,'双倾斜边带 · 现场搜索');layoutTag=tags.get(n);selected=-1;fit();
-          colorMessage('已采用现场搜索得到的布局。');return;
-        }
+        if(measured.valid&&measured.bounds.L<side-1e-6){best=tiles;side=measured.bounds.L;}
+      }
+      if(best){
+        layouts.set(n,best);tags.set(n,'双倾斜边带 · 现场搜索');layoutTag=tags.get(n);selected=-1;fit();
+        colorMessage('已采用现场搜索得到的布局。');return;
       }
       colorMessage('本次枚举未缩小外框，已保留当前布局。');
     }finally{setBusy(false);}
