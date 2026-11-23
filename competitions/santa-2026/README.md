@@ -8,11 +8,11 @@
 
 ## 运行
 
-使用 Python 3.11+，仅需标准库。接受竞赛规则后从 Kaggle 下载数据，在本目录运行以下命令。
+使用 Python 3.11+，仅需标准库。接受竞赛规则后从 Kaggle 下载 `puzzles.csv`、`sample_submission.csv` 到本目录的 `data/`。`data/` 不入库；生成的提交存档在 `submissions/`，本地产物 `submission.csv` 被忽略。
 
 ```bash
-python solve.py /path/to/puzzles.csv --reference /path/to/sample_submission.csv --output /path/to/submission.csv --jobs 8
-python solve.py /path/to/puzzles.csv --check /path/to/submission.csv
+python solve.py data/puzzles.csv --reference data/sample_submission.csv --output submission.csv --jobs 8
+python solve.py data/puzzles.csv --check submission.csv
 ```
 
 `--jobs` 控制并行进程数，默认 1。
@@ -20,11 +20,22 @@ python solve.py /path/to/puzzles.csv --check /path/to/submission.csv
 对已有提交继续压缩时，将旧提交指定为参考。
 
 ```bash
-python solve.py /path/to/puzzles.csv --reference /path/to/previous-submission.csv --refine --output /path/to/refined-submission.csv --jobs 8
+python solve.py data/puzzles.csv --reference submission.csv --refine --output submission-refined.csv --jobs 8
 ```
 
-`--refine` 跳过旧的构造策略，使用混合进制、小题精确搜索和算术链重写压缩参考程序。`--reference` 可选。给定参考 CSV 时，程序逐题选用更短的合法结果，指令数不会超过参考程序。练习时，将输入替换为 `practice_puzzles.csv` 并省略 `--reference`。
+`--refine` 跳过旧的构造策略，使用混合进制、小题精确搜索和算术链重写压缩参考程序。`--reference` 可选。给定参考 CSV 时，程序逐题选用更短的合法结果，指令数不会超过参考程序。练习时，将输入替换为 `data/practice_puzzles.csv` 并省略 `--reference`。
 
-用官方数据独立回放 1,000 道题，当前总指令数为 **272,748**。
+用官方数据独立回放 1,000 道题，当前提交文件的总指令数为 **270,450**（本地计数，待上传 Kaggle 核对）。[完整 CSV](submissions/elf-calculator-score-270450.csv)
 
-[解题思路和验证范围](../../docs/santa-2026.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)
+## 值图改写器
+
+`graph_solver.py` 把一份合法程序产出的所有值当作可用操作数，逐目标寻找更短的重新推导（单指令、双指令、锚点、隐藏锚点），循环到不动点后重新分配寄存器。每一步都用 `solve.replay` 校验，只保留更短的程序。
+
+```bash
+python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv --output polished.csv --jobs 8
+python graph_solver.py data/puzzles.csv --check polished.csv
+```
+
+实测在练习集上少 0.13%，在正式 1,000 题上没有改进，说明现有提交在该改写族下已局部饱和；详细测量、与公开前沿（128,513）的分档差距和结构检验见[对比分析](docs/frontier-analysis.md)。
+
+[解题思路和验证范围](docs/progress.md) · [公开前沿对比与搜索实验](docs/frontier-analysis.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)
