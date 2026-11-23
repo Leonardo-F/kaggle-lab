@@ -250,12 +250,12 @@
     if(running)return;
     const k=Math.floor(Math.sqrt(n)), previous=evaluate(current());
     if(k*k===n){colorMessage('完全平方数可直接用整数网格达到面积下界。');return;}
-    setBusy(true);colorMessage('正在枚举两条边带的宽度、倾角和位置…');
+    setBusy(true);colorMessage('正在枚举边带宽度、倾角与行偏移，可能需要数秒…');
     try {
       await nextFrame();
       const fraction=Math.min(.9999,previous.bounds.L-k-.001);
       if(fraction<=0)return;
-      const result=PackingBands.search(k,fraction,[29,45,52,61,71,75,78,79,81,83,85],16);
+      const result=PackingBands.search(k,fraction,[29,45,52,61,71,75,78,79,81,83,85],0);
       if(result.count>=n && result.recipe){
         const tiles=PackingBands.construct(result.recipe).slice(0,n), measured=evaluate(tiles);
         if(measured.valid && (!previous.valid || measured.bounds.L<previous.bounds.L-1e-6)){
