@@ -3,10 +3,12 @@
 import argparse
 import csv
 import json
-from collections import OrderedDict, defaultdict, deque
+from collections import Counter, OrderedDict, defaultdict, deque
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from collections.abc import Iterator
+from heapq import heappop, heappush
+from itertools import chain
 from math import isqrt
 from pathlib import Path
 
@@ -15,6 +17,11 @@ MAX_STEPS = 4096
 MAX_BYTES = 131072
 BASES = (2, 3, 4, 5, 7, 8, 11, 16)
 WIDE_BASES = ((31, 12), (48, 16), (64, 16), (81, 12), (128, 16), (256, 16), (512, 16))
+REFINEMENT_BASES = ((729, 13), (1000, 16), (1024, 16), (1024, 24),
+                    (2048, 16), (4096, 16))
+MIXED_BASES = ((12, (48, 768)), (16, (64, 1024)), (16, (90, 1350)),
+               (16, (128, 2048)), (16, (128, 4096)), (16, (256, 4096)),
+               (16, (256, 16384)), (16, (512, 65536)))
 Instruction = tuple[str, int, int, int]
 Program = list[Instruction]
 
@@ -249,6 +256,83 @@ class Builder:
         return self.program
 
 
+    def build_mixed(self, target: int, radices: tuple[int, ...], small: int) -> None:
+        if target < radices[0]:
+            self.build(target, small, signed=True)
+            return
+        if self.direct(target):
+            return
+
+        width = radices[-1].bit_length() - 1
+        small_width = small.bit_length() - 1
+
+        def cost(n: int) -> int:
+            if n in self.live:
+                return 0
+            bits = n.bit_length()
+            if n < radices[0]:
+                return max(1, (bits - 1) // small_width * 2)
+            if bits <= width:
+                return max(2, (bits - 1) // small_width + 1)
+            return 3 + (bits - width - 1) // width * 3
+
+        def estimate(base: int, q: int, d: int) -> tuple[int, int, int]:
+            cost_q, cost_d = cost(q), cost(d) if d else 0
+            setup = (q * base not in self.live) + bool(d)
+            return cost_q + cost_d + setup, cost_q, d
+
+        best = None
+        for base in radices:
+            if base > target:
+                break
+            q, digit = divmod(target, base)
+            candidate = (estimate(base, q, digit), base, q, digit, "+")
+            if best is None or candidate < best:
+                best = candidate
+            if digit and (q + 1) * base <= self.limit and digit >= base // 2:
+                complement = base - digit
+                candidate = (estimate(base, q + 1, complement), base, q + 1, complement, "-")
+                if candidate < best:
+                    best = candidate
+        _, base, q, digit, op = best
+
+        # Build the smaller operand first and preserve it while building the quotient.
+        if digit:
+            if q in self.live and digit not in self.live:
+                temporary = q not in self.pinned
+                if temporary:
+                    self.pinned.add(q)
+                self.build_mixed(digit, radices, small)
+                if temporary:
+                    self.pinned.remove(q)
+            else:
+                self.build_mixed(digit, radices, small)
+                temporary = digit not in self.pinned
+                if temporary:
+                    self.pinned.add(digit)
+                self.build_mixed(q, radices, small)
+                if temporary:
+                    self.pinned.remove(digit)
+        else:
+            self.build_mixed(q, radices, small)
+        self.join_digits(target, base, q, digit, op)
+
+    def run_mixed(self, small: int, radices: tuple[int, ...], reverse: bool) -> Program | None:
+        self.sweep(reverse)
+        if not self.missing or max(self.missing) < radices[-1]:
+            return None
+        self.prepare_radix(small)
+        for base in radices:
+            self.build(base, small, signed=True)
+            self.pinned.add(base)
+        self.sweep(reverse)
+        for target in sorted(self.missing, reverse=reverse):
+            if target in self.missing:
+                self.build_mixed(target, radices, small)
+                self.sweep(reverse)
+        return self.program
+
+
 def trace_values(puzzle: Puzzle, program: Program) -> Iterator[tuple[str, int, int, int]]:
     """Decode an already constructed or validated program into value operations."""
     slots = list(puzzle.starting) + [None] * (REGISTERS - len(puzzle.starting))
@@ -331,32 +415,204 @@ def candidate_programs(puzzle: Puzzle) -> Iterator[Program | None]:
             yield Builder(puzzle).run_wide(base, digit_base, reverse, signed)
 
 
-def optimize(puzzle: Puzzle, reference: Program | None = None) -> Program:
+def find_expression(value: int, prior: list[int], available: set[int]) -> tuple[str, int, int] | None:
+    for a in prior:
+        if value > a and value - a in available:
+            return "+", a, value - a
+        if value + a in available:
+            return "-", value + a, a
+        if value % a == 0 and value // a in available:
+            return "*", a, value // a
+        if value * a in available:
+            return "/", value * a, a
+    return None
+
+
+def rewrite_expressions(puzzle: Puzzle, program: Program, reverse: bool) -> Program:
+    """Replace expensive arithmetic chains with existing, earlier values."""
+    if len(set(puzzle.starting)) > 16:
+        return program
+    known = dict.fromkeys(puzzle.starting)
+    expressions = {}
+    for op, a, b, value in trace_values(puzzle, program):
+        if value not in known:
+            known[value] = None
+            expressions[value] = (op, a, b)
+    order = {value: step for step, value in enumerate(known)}
+    goals = sorted(set(puzzle.targets).difference(puzzle.starting), key=order.__getitem__)
+
+    def dependencies():
+        """Count uses in the subgraph needed by the targets."""
+        counts = Counter()
+        pending = list(goals)
+        while pending:
+            value = pending.pop()
+            counts[value] += 1
+            if counts[value] == 1 and value in expressions:
+                pending.extend(set(expressions[value][1:]))
+        return counts
+
+    counts = dependencies()
+    starts = set(puzzle.starting)
+    for value in sorted(expressions, key=order.__getitem__, reverse=reverse):
+        if value not in counts:
+            continue
+        pending = list(set(expressions[value][1:]))
+        deleted_uses = Counter()
+        while pending:
+            item = pending.pop()
+            deleted_uses[item] += 1
+            if item in expressions and deleted_uses[item] == counts[item]:
+                pending.extend(set(expressions[item][1:]))
+        removed = {item for item, count in deleted_uses.items()
+                   if item in expressions and count == counts[item]}
+        if not removed:
+            continue
+        upstream = (set(counts) | starts) - removed
+        earlier = [item for item in upstream if order[item] < order[value]]
+        earlier.sort(key=order.__getitem__, reverse=True)
+        expression = find_expression(value, earlier, set(earlier))
+        if expression is not None:
+            expressions[value] = expression
+            counts = dependencies()
+
+    builder = Builder(puzzle)
+    builder.pinned.update(starts)
+    # Minimal number of registers required by a tree-shaped evaluation.
+    demand = dict.fromkeys(starts, 1)
+    for value in known:
+        if value not in expressions:
+            continue
+        _, a, b = expressions[value]
+        d1, d2 = demand[a], demand[b]
+        demand[value] = max(d1, d2 + (d1 == d2 and a != b))
+
+    if any(demand[value] + len(starts) > REGISTERS for value in goals):
+        return program
+
+    def compute(value: int) -> None:
+        if value in builder.live:
+            return
+        op, a, b = expressions[value]
+        first, second = sorted((a, b), key=demand.__getitem__, reverse=True)
+        compute(first)
+        temporary = first != second and first not in builder.pinned
+        if temporary:
+            builder.pinned.add(first)
+        compute(second)
+        if temporary:
+            builder.pinned.remove(first)
+        builder.emit(value, op, a, b)
+
+    for value in goals:
+        if value in builder.missing:
+            compute(value)
+    return builder.program
+
+
+def exact_small(puzzle: Puzzle, incumbent: int) -> Program | None:
+    """Find a shorter program by A* on the set of values, for limits up to 24."""
+    if puzzle.limit > 24:
+        return None
+    start_values = set(puzzle.starting)
+    targets = sum(1 << n for n in set(puzzle.targets))
+    start = sum(1 << n for n in start_values)
+    queue = [((targets & ~start).bit_count(), 0, start)]
+    parents = {start: None}
+    arithmetic = {}
+    for a in range(1, puzzle.limit + 1):
+        for b in range(1, a + 1):
+            moves = [(a + b, "+"), (a * b, "*"), (a - b, "-")]
+            if a % b == 0:
+                moves.append((a // b, "/"))
+            arithmetic[a, b] = [(v, op) for v, op in moves if 0 < v <= puzzle.limit]
+
+    # Each step adds one value. With limit < 48, deleting a value never helps.
+    while queue:
+        bound, steps, mask = heappop(queue)
+        if bound >= incumbent:
+            return None
+        if mask & targets == targets:
+            instructions = []
+            while (edge := parents[mask]) is not None:
+                mask, value, op, a, b = edge
+                instructions.append((value, op, a, b))
+            builder = Builder(puzzle)
+            for instruction in reversed(instructions):
+                builder.emit(*instruction)
+            return builder.program
+        values = [v for v in range(1, puzzle.limit + 1) if mask & (1 << v)]
+        for i, a in enumerate(values):
+            for j in range(i + 1):
+                b = values[j]
+                for value, op in arithmetic[a, b]:
+                    bit = 1 << value
+                    if mask & bit:
+                        continue
+                    after = mask | bit
+                    if after in parents:
+                        continue
+                    score = steps + 1 + (targets & ~after).bit_count()
+                    if score < incumbent:
+                        parents[after] = (mask, value, op, a, b)
+                        heappush(queue, (score, steps + 1, after))
+        if len(parents) > 100_000:
+            return None
+    return None
+
+
+def refinement_programs(puzzle: Puzzle) -> Iterator[Program | None]:
+    for base, digit_base in REFINEMENT_BASES:
+        for reverse, signed in ((False, False), (False, True), (True, True)):
+            yield Builder(puzzle).run_wide(base, digit_base, reverse, signed)
+    for small, radices in MIXED_BASES:
+        for reverse in (False, True):
+            yield Builder(puzzle).run_mixed(small, radices, reverse)
+
+
+def optimize(
+    puzzle: Puzzle, reference: Program | None = None, refine: bool = False,
+) -> Program:
     best = None
     if reference is not None:
         replay(puzzle, reference)
-        best = prune(puzzle, reference)
-        best = reuse_registers(puzzle, best)
+        best = reuse_registers(puzzle, prune(puzzle, reference))
         replay(puzzle, best)
     lower_bound = len(set(puzzle.targets).difference(puzzle.starting))
-    if best is not None and len(best) == lower_bound:
-        return best
-    for raw in candidate_programs(puzzle):
+
+    def consider(raw: Program | None) -> None:
+        nonlocal best
         if raw is None:
-            continue
+            return
         candidate = prune(puzzle, raw)
         if len(candidate) > MAX_STEPS:
-            continue
+            return
         candidate = reuse_registers(puzzle, candidate)
-        if len(encode(candidate)) > MAX_BYTES:
-            continue
-        replay(puzzle, candidate)
-        if best is None or len(candidate) < len(best):
+        if (best is None or len(candidate) < len(best)) and len(encode(candidate)) <= MAX_BYTES:
+            replay(puzzle, candidate)
             best = candidate
-            if len(best) == lower_bound:
-                return best
+
+    if best is not None and len(best) == lower_bound:
+        return best
+    tight = exact_small(puzzle, len(best) if best is not None else MAX_STEPS + 1)
+    if tight is not None:
+        replay(puzzle, tight)
+        return tight
+
+    baseline = () if refine else candidate_programs(puzzle)
+    for raw in chain(baseline, refinement_programs(puzzle)):
+        consider(raw)
+        if best is not None and len(best) == lower_bound:
+            return best
     if best is None:
-        raise ValueError("no program fits the limits; supply the official sample")
+        raise ValueError("no program fits the limits; supply a valid reference submission")
+
+    sources = [best]
+    if reference is not None and len(reference) <= len(best) * 1.1 and reference != best:
+        sources.append(reference)
+    for source in sources:
+        for reverse in (False, True):
+            consider(rewrite_expressions(puzzle, source, reverse))
     return best
 
 
@@ -403,10 +659,10 @@ def load_programs(path: Path, puzzles: dict[str, Puzzle]) -> dict[str, Program]:
     return programs
 
 
-def solve_row(job: tuple[Puzzle, Program | None]) -> tuple[str, Program]:
-    puzzle, reference = job
+def solve_row(job: tuple[Puzzle, Program | None, bool]) -> tuple[str, Program]:
+    puzzle, reference, refine = job
     try:
-        return puzzle.id, optimize(puzzle, reference)
+        return puzzle.id, optimize(puzzle, reference, refine)
     except ValueError as error:
         raise ValueError(f"{puzzle.id}: {error}") from error
 
@@ -419,7 +675,11 @@ def main() -> None:
     mode.add_argument("--check", type=Path, help="validate an existing program CSV")
     parser.add_argument("--reference", type=Path, help="optional official sample submission")
     parser.add_argument("--jobs", type=int, default=1, help="parallel solver workers")
+    parser.add_argument("--refine", action="store_true",
+                        help="start from --reference and skip older construction strategies")
     args = parser.parse_args()
+    if args.refine and (not args.reference or not args.output):
+        parser.error("--refine requires --reference and --output")
     if args.jobs < 1:
         parser.error("--jobs must be at least 1")
     if args.check and args.reference:
@@ -430,7 +690,7 @@ def main() -> None:
             programs = load_programs(args.check, puzzles)
         else:
             reference = load_programs(args.reference, puzzles) if args.reference else {}
-            jobs = ((puzzle, reference.get(puzzle_id)) for puzzle_id, puzzle in puzzles.items())
+            jobs = ((puzzle, reference.get(puzzle_id), args.refine) for puzzle_id, puzzle in puzzles.items())
             if args.jobs == 1:
                 programs = dict(map(solve_row, jobs))
             else:
