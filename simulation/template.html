@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kaggle Lab · 模拟器</title>
+<style>
+:root { font-family: system-ui, sans-serif; color: #17233d; background: #f2f5fa; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { background: #142344; color: white; padding: 14px 22px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+h1 { font-size: 19px; margin: 0 14px 0 0; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; }
+button { cursor: pointer; border: 1px solid #a3b7da; border-radius: 8px; background: transparent; color: white; padding: 9px 13px; font-size: 14px; }
+button[aria-selected="true"] { background: white; color: #142344; }
+main { padding: 12px; }
+.notice { margin: 0 auto 10px; max-width: 1500px; line-height: 1.5; font-size: 13px; color: #435571; }
+iframe { display: block; border: 1px solid #ced8e7; border-radius: 10px; width: 100%; height: calc(100vh - 150px); min-height: 620px; background: white; }
+iframe[hidden] { display: none; }
+@media(max-width: 650px) { header { padding: 12px; } main { padding: 8px; } iframe { height: 78vh; min-height: 600px; } }
+</style>
+</head>
+<body>
+<header><h1>Kaggle Lab · 模拟器</h1><nav aria-label="选择赛题"><button id="square-tab" aria-selected="true">正方形装箱</button><button id="santa-tab" aria-selected="false">Santa 2026 计算器</button></nav></header>
+<main>
+<p class="notice">离线单文件 · 两个模拟器保留各自原始页面。Santa 网页使用独立 JavaScript 求解器，结果不保证与 Python 批量求解器一致。</p>
+<iframe id="square" title="正方形装箱模拟器"></iframe><iframe id="santa" title="Santa 2026 计算器模拟器" hidden></iframe>
+</main>
+<script>
+const documents = /* EMBEDDED_DOCUMENTS */;
+const loaded = new Set();
+function select(name) {
+  for (const item of ['square', 'santa']) {
+    document.getElementById(item).hidden = item !== name;
+    document.getElementById(item + '-tab').setAttribute('aria-selected', String(item === name));
+  }
+  if (!loaded.has(name)) {
+    const bytes = Uint8Array.from(atob(documents[name]), c => c.charCodeAt(0));
+    document.getElementById(name).srcdoc = new TextDecoder().decode(bytes);
+    loaded.add(name);
+  }
+}
+document.getElementById('square-tab').addEventListener('click', () => select('square'));
+document.getElementById('santa-tab').addEventListener('click', () => select('santa'));
+select('square');
+</script>
+</body>
+</html>
