@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Santa 2026 · 精灵计算器模拟器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172527; --muted: #566867; --paper: #f3f5f1; --card: #ffffff;
+      --line: #d9e1db; --accent: #145d4d; --accent-light: #eaf6ef;
+      --danger: #a42121; --danger-light: #ffebeb;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); line-height: 1.55; }
+    h1, h2, p { margin: 0; }
+    a { color: inherit; }
+    .shell { width: min(1320px, calc(100% - 64px)); margin-inline: auto; }
+    .masthead { background: #122d28; color: #fff; padding: 25px 0 32px; border-bottom: 4px solid #78b895; }
+    .masthead .shell { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+    .brand { font-family: var(--mono); font-size: .8rem; font-weight: 700; letter-spacing: .11em; color: #acdcc2; }
+    h1 { font-size: clamp(1.8rem, 4vw, 2.7rem); line-height: 1.12; margin-block: 9px 10px; letter-spacing: -.04em; }
+    .masthead p:last-child { color: #d0e4da; font-size: .91rem; }
+    .repo-link { color: #cdeadd; font-size: .84rem; text-underline-offset: 3px; white-space: nowrap; }
+    main.shell { padding-block: 24px 34px; }
+    .layout { display: grid; grid-template-columns: minmax(245px, 315px) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+    .input-panel { padding: 20px; }
+    h2 { font-size: 1.08rem; letter-spacing: -.02em; }
+    .topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    form { display: grid; gap: 15px; margin-top: 17px; }
+    label { display: grid; gap: 5px; font-size: .88rem; font-weight: 650; }
+    textarea, input {
+      display: block; width: 100%; padding: 9px 10px; font: .86rem/1.5 var(--mono);
+      background: #fafcfb; color: var(--ink); border: 1px solid #bfcfc5; border-radius: 8px;
+    }
+    textarea { resize: vertical; min-height: 54px; }
+    #targets { min-height: 76px; }
+    button { color: var(--ink); background: #fff; border: 1px solid #bfcfc5; border-radius: 8px; font: inherit; font-size: .84rem; font-weight: 630; padding: 7px 11px; cursor: pointer; }
+    button:hover:not(:disabled) { background: #f0f7f2; border-color: #7aa28c; }
+    button:disabled { opacity: .45; cursor: default; }
+    :focus-visible { outline: 3px solid #267f64; outline-offset: 2px; }
+    .primary { background: var(--accent); border-color: var(--accent); color: #fff; min-height: 40px; }
+    .primary:hover:not(:disabled) { background: #0d473b; color: #fff; }
+    .hint, .status { color: var(--muted); font-size: .79rem; }
+    .status { min-height: 1.25rem; }
+    .status.error { color: var(--danger); font-weight: 650; }
+    .target-section { border-top: 1px solid var(--line); margin-top: 15px; padding-top: 14px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .chip { font: .77rem var(--mono); background: #f0f3ef; border: 1px solid #e0e7e0; border-radius: 7px; padding: 6px 8px; overflow-wrap: anywhere; }
+    .chip.hit { color: var(--danger); background: var(--danger-light); border-color: #edb6b6; font-weight: 750; }
+    .output { display: grid; gap: 14px; min-width: 0; }
+    .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; }
+    .metric { padding: 14px 17px; min-width: 0; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric span { display: block; font-size: .75rem; color: var(--muted); }
+    .metric strong { display: block; font: 750 clamp(1.05rem, 2.8vw, 1.75rem)/1.4 var(--mono); }
+    .output-heading { padding: 14px 15px; border-bottom: 1px solid var(--line); }
+    .output-heading p { color: var(--muted); font-size: .78rem; margin-top: 4px; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .output-actions { justify-content: flex-end; }
+    .table-wrap { max-height: 440px; overflow: auto; border-radius: 0 0 14px 14px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: .86rem; }
+    thead th { position: sticky; inset-block-start: 0; background: #eef4ef; z-index: 1; padding: 9px 13px; color: #284a3c; font-size: .76rem; white-space: nowrap; }
+    td { padding: 7px 13px; border-top: 1px solid #edf0ed; vertical-align: middle; overflow-wrap: anywhere; }
+    td:nth-child(2), td:nth-child(3), td:nth-child(4), td:last-child { font-family: var(--mono); font-size: .80rem; }
+    td:first-child { width: 1%; }
+    td:nth-child(4) { white-space: nowrap; }
+    tr.current td { background: var(--accent-light); }
+    td.result.hit, tr.current td.result.hit { background: var(--danger-light); color: var(--danger); font-weight: 800; }
+    .target-tag { display: block; font: 700 .68rem system-ui, sans-serif; margin-top: 1px; }
+    .step-link { padding: 3px 8px; min-width: 28px; font-family: var(--mono); }
+    td.empty { padding: 22px 14px; color: var(--muted); }
+    .playback { padding: 13px 15px 15px; display: grid; gap: 11px; }
+    .playback .step-status { font: .78rem var(--mono); color: var(--muted); }
+    .registers { display: grid; grid-template-columns: repeat(auto-fill, minmax(97px, 1fr)); gap: 6px; }
+    .register { background: #f5f8f4; padding: 6px 8px; border: 1px solid #e0e8df; border-radius: 7px; min-width: 0; }
+    .register.updated { background: var(--accent-light); border-color: #81b49c; }
+    .register span { display: block; color: var(--muted); font: .71rem var(--mono); }
+    .register strong { display: block; overflow-wrap: anywhere; font: 650 .78rem/1.5 var(--mono); }
+    details { padding: 9px 15px 13px; }
+    summary { cursor: pointer; font-size: .80rem; font-weight: 650; }
+    pre { max-height: 160px; overflow: auto; margin-bottom: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: .76rem/1.5 var(--mono); }
+    @media (max-width: 800px) {
+      .shell { width: min(680px, calc(100% - 30px)); }
+      .layout { grid-template-columns: 1fr; gap: 13px; }
+      .masthead { padding: 18px 0 22px; }
+      main.shell { padding-block: 16px; }
+    }
+    @media (max-width: 470px) {
+      .masthead .shell, .output-heading { align-items: start; }
+      .masthead .shell { flex-direction: column; gap: 9px; }
+      .topline.output-heading { flex-direction: column; gap: 8px; }
+      .output-actions { justify-content: flex-start; }
+      .table-wrap table { min-width: 450px; }
+      .metric { padding: 11px 9px; }
+      .metric span { font-size: .69rem; }
+    }
+    @media print {
+      :root { print-color-adjust: exact; }
+      body { background: white; }
+      .shell { width: 100%; }
+      .masthead { color: var(--ink); background: white; padding: 0 0 7px; border-color: var(--line); }
+      .masthead p:last-child, .brand { color: var(--muted); }
+      .layout { display: block; }
+      .input-panel { margin-bottom: 10px; }
+      .repo-link, .buttons, .example, .status, .playback, details, .hint { display: none; }
+      .table-wrap { max-height: none; overflow: visible; }
+      .table-wrap table { min-width: 0; }
+      thead { display: table-header-group; }
+      thead th { position: static; }
+      tr { break-inside: avoid; }
+      .step-link { background: none; border: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="shell">
+      <div>
+        <p class="brand">SANTA 2026 / THE ELF CALCULATOR</p>
+        <h1>精灵计算器模拟器</h1>
+        <p>输入一题，求解后逐步查看 48 个寄存器的计算过程。</p>
+      </div>
+      <a class="repo-link" href="https://github.com/Leonardo-F/kaggle-lab/tree/main/competitions/santa-2026">GitHub 求解器 ↗</a>
+    </div>
+  </header>
+  <main class="shell layout">
+    <section class="panel input-panel" aria-labelledby="input-title">
+      <div class="topline">
+        <h2 id="input-title">题目参数</h2>
+        <button class="example" id="example" type="button">载入示例</button>
+      </div>
+      <form id="puzzle-form">
+        <label for="starting">初始值
+          <textarea id="starting" rows="2" spellcheck="false" required aria-describedby="input-hint">12</textarea>
+        </label>
+        <label for="targets">目标值
+          <textarea id="targets" rows="3" spellcheck="false" required aria-describedby="input-hint">5, 7, 17, 19</textarea>
+        </label>
+        <label for="limit">数值上限
+          <input id="limit" inputmode="numeric" value="30" required aria-describedby="input-hint">
+        </label>
+        <p class="hint" id="input-hint">输入正整数，多个值用逗号、空格或换行分隔。上限最高为 10¹⁸。</p>
+        <div class="buttons"><button class="primary" id="solve-button" type="submit">求解并回放</button><button id="cancel" type="button" hidden>停止</button></div>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </form>
+      <div class="target-section">
+        <div class="topline"><h2>目标进度</h2><span class="hint" id="progress">0 / 0</span></div>
+        <div class="chips" id="target-chips"></div>
+      </div>
+    </section>
+    <div class="output">
+      <section class="panel summary" aria-label="求解摘要">
+        <div class="metric"><span>程序步数</span><strong id="step-count">—</strong></div>
+        <div class="metric"><span>目标覆盖</span><strong id="coverage">—</strong></div>
+        <div class="metric"><span>寄存器容量</span><strong>48</strong></div>
+      </section>
+      <section class="panel" aria-labelledby="table-title">
+        <div class="topline output-heading">
+          <div><h2 id="table-title">指令回放</h2><p>红色结果为目标值。点击步号可查看对应寄存器状态。</p></div>
+          <div class="buttons output-actions">
+            <button id="copy" type="button" disabled>复制指令</button>
+            <button id="print" type="button" disabled>打印</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="table-scroll" tabindex="0" aria-label="指令表">
+          <table>
+            <thead><tr><th scope="col">步</th><th scope="col">指令</th><th scope="col">算式</th><th scope="col">写入</th><th scope="col">结果</th></tr></thead>
+            <tbody id="rows"><tr><td class="empty" colspan="5">输入题目参数即可求解。</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel playback" aria-labelledby="register-title">
+        <div class="topline"><h2 id="register-title">寄存器状态</h2><span class="step-status" id="step-status">初始状态</span></div>
+        <div class="buttons">
+          <button id="prev" type="button" disabled>上一步</button>
+          <button id="next" type="button" disabled>下一步</button>
+          <button id="play" type="button" disabled>播放</button>
+        </div>
+        <div id="registers" class="registers" aria-label="已赋值寄存器"></div>
+      </section>
+      <details class="panel" id="raw-panel" hidden>
+        <summary>原始 JSON 指令</summary><pre id="raw-json"></pre>
+      </details>
+    </div>
+  </main>
+  <script id="solver-source">
+// Browser port of competitions/santa-2026/solve.py. Arithmetic values use BigInt.
+const REGISTERS = 48;
+const MAX_STEPS = 4096;
+const MAX_VALUE = 10n ** 18n;
+const BASES = [2, 3, 4, 5, 7, 8, 11, 16];
+const WIDE_BASES = [[31, 12], [48, 16], [64, 16], [81, 12], [128, 16], [256, 16], [512, 16]];
+const REFINEMENT_BASES = [[729, 13], [1000, 16], [1024, 16], [1024, 24], [2048, 16], [4096, 16]];
+const MIXED_BASES = [[12, [48, 768]], [16, [64, 1024]], [16, [90, 1350]], [16, [128, 2048]], [16, [128, 4096]], [16, [256, 4096]], [16, [256, 16384]], [16, [512, 65536]]];
+const sorted = (values, reverse = false) => [...values].sort((a, b) => {
+  const order = a < b ? -1 : a > b ? 1 : 0;
+  return reverse ? -order : order;
+});
+const missingTargets = ({ starting, targets }) => {
+  const known = new Set(starting);
+  return new Set(targets.filter(value => !known.has(value)));
+};
+const registerMap = starting => new Map(starting.map((value, index) => [value, index]));
+const freeRegisters = live => {
+  const occupied = new Set(live.values());
+  return Array.from({length: REGISTERS}, (_, i) => REGISTERS - 1 - i).filter(i => !occupied.has(i));
+};
+
+function arithmetic(op, left, right) {
+  if (op === "+") return left + right;
+  if (op === "-") return left - right;
+  if (op === "*") return left * right;
+  if (op === "/" && right !== 0n && left % right === 0n) return left / right;
+  throw new Error("运算符无效或除法无法整除。");
+}
+
+function trace(puzzle, program, requireCoverage = true) {
+  if (requireCoverage && program.length > MAX_STEPS) throw new Error("程序超过 4096 步。");
+  const slots = [...puzzle.starting];
+  const missing = missingTargets(puzzle);
+  const rows = program.map(([op, i, j, d], index) => {
+    if ([i, j, d].some(k => !Number.isInteger(k) || k < 0 || k >= REGISTERS)) {
+      throw new Error(`第 ${index + 1} 步的寄存器编号无效。`);
+    }
+    const left = slots[i], right = slots[j];
+    if (left === undefined || right === undefined) {
+      throw new Error(`第 ${index + 1} 步读取了空寄存器。`);
+    }
+    const value = arithmetic(op, left, right);
+    if (value < 1n || value > puzzle.limit) {
+      throw new Error(`第 ${index + 1} 步的结果超出允许范围。`);
+    }
+    slots[d] = value;
+    return {op, i, j, d, left, right, value, hit: missing.delete(value)};
+  });
+  if (requireCoverage && missing.size) throw new Error("程序没有覆盖全部目标。");
+  return rows;
+}
+
+function findExpression(value, orderedValues, available) {
+  for (const a of orderedValues) {
+    if (value > a && available.has(value - a)) return ["+", a, value - a];
+    if (available.has(value + a)) return ["-", value + a, a];
+    if (value % a === 0n && available.has(value / a)) return ["*", a, value / a];
+    if (available.has(value * a)) return ["/", value * a, a];
+  }
+  return null;
+}
+
+function intSqrt(n) {
+  let x = 1n << BigInt(Math.ceil(n.toString(2).length / 2));
+  let y = (x + n / x) >> 1n;
+  while (y < x) {
+    x = y;
+    y = (x + n / x) >> 1n;
+  }
+  return x;
+}
+
+class Builder {
+  constructor(puzzle) {
+    this.limit = puzzle.limit;
+    this.missing = missingTargets(puzzle);
+    this.live = registerMap(puzzle.starting);
+    this.free = freeRegisters(this.live);
+    this.pinned = new Set();
+    this.program = [];
+  }
+
+  touch(value) {
+    const index = this.live.get(value);
+    this.live.delete(value);
+    this.live.set(value, index);
+  }
+
+  emit(value, op, a, b, keep = null) {
+    const i = this.live.get(a), j = this.live.get(b);
+    if (i === undefined || j === undefined) throw new Error("缺少算术链依赖。");
+    this.touch(a);
+    this.touch(b);
+    let d = this.free.pop();
+    if (d === undefined) {
+      for (const candidate of this.live.keys()) {
+        if (candidate === keep || this.pinned.has(candidate)) continue;
+        d = this.live.get(candidate);
+        this.live.delete(candidate);
+        break;
+      }
+    }
+    if (d === undefined) throw new Error("没有可用寄存器。");
+    this.program.push([op, i, j, d]);
+    this.live.set(value, d);
+    this.missing.delete(value);
+  }
+
+  direct(value) {
+    if (this.live.has(value)) {
+      this.touch(value);
+      return true;
+    }
+    const expression = findExpression(value, [...this.live.keys()].reverse(), this.live);
+    if (expression === null) return false;
+    this.emit(value, ...expression);
+    return true;
+  }
+
+  sweep(reverse) {
+    while (this.missing.size) {
+      const count = this.missing.size;
+      for (const value of sorted(this.missing, reverse)) this.direct(value);
+      if (this.missing.size === count) break;
+    }
+  }
+
+  split(value, base, signed) {
+    const quotient = value / base, digit = value % base;
+    if (signed && digit && (quotient + 1n) * base <= this.limit
+        && !this.live.has(quotient)
+        && (digit > base / 2n || this.live.has(quotient + 1n))) {
+      return [quotient + 1n, base - digit, "-"];
+    }
+    return [quotient, digit, "+"];
+  }
+
+  joinDigits(target, base, quotient, digit, op) {
+    const multiple = quotient * base;
+    if (!this.live.has(multiple)) this.emit(multiple, "*", quotient, base, digit);
+    if (digit && !this.live.has(target)) this.emit(target, op, multiple, digit);
+  }
+
+  build(target, base, signed) {
+    if (this.direct(target)) return;
+    const [quotient, digit, op] = this.split(target, base, signed);
+    this.build(quotient, base, signed);
+    this.joinDigits(target, base, quotient, digit, op);
+  }
+
+  whilePinned(value, build) {
+    const temporary = value !== 0n && !this.pinned.has(value);
+    if (temporary) this.pinned.add(value);
+    build();
+    if (temporary) this.pinned.delete(value);
+  }
+
+  buildWide(target, base, digitBase, signed) {
+    if (target < base) {
+      this.build(target, digitBase, signed);
+      return;
+    }
+    if (this.direct(target)) return;
+    const [quotient, digit, op] = this.split(target, base, signed);
+    if (digit) this.build(digit, digitBase, signed);
+    this.whilePinned(digit, () => this.buildWide(quotient, base, digitBase, signed));
+    this.joinDigits(target, base, quotient, digit, op);
+  }
+
+  frontier() {
+    const values = sorted(this.live.keys());
+    const reachable = new Map();
+    for (let i = 0; i < values.length; i++) {
+      const high = values[i];
+      for (let j = 0; j <= i; j++) {
+        const low = values[j];
+        const moves = [[high + low, "+"], [high * low, "*"], [high - low, "-"]];
+        if (high % low === 0n) moves.push([high / low, "/"]);
+        for (const [value, op] of moves) {
+          if (value > 0n && value <= this.limit && !this.live.has(value) && !reachable.has(value)) {
+            reachable.set(value, [op, high, low]);
+          }
+        }
+      }
+    }
+    return reachable;
+  }
+
+  bridge(reverse) {
+    const frontier = this.frontier();
+    const links = new Map();
+    for (const target of sorted(this.missing, reverse)) {
+      const producers = new Map();
+      const half = target / 2n, root = intSqrt(target);
+      if (target % 2n === 0n) producers.set(half, ["+", half, half]);
+      if (root * root === target) producers.set(root, ["*", root, root]);
+      for (const a of this.live.keys()) {
+        if (target > a) producers.set(target - a, ["+", a, target - a]);
+        if (a > target) producers.set(a - target, ["-", a, a - target]);
+        producers.set(target + a, ["-", target + a, a]);
+        producers.set(target * a, ["/", target * a, a]);
+        if (target % a === 0n) producers.set(target / a, ["*", a, target / a]);
+        if (a % target === 0n) producers.set(a / target, ["/", a, a / target]);
+      }
+      for (const [value, recipe] of producers) {
+        if (!frontier.has(value)) continue;
+        if (!links.has(value)) links.set(value, []);
+        links.get(value).push([target, ...recipe]);
+      }
+    }
+    let best, bestLinks = [];
+    for (const [value, recipes] of links) {
+      if (recipes.length > bestLinks.length || (recipes.length === bestLinks.length && value < best)) {
+        best = value;
+        bestLinks = recipes;
+      }
+    }
+    if (!bestLinks.length) return false;
+    const [target, op, a, b] = bestLinks[0];
+    this.emit(best, ...frontier.get(best), a === best ? b : a);
+    this.emit(target, op, a, b);
+    return true;
+  }
+
+  prepareRadix(base) {
+    if (!this.live.has(1n)) {
+      const seed = this.live.keys().next().value;
+      this.emit(1n, "/", seed, seed);
+    }
+    for (const value of this.live.keys()) {
+      if (value <= base) this.pinned.add(value);
+    }
+    for (let digit = 2n; digit <= base && this.missing.size; digit++) {
+      if (!this.direct(digit)) this.emit(digit, "+", digit - 1n, 1n);
+      this.pinned.add(digit);
+    }
+  }
+
+  run(base, reverse, useBridge = false) {
+    this.sweep(reverse);
+    if (!this.missing.size) return this.program;
+    if (useBridge) {
+      while (this.missing.size && this.bridge(reverse)) this.sweep(reverse);
+      if (!this.missing.size) return this.program;
+    }
+    const max = sorted(this.missing, true)[0];
+    base = base < max ? base : max;
+    this.prepareRadix(base);
+    this.sweep(reverse);
+    for (const target of sorted(this.missing, reverse)) {
+      if (useBridge) {
+        while (this.missing.size && this.bridge(reverse)) this.sweep(reverse);
+      }
+      if (this.missing.has(target)) {
+        this.build(target, base, useBridge);
+        if (useBridge) this.sweep(reverse);
+      }
+    }
+    return this.program;
+  }
+
+  buildMixed(target, radices, small) {
+    if (target < radices[0]) {
+      this.build(target, small, true);
+      return;
+    }
+    if (this.direct(target)) return;
+
+    const width = radices.at(-1).toString(2).length - 1;
+    const smallWidth = small.toString(2).length - 1;
+    const cost = value => {
+      if (this.live.has(value)) return 0;
+      const bits = value.toString(2).length;
+      if (value < radices[0]) return Math.max(1, Math.floor((bits - 1) / smallWidth) * 2);
+      if (bits <= width) return Math.max(2, Math.floor((bits - 1) / smallWidth) + 1);
+      return 3 + Math.floor((bits - width - 1) / width) * 3;
+    };
+    let best;
+    const offer = (base, quotient, digit, op) => {
+      const quotientCost = cost(quotient);
+      const total = quotientCost + (digit ? cost(digit) + 1 : 0)
+        + Number(!this.live.has(quotient * base));
+      const rank = [total, quotientCost, digit, base, quotient, op];
+      const firstDifference = best ? rank.findIndex((value, index) => value !== best.rank[index]) : -1;
+      if (!best || (firstDifference >= 0 && rank[firstDifference] < best.rank[firstDifference])) {
+        best = {rank, base, quotient, digit, op};
+      }
+    };
+    for (const base of radices) {
+      if (base > target) break;
+      const q = target / base, d = target % base;
+      offer(base, q, d, "+");
+      if (d && d >= base / 2n && (q + 1n) * base <= this.limit) offer(base, q + 1n, base - d, "-");
+    }
+    const {base, quotient, digit, op} = best;
+    if (digit && this.live.has(quotient) && !this.live.has(digit)) {
+      this.whilePinned(quotient, () => this.buildMixed(digit, radices, small));
+    } else {
+      if (digit) this.buildMixed(digit, radices, small);
+      this.whilePinned(digit, () => this.buildMixed(quotient, radices, small));
+    }
+    this.joinDigits(target, base, quotient, digit, op);
+  }
+
+  runWide(radices, small, reverse, signed) {
+    this.sweep(reverse);
+    if (!this.missing.size || sorted(this.missing, true)[0] < radices.at(-1)) return null;
+    this.prepareRadix(small);
+    for (const base of radices) {
+      this.build(base, small, signed);
+      this.pinned.add(base);
+    }
+    this.sweep(reverse);
+    for (const target of sorted(this.missing, reverse)) {
+      if (!this.missing.has(target)) continue;
+      if (radices.length === 1) this.buildWide(target, radices[0], small, signed);
+      else this.buildMixed(target, radices, small);
+      this.sweep(reverse);
+    }
+    return this.program;
+  }
+}
+
+function prune(puzzle, program) {
+  const rows = trace(puzzle, program, false);
+  const needed = new Set();
+  const kept = [];
+  for (let k = rows.length - 1; k >= 0; k--) {
+    const row = rows[k];
+    if (row.hit || needed.has(row.d)) {
+      kept.push(program[k]);
+      needed.delete(row.d);
+      needed.add(row.i);
+      needed.add(row.j);
+    }
+  }
+  return kept.reverse();
+}
+
+function reuseRegisters(puzzle, program) {
+  const rows = trace(puzzle, program, false);
+  const events = new Map();
+  const add = (value, step, used) => {
+    if (!events.has(value)) events.set(value, []);
+    events.get(value).push({step, used});
+  };
+  rows.forEach(({left, right, value}, step) => {
+    for (const operand of new Set([left, right])) add(operand, step, true);
+    add(value, step, false);
+  });
+  const live = registerMap(puzzle.starting), free = freeRegisters(live);
+  const result = [];
+  rows.forEach(({op, left, right, value}, step) => {
+    for (const touched of new Set([left, right, value])) {
+      const queue = events.get(touched);
+      while (queue[0]?.step === step) queue.shift();
+    }
+    if (live.has(value)) return;
+    const i = live.get(left), j = live.get(right);
+    let d = free.pop();
+    if (d === undefined) {
+      let discard, latest = -1;
+      for (const candidate of live.keys()) {
+        const event = events.get(candidate)?.[0];
+        if (event?.used) continue;
+        const next = event?.step ?? rows.length;
+        if (next > latest) {
+          latest = next;
+          discard = candidate;
+        }
+      }
+      if (discard === undefined) throw new Error("无法分配寄存器。");
+      d = live.get(discard);
+      live.delete(discard);
+    }
+    live.set(value, d);
+    result.push([op, i, j, d]);
+  });
+  return prune(puzzle, result);
+}
+
+function rewriteExpressions(puzzle, program, reverse) {
+  const starts = new Set(puzzle.starting);
+  if (starts.size > 16) return program;
+  const order = new Map([...starts].map((value, i) => [value, i]));
+  const expressions = new Map();
+  for (const {value, op, left, right} of trace(puzzle, program)) {
+    if (order.has(value)) continue;
+    order.set(value, order.size);
+    expressions.set(value, [op, left, right]);
+  }
+  const goals = [...missingTargets(puzzle)].sort((a, b) => order.get(a) - order.get(b));
+  const operands = value => new Set(expressions.get(value).slice(1));
+  const countsFor = seeds => {
+    const counts = new Map(), pending = [...seeds];
+    while (pending.length) {
+      const value = pending.pop();
+      const count = (counts.get(value) || 0) + 1;
+      counts.set(value, count);
+      if (count === 1 && expressions.has(value)) pending.push(...operands(value));
+    }
+    return counts;
+  };
+
+  let counts = countsFor(goals);
+  const consider = [...expressions.keys()];
+  if (reverse) consider.reverse();
+  for (const value of consider) {
+    if (!counts.has(value)) continue;
+    const pending = [...operands(value)], deleted = new Map(), removed = new Set();
+    while (pending.length) {
+      const item = pending.pop();
+      const count = (deleted.get(item) || 0) + 1;
+      deleted.set(item, count);
+      if (expressions.has(item) && count === counts.get(item)) {
+        pending.push(...operands(item));
+        removed.add(item);
+      }
+    }
+    if (!removed.size) continue;
+    const earlier = [...new Set([...counts.keys(), ...starts])]
+      .filter(item => order.get(item) < order.get(value) && !removed.has(item))
+      .sort((a, b) => order.get(b) - order.get(a));
+    const replacement = findExpression(value, earlier, new Set(earlier));
+    if (replacement) {
+      expressions.set(value, replacement);
+      counts = countsFor(goals);
+    }
+  }
+
+  const builder = new Builder(puzzle);
+  builder.pinned = starts;
+  const demand = new Map([...starts].map(value => [value, 1]));
+  for (const [value, [, a, b]] of expressions) {
+    const d1 = demand.get(a), d2 = demand.get(b);
+    demand.set(value, Math.max(d1, d2 + Number(d1 === d2 && a !== b)));
+  }
+  if (goals.some(value => demand.get(value) + starts.size > REGISTERS)) return program;
+
+  const compute = value => {
+    if (builder.live.has(value)) return;
+    const [op, a, b] = expressions.get(value);
+    const [first, second] = demand.get(a) >= demand.get(b) ? [a, b] : [b, a];
+    compute(first);
+    builder.whilePinned(first === second ? 0n : first, () => compute(second));
+    builder.emit(value, op, a, b);
+  };
+  for (const goal of goals) {
+    if (builder.missing.has(goal)) compute(goal);
+  }
+  return builder.program;
+}
+
+function countBits(mask) {
+  let count = 0;
+  for (; mask; mask &= mask - 1) count++;
+  return count;
+}
+
+function exactSmall(puzzle) {
+  if (puzzle.limit > 24n) return null;
+  const limit = Number(puzzle.limit);
+  const toMask = values => values.reduce((mask, n) => mask | (1 << Number(n)), 0);
+  const start = toMask(puzzle.starting), target = toMask(puzzle.targets);
+  const queue = Array.from({length: limit + 1}, () => []);
+  queue[countBits(target & ~start)].push(start);
+  const parents = new Map([[start, null]]);
+  const arithmeticTable = [];
+  for (let a = 1; a <= limit; a++) {
+    for (let b = 1; b <= a; b++) {
+      const moves = [[a + b, "+"], [a * b, "*"], [a - b, "-"]];
+      if (a % b === 0) moves.push([a / b, "/"]);
+      arithmeticTable[a * (limit + 1) + b] = moves.filter(([value]) => value > 0 && value <= limit);
+    }
+  }
+  // A* with a bucket per integer bound. Every edge adds exactly one available value.
+  const startSize = countBits(start);
+  for (let bound = 0; bound <= limit; bound++) {
+    const bucket = queue[bound];
+    for (let k = 0; k < bucket.length; k++) {
+      const mask = bucket[k];
+      const remaining = target & ~mask;
+      if (!remaining) {
+        const route = [];
+        for (let current = mask; parents.get(current);) {
+          const [previous, value, op, a, b] = parents.get(current);
+          route.push([BigInt(value), op, BigInt(a), BigInt(b)]);
+          current = previous;
+        }
+        const builder = new Builder(puzzle);
+        for (const move of route.reverse()) builder.emit(...move);
+        return builder.program;
+      }
+      const steps = countBits(mask) - startSize;
+      const values = [];
+      for (let value = 1; value <= limit; value++) if (mask & (1 << value)) values.push(value);
+      for (let i = 0; i < values.length; i++) {
+        const a = values[i];
+        for (let j = 0; j <= i; j++) {
+          const b = values[j];
+          for (const [value, op] of arithmeticTable[a * (limit + 1) + b]) {
+            const after = mask | (1 << value);
+            if (parents.has(after)) continue;
+            const nextBound = steps + 1 + countBits(target & ~after);
+            parents.set(after, [mask, value, op, a, b]);
+            queue[nextBound].push(after);
+          }
+        }
+      }
+      if (parents.size > 100000) return null;
+    }
+  }
+  return null;
+}
+
+function* candidatePrograms(puzzle) {
+  for (const base of BASES) {
+    for (const reverse of [false, true]) yield new Builder(puzzle).run(BigInt(base), reverse);
+  }
+  for (const base of [5n, 12n, 20n]) {
+    for (const reverse of [false, true]) yield new Builder(puzzle).run(base, reverse, true);
+  }
+  for (const [base, small] of [...WIDE_BASES, ...REFINEMENT_BASES]) {
+    for (const [reverse, signed] of [[false, false], [false, true], [true, true]]) {
+      yield new Builder(puzzle).runWide([BigInt(base)], BigInt(small), reverse, signed);
+    }
+  }
+  for (const [small, radices] of MIXED_BASES) {
+    for (const reverse of [false, true]) {
+      yield new Builder(puzzle).runWide(radices.map(BigInt), BigInt(small), reverse, true);
+    }
+  }
+}
+
+function solve(puzzle) {
+  const lowerBound = missingTargets(puzzle).size;
+  if (lowerBound === 0) return [];
+  const exact = exactSmall(puzzle);
+  if (exact !== null) {
+    trace(puzzle, exact);
+    return exact;
+  }
+  let best = null;
+  const consider = raw => {
+    if (raw === null) return;
+    const pruned = prune(puzzle, raw);
+    if (pruned.length > MAX_STEPS) return;
+    const candidate = reuseRegisters(puzzle, pruned);
+    if (best === null || candidate.length < best.length) {
+      trace(puzzle, candidate);
+      best = candidate;
+    }
+  };
+  for (const raw of candidatePrograms(puzzle)) {
+    consider(raw);
+    if (best?.length === lowerBound) return best;
+  }
+  if (best === null) throw new Error("在 4096 步限制内未找到可用程序。");
+  const source = best;
+  for (const reverse of [false, true]) consider(rewriteExpressions(puzzle, source, reverse));
+  return best;
+}
+
+  </script>
+  <script>
+  "use strict";
+  const el = id => document.getElementById(id);
+  const symbols = {"*": "×", "/": "÷", "-": "−", "+": "+"};
+  let activeJob = null;
+  let solved = null;
+  let currentStep = 0;
+  let playing = null;
+  let rowElements = [];
+
+  function positive(text) {
+    if (!/^\d+$/.test(text) || BigInt(text) <= 0n) throw new Error("请输入正整数，可用逗号或空格分隔。");
+    return BigInt(text);
+  }
+
+  function values(text) {
+    return text.trim().replace(/^\[([\s\S]*)\]$/, "$1").trim().split(/[\s,，、;；]+/).map(positive);
+  }
+
+  function readPuzzle() {
+    const starting = values(el("starting").value);
+    const targets = [...new Set(values(el("targets").value))];
+    const limit = positive(el("limit").value.trim());
+    if (starting.length > 48) throw new Error("初始值最多 48 个。");
+    if (limit > MAX_VALUE) throw new Error("数值上限不能超过 10¹⁸。");
+    if ([...starting, ...targets].some(value => value > limit)) throw new Error("初始值与目标值都不能超过数值上限。");
+    return {starting, targets, limit};
+  }
+
+  function status(message, error = false) {
+    el("status").textContent = message;
+    el("status").classList.toggle("error", error);
+  }
+
+  function stopPlayback() {
+    clearInterval(playing);
+    playing = null;
+    el("play").textContent = "播放";
+  }
+
+  function setBusy(busy) {
+    el("cancel").hidden = !busy;
+    el("solve-button").disabled = busy;
+    el("example").disabled = busy;
+    el("puzzle-form").setAttribute("aria-busy", String(busy));
+  }
+
+  function cancelJob() {
+    if (!activeJob) return;
+    activeJob.terminate();
+    activeJob = null;
+    setBusy(false);
+  }
+
+  function node(tag, value, className = "") {
+    const element = document.createElement(tag);
+    element.textContent = String(value);
+    if (className) element.className = className;
+    return element;
+  }
+
+  function targetState(puzzle, rows, step) {
+    const seen = new Set(puzzle.starting);
+    for (let k = 0; k < step; k++) seen.add(rows[k].value);
+    const hits = puzzle.targets.filter(value => seen.has(value)).length;
+    el("progress").textContent = `${hits} / ${puzzle.targets.length}`;
+    el("target-chips").replaceChildren(...puzzle.targets.map(value => {
+      const hit = seen.has(value);
+      return node("span", hit ? `✓ ${value}` : value, hit ? "chip hit" : "chip");
+    }));
+  }
+
+  function selectStep(step, scroll = false) {
+    if (!solved) return;
+    const {puzzle, rows} = solved;
+    const previous = rowElements[currentStep - 1];
+    previous?.classList.remove("current");
+    previous?.querySelector("button").removeAttribute("aria-current");
+    currentStep = Math.min(Math.max(0, step), rows.length);
+    const row = rowElements[currentStep - 1];
+    row?.classList.add("current");
+    row?.querySelector("button").setAttribute("aria-current", "step");
+    if (scroll && row) {
+      const wrap = el("table-scroll");
+      const rowBox = row.getBoundingClientRect(), wrapBox = wrap.getBoundingClientRect();
+      const head = wrap.querySelector("thead").getBoundingClientRect().height;
+      if (rowBox.top < wrapBox.top + head) wrap.scrollTop += rowBox.top - wrapBox.top - head;
+      if (rowBox.bottom > wrapBox.bottom) wrap.scrollTop += rowBox.bottom - wrapBox.bottom;
+    }
+
+    const slots = [...puzzle.starting];
+    for (let i = 0; i < currentStep; i++) slots[rows[i].d] = rows[i].value;
+    const lastWrite = rows[currentStep - 1]?.d;
+    el("registers").replaceChildren(...slots.flatMap((value, index) => {
+      const tile = node("div", "", lastWrite === index ? "register updated" : "register");
+      tile.append(node("span", `R${index}`), node("strong", value));
+      return [tile];
+    }));
+    targetState(puzzle, rows, currentStep);
+    el("step-status").textContent = currentStep === 0 ? "初始状态" : `第 ${currentStep} / ${rows.length} 步后`;
+    el("prev").disabled = currentStep === 0;
+    el("next").disabled = currentStep === rows.length;
+    el("play").disabled = rows.length === 0;
+    if (playing && currentStep === rows.length) stopPlayback();
+  }
+
+  function showResult(puzzle, program, rows, elapsed) {
+    solved = {puzzle, program, rows};
+    const targets = new Set(puzzle.targets);
+    rowElements = rows.map((row, index) => {
+      const tr = document.createElement("tr");
+      const step = node("button", index + 1, "step-link");
+      step.type = "button";
+      step.dataset.step = index + 1;
+      step.setAttribute("aria-label", `跳到第 ${index + 1} 步`);
+      const stepCell = node("td", "");
+      stepCell.append(step);
+      const isTarget = targets.has(row.value);
+      const result = node("td", row.value, isTarget ? "result hit" : "result");
+      if (isTarget) result.append(node("span", row.hit ? "命中目标" : "已命中目标", "target-tag"));
+      tr.append(stepCell, node("td", JSON.stringify(program[index])),
+        node("td", `${row.left} ${symbols[row.op]} ${row.right}`), node("td", `R${row.d}`), result);
+      return tr;
+    });
+    if (rows.length) el("rows").replaceChildren(...rowElements);
+    else {
+      const empty = document.createElement("tr");
+      const cell = node("td", "全部目标已经出现在初值中，程序为 0 步。", "empty");
+      cell.colSpan = 5;
+      empty.append(cell);
+      el("rows").replaceChildren(empty);
+    }
+    el("table-scroll").scrollTop = 0;
+    el("step-count").textContent = rows.length;
+    el("coverage").textContent = `${puzzle.targets.length} / ${puzzle.targets.length}`;
+    el("raw-panel").hidden = false;
+    el("raw-json").textContent = JSON.stringify(program);
+    el("copy").disabled = false;
+    el("print").disabled = false;
+    selectStep(0);
+    status(`回放校验通过 · ${elapsed < 1000 ? `${Math.round(elapsed)} ms` : `${(elapsed / 1000).toFixed(1)} s`}`);
+  }
+
+  function clearResult() {
+    solved = null;
+    currentStep = 0;
+    rowElements = [];
+    const row = document.createElement("tr");
+    const cell = node("td", "正在生成指令…", "empty");
+    cell.colSpan = 5;
+    row.append(cell);
+    el("rows").replaceChildren(row);
+    for (const id of ["copy", "print", "prev", "next", "play"]) el(id).disabled = true;
+    el("step-count").textContent = "—";
+    el("coverage").textContent = "—";
+    el("step-status").textContent = "等待求解";
+    el("registers").replaceChildren();
+    el("target-chips").replaceChildren();
+    el("progress").textContent = "—";
+    el("raw-panel").hidden = true;
+  }
+
+  function finishWithError(message) {
+    status(message, true);
+    el("step-status").textContent = "无结果";
+    el("rows").querySelector("td").textContent = "修改参数后可重新求解。";
+  }
+
+  function startSolve(event) {
+    event?.preventDefault();
+    let puzzle;
+    try {
+      puzzle = readPuzzle();
+    } catch (error) {
+      stopPlayback();
+      clearResult();
+      finishWithError(error.message);
+      return;
+    }
+    stopPlayback();
+    cancelJob();
+    clearResult();
+    targetState(puzzle, [], 0);
+    setBusy(true);
+    status("搜索合法程序…");
+
+    const solveHere = () => {
+      const timer = setTimeout(() => {
+        const start = performance.now();
+        try {
+          const program = solve(puzzle);
+          cancelJob();
+          showResult(puzzle, program, trace(puzzle, program), performance.now() - start);
+        } catch (error) {
+          cancelJob();
+          finishWithError(error.message);
+        }
+      }, 0);
+      activeJob = {terminate: () => clearTimeout(timer)};
+    };
+
+    const source = el("solver-source").textContent + `
+self.onmessage = ({data}) => {
+  const start = performance.now();
+  try {
+    const program = solve(data);
+    self.postMessage({program, rows: trace(data, program), elapsed: performance.now() - start});
+  } catch (error) {
+    self.postMessage({error: error.message});
+  }
+};`;
+    const url = URL.createObjectURL(new Blob([source], {type: "text/javascript"}));
+    try {
+      const worker = new Worker(url);
+      activeJob = worker;
+      worker.onmessage = ({data}) => {
+        if (activeJob !== worker) return;
+        cancelJob();
+        if (data.error) finishWithError(data.error);
+        else showResult(puzzle, data.program, data.rows, data.elapsed);
+      };
+      worker.onerror = () => {
+        if (activeJob !== worker) return;
+        activeJob.terminate();
+        solveHere();
+      };
+      worker.postMessage(puzzle);
+    } catch (error) {
+      activeJob?.terminate();
+      solveHere();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  el("puzzle-form").addEventListener("submit", startSolve);
+  el("example").addEventListener("click", () => {
+    el("starting").value = "12";
+    el("targets").value = "5, 7, 17, 19";
+    el("limit").value = "30";
+    startSolve();
+  });
+  el("cancel").addEventListener("click", () => {
+    cancelJob();
+    status("已停止求解。");
+    el("rows").querySelector("td").textContent = "可更改参数并重新求解。";
+  });
+  el("rows").addEventListener("click", event => {
+    const step = event.target.closest("button[data-step]");
+    if (step) {
+      stopPlayback();
+      selectStep(Number(step.dataset.step));
+    }
+  });
+  el("prev").addEventListener("click", () => { stopPlayback(); selectStep(currentStep - 1, true); });
+  el("next").addEventListener("click", () => { stopPlayback(); selectStep(currentStep + 1, true); });
+  el("play").addEventListener("click", () => {
+    if (playing) { stopPlayback(); return; }
+    if (currentStep === solved.rows.length) selectStep(0);
+    el("play").textContent = "暂停";
+    playing = setInterval(() => selectStep(currentStep + 1, true), 580);
+  });
+  el("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(solved.program));
+      status("已复制 JSON 指令。");
+    } catch {
+      el("raw-panel").open = true;
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(el("raw-json"));
+      selection.removeAllRanges();
+      selection.addRange(range);
+      status("已选中 JSON 指令，可直接复制。");
+    }
+  });
+  el("print").addEventListener("click", () => window.print());
+  startSolve();
+  </script>
+</body>
+</html>
