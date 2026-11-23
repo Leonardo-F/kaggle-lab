@@ -516,7 +516,7 @@ class Polisher:
         return True
 
     def anchor_pass(self, window: int = 1 << 26, nearest: int = 8,
-                    strict: bool = True) -> bool:
+                    strict: bool = True, one_sided: bool = False) -> bool:
         """Re-derive targets as ``nearby graph value + small offset``."""
         changed = False
         ordered = sorted(self.graph)
@@ -529,7 +529,7 @@ class Polisher:
             around = []
             span = 8
             low = max(0, position - span)
-            high = min(len(ordered), position + span + 1)
+            high = position + 1 if one_sided else min(len(ordered), position + span + 1)
             for index in range(low, high):
                 value = ordered[index]
                 gap = abs(target - value)
@@ -669,7 +669,8 @@ def emit(puzzle: Puzzle, graph: dict[int, OpSplit | None]) -> Program:
 
 def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
            deep: bool = False, two_step: bool = False,
-           strict: bool = True) -> Program:
+           strict: bool = True, seed: int = 0, walk: bool = False,
+           one_sided: bool = False) -> Program:
     """Iteratively shorten ``program`` inside its own value graph."""
     sys.setrecursionlimit(20000)
     replay(puzzle, program)
@@ -692,10 +693,10 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
             if deep and polisher.anchor_search():
                 inner = True
                 polisher.sweep()
-            if polisher.anchor_pass(strict=strict):
+            if polisher.anchor_pass(strict=strict, one_sided=one_sided):
                 inner = True
                 polisher.sweep()
-            if polisher.walk(rounds=300, seed=len(polisher.graph)):
+            if walk and polisher.walk(rounds=300, seed=seed * 7919 + len(polisher.graph)):
                 inner = True
                 polisher.sweep()
             if not inner:
@@ -716,14 +717,17 @@ def polish(puzzle: Puzzle, program: Program, rounds: int = 6,
 
 
 def solve(puzzle: Puzzle, reference: Program | None = None,
-          rounds: int = 8, two_step: bool = True, strict: bool = True) -> Program:
+          rounds: int = 8, two_step: bool = True, strict: bool = True,
+          seed: int = 0, walk: bool = False, one_sided: bool = False) -> Program:
     """Polish ``reference`` repeatedly until it stops getting shorter."""
     if reference is None:
         raise ValueError("the polisher needs a reference program")
     replay(puzzle, reference)
     best = reference
     for _ in range(rounds):
-        candidate = polish(puzzle, best, two_step=two_step, rounds=4, strict=strict)
+        candidate = polish(puzzle, best, two_step=two_step, rounds=4,
+                           strict=strict, seed=seed, walk=walk,
+                           one_sided=one_sided)
         if len(candidate) >= len(best):
             break
         best = candidate
@@ -731,8 +735,9 @@ def solve(puzzle: Puzzle, reference: Program | None = None,
 
 
 def solve_row(job):
-    puzzle, reference, two_step, strict = job
-    return puzzle.id, solve(puzzle, reference, two_step=two_step, strict=strict)
+    puzzle, reference, two_step, strict, seed, one_sided = job
+    return puzzle.id, solve(puzzle, reference, two_step=two_step,
+                            strict=strict, seed=seed, one_sided=one_sided)
 
 
 def main() -> None:
@@ -744,21 +749,39 @@ def main() -> None:
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument("--no-two-step", action="store_true",
                         help="only rewrite with a single instruction per target")
+    parser.add_argument("--seed", type=int, default=0, help="randomised walk seed")
+    parser.add_argument("--one-sided", action="store_true",
+                        help="only use anchors below the target")
+    parser.add_argument("--merge", type=Path, nargs="+", metavar="CSV",
+                        help="combine several program CSVs, keeping the shortest per puzzle")
     parser.add_argument("--loose", action="store_true",
                         help="accept anchor rewrites optimistically (explores more)")
     args = parser.parse_args()
-    if not args.check and not args.reference:
-        parser.error("--reference is required unless --check is used")
+    if not args.check and not args.reference and not args.merge:
+        parser.error("--reference or --merge is required unless --check is used")
     try:
         puzzles = load_puzzles(args.puzzles)
+        if args.merge:
+            if not args.output:
+                parser.error("--merge requires --output")
+            sources = [load_programs(path, puzzles) for path in args.merge]
+            programs = {pid: min((table[pid] for table in sources), key=len)
+                        for pid in puzzles}
+            with args.output.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(("id", "program"))
+                writer.writerows((pid, encode(program)) for pid, program in programs.items())
+            print(f"Puzzles: {len(programs):,} | Total instructions: "
+                  f"{sum(map(len, programs.values())):,}")
+            return
         if args.check:
             programs = load_programs(args.check, puzzles)
             print(f"Puzzles: {len(programs):,} | Total instructions: "
                   f"{sum(map(len, programs.values())):,}")
             return
         reference = load_programs(args.reference, puzzles)
-        jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose)
-                for pid, puzzle in puzzles.items())
+        jobs = ((puzzle, reference[pid], not args.no_two_step, not args.loose,
+                 args.seed, args.one_sided) for pid, puzzle in puzzles.items())
         if args.jobs == 1:
             programs = dict(map(solve_row, jobs))
         else:

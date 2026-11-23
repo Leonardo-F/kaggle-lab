@@ -27,7 +27,8 @@
 | 上一版逐题选优 | 285,288 |
 | 混合进制、算术链重写与小题精确搜索 | 272,748 |
 | 官方示例起点压缩（自产结果连续三轮 `--refine`） | 270,450 |
-| 值图改写器（锚点 ± 偏移 + 双指令重推，迭代三轮） | **269,706** |
+| 值图改写器（锚点 ± 偏移 + 双指令重推，迭代三轮） | 269,706 |
+| 值图改写器多轮 + 逐题取最短合并 | **269,611** |
 
 本次从本地 285,288 步提交文件继续优化，少 12,540 步（4.40%）。有 951 道题变短。求解器和独立回放器均验证了全部 1,000 道题，最长程序 526 步。该分数为本地计数，待上传 Kaggle 核对。
 
@@ -37,12 +38,23 @@
 
 对公开前沿提交（128,513，见 [对比分析](frontier-analysis.md)）做了逐格阅读与差距测量：该 notebook 只校验并复制一份公开的"逐题最短程序"数据集，不含求解算法。按目标位宽分档对比，我们的每题目标平均指令数在各档都约为其 1.8 倍；对 1,000 题的随机性与共享结构检验显示目标基本是随机大整数，差距来自联合搜索而非某种解析结构。
 
-新增 `graph_solver.py`（值图改写器），把程序产出的所有值当作操作数做单/双指令重推、锚点 ± 偏移重推（偏移递归构造）和平台游走，每步回放校验、只保留更短结果。修正"锚点改写只按整题长度择优"后，对正式集迭代打磨得到 **270,450 → 269,706**（少 744 步，−0.28%；230 题变短，0 题变长，最长程序 525 步），`solve.py --check` 独立回放 1,000 题通过。归档 [elf-calculator-score-269706.csv](../submissions/elf-calculator-score-269706.csv)。
+新增 `graph_solver.py`（值图改写器），把程序产出的所有值当作操作数做单/双指令重推、锚点 ± 偏移重推（偏移递归构造），每步回放校验、只保留更短结果；多轮结果再逐题取最短合并。修正"锚点改写只按整题长度择优"后，对正式集迭代打磨并逐题取最短合并，得到 **270,450 → 269,611**（少 839 步，−0.31%；240 题变短、760 题持平、0 题变长，最长程序 525 步），`solve.py --check` 独立回放 1,000 题通过。归档 [elf-calculator-score-269611.csv](../submissions/elf-calculator-score-269611.csv)（中间版本 `elf-calculator-score-269706.csv` 一并保留）。
 
 ```bash
-python graph_solver.py data/puzzles.csv --check submissions/elf-calculator-score-269706.csv
-python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv --output polished.csv --jobs 8
+# 逐轮打磨：单指令 → 双指令 → 双向锚点 → 交替收敛
+python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv \
+    --one-sided --no-two-step --output a.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference a.csv --one-sided --output b.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference b.csv --output c.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference c.csv --one-sided --output d.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference d.csv --output e.csv --jobs 8
+# 逐题取最短并复核
+python graph_solver.py data/puzzles.csv --merge \
+    submissions/elf-calculator-score-270450.csv a.csv b.csv c.csv d.csv e.csv --output merged.csv
+python graph_solver.py data/puzzles.csv --check merged.csv
 ```
+
+各轮总步数：a=269,911 · b=269,804 · c=269,741 · d=e=269,739 · 合并=**269,611**。
 
 仍与公开前沿（128,513）差约 2.1 倍：该分数是社区逐题最优程序的并集，单算法难以匹配；剩余差距需要"全局共享中间值搜索"而非继续加局部改写规则。
 

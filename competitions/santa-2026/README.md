@@ -25,17 +25,24 @@ python solve.py data/puzzles.csv --reference submission.csv --refine --output su
 
 `--refine` 跳过旧的构造策略，使用混合进制、小题精确搜索和算术链重写压缩参考程序。`--reference` 可选。给定参考 CSV 时，程序逐题选用更短的合法结果，指令数不会超过参考程序。练习时，将输入替换为 `data/practice_puzzles.csv` 并省略 `--reference`。
 
-用官方数据独立回放 1,000 道题，当前提交文件的总指令数为 **269,706**（本地计数，待上传 Kaggle 核对；上一版 270,450）。[完整 CSV](submissions/elf-calculator-score-269706.csv)
+用官方数据独立回放 1,000 道题，当前提交文件的总指令数为 **269,611**（本地计数，待上传 Kaggle 核对；上一版 270,450）。[完整 CSV](submissions/elf-calculator-score-269611.csv)
 
 ## 值图改写器
 
 `graph_solver.py` 把一份合法程序产出的所有值当作可用操作数，逐目标寻找更短的重新推导（单指令、双指令、锚点、隐藏锚点），循环到不动点后重新分配寄存器。每一步都用 `solve.replay` 校验，只保留更短的程序。
 
 ```bash
-python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv --output polished.csv --jobs 8
-python graph_solver.py data/puzzles.csv --check polished.csv
+python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv \
+    --one-sided --no-two-step --output a.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference a.csv --one-sided --output b.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference b.csv --output c.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference c.csv --one-sided --output d.csv --jobs 8
+python graph_solver.py data/puzzles.csv --reference d.csv --output e.csv --jobs 8
+python graph_solver.py data/puzzles.csv --merge \
+    submissions/elf-calculator-score-270450.csv a.csv b.csv c.csv d.csv e.csv --output merged.csv
+python graph_solver.py data/puzzles.csv --check merged.csv
 ```
 
-对正式集 1,000 题迭代打磨得到 **270,450 → 269,706**（少 744 步，230 题变短、0 题变长，最长程序 525 步），`--check` 独立回放全部通过。详细测量、与公开前沿（128,513）的分档差距和结构检验见[对比分析](docs/frontier-analysis.md)。
+对正式集 1,000 题迭代打磨并逐题取最短，得到 **270,450 → 269,611**（少 839 步，240 题变短、0 题变长，最长程序 525 步），`--check` 独立回放全部通过。详细测量、与公开前沿（128,513）的分档差距和结构检验见[对比分析](docs/frontier-analysis.md)。
 
 [解题思路和验证范围](docs/progress.md) · [公开前沿对比与搜索实验](docs/frontier-analysis.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)
