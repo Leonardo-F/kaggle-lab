@@ -8,6 +8,7 @@
 | V1 | 250,642 | — | 156.5 秒 | [1,000 / 1,000](../experiments/reports/v1.json) |
 | V2 | 236,449 | 14,193 | 285.5 秒 | [1,000 / 1,000](../experiments/reports/v2.json) |
 | V3 | 227,799 | 8,650 | 424.8 秒 | [1,000 / 1,000](../experiments/reports/v3.json) |
+| V4 | 219,462 | 8,337 | 624.2 秒 | [1,000 / 1,000](../experiments/reports/v4.json) |
 
 耗时取自本次同步复跑，多个版本并行运行。分数为本地指令计数。各版报告同时记录交接 CSV 与本次输出的 SHA-256。
 
@@ -63,4 +64,22 @@ flowchart LR
 ```bash
 python graph_solver.py data/puzzles.csv --version v3 --output submissions/v3-score-227799.csv --jobs 4
 python verify.py data/puzzles.csv submissions/v3-score-227799.csv
+```
+
+## V4 · 双乘数联合匹配
+
+固定基数后只取向下或向上取整的商，可能错过池中已有的廉价商。扩大低成本前向值池，从已用节点选择基数，并在已知值中找相邻的商。最小化两个乘数和余数的新增依赖，再与本轮重新生成的 V3 程序融合。
+
+若 10、9、13 已知，103 可写成 10×9+13。
+
+```mermaid
+flowchart LR
+    A["已有操作数"] --> B["匹配因子与邻近商"] --> C["与新生成 V3 融合"]
+```
+
+本次复跑 219,462 步。本次输出与交接 CSV 逐字节一致。较前版 723 题缩短，277 题持平，0 题变长。只检查有限的邻近因子、递归深度和候选宽度。交接包 24 题对照中，V3 为 6,473 步，候选择优为 6,310 步，融合为 6,290 步。全量 723 题变短。
+
+```bash
+python graph_solver.py data/puzzles.csv --version v4 --output submissions/v4-score-219462.csv --jobs 4
+python verify.py data/puzzles.csv submissions/v4-score-219462.csv
 ```
