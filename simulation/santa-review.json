@@ -1,3 +1,15 @@
 {
-  "python_sha256": "b342023b1c0b5f56ea002ed1590c17176f595a2791156fe06d91df4836d9ab60"
+  "python_sha256": "b342023b1c0b5f56ea002ed1590c17176f595a2791156fe06d91df4836d9ab60",
+  "independent_replay": {
+    "versions": [
+      "v1"
+    ],
+    "source_sha256": {
+      "graph_solver.py": "2ba946321055eb941b31758267bebaeeb9104985d7a173ff74027269702f96bc",
+      "verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
+      "algorithms/__init__.py": "ffc13e8ebba9d9402e0ea886e31ef545713478e1717b685a3fdf1f85d596a4fc",
+      "algorithms/common.py": "736fab8908b641d1f0373dbc18ba8d186034892a38fe454628b048860854b6e6",
+      "algorithms/v1.py": "9443aa952395ae0936b0766b8c1549f1d36c86ca48feb3d39a1d10061ca5346d"
+    }
+  }
 }

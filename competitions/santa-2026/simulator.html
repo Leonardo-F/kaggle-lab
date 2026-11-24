@@ -30,6 +30,16 @@
     .input-panel { padding: 20px; }
     h2 { font-size: 1.08rem; letter-spacing: -.02em; }
     .topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .input-stack, .import-pane, #replay-files { display: grid; gap: 10px; }
+    .import-pane { margin-top: 10px; }
+    .import-pane select { width: 100%; padding: 8px; background: #fafcfb; color: var(--ink); border: 1px solid #bfcfc5; border-radius: 8px; }
+    .import-pane input[type="file"] { padding: 5px 6px; font: .75rem system-ui, sans-serif; }
+    .import-pane summary { color: var(--accent); }
+    .import-pane details { padding: 4px 0; }
+    #replay-files { margin-top: 8px; }
+    #replay-comparison { list-style: none; padding: 0; margin: 0; font-size: .78rem; }
+    #replay-comparison li { padding: 5px 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 4px; }
+    #replay-comparison li[aria-current] { background: var(--accent-light); }
     form { display: grid; gap: 15px; margin-top: 17px; }
     label { display: grid; gap: 5px; font-size: .88rem; font-weight: 650; }
     textarea, input {
@@ -122,15 +132,31 @@
       <div>
         <p class="brand">SANTA 2026 / THE ELF CALCULATOR</p>
         <h1>精灵计算器模拟器</h1>
-        <p>输入一题，求解后逐步查看 48 个寄存器的计算过程。</p>
+        <p>导入各版本输出对比同题指令，或用网页求解器探索自定义题。</p>
       </div>
       <a class="repo-link" href="https://github.com/Leonardo-F/kaggle-lab/tree/main/competitions/santa-2026">GitHub 求解器 ↗</a>
     </div>
   </header>
   <main class="shell layout">
+    <div class="input-stack">
+    <section class="panel input-panel" aria-labelledby="import-title">
+      <h2 id="import-title">Python 版本回放</h2>
+      <div class="import-pane">
+        <p class="hint">离线读取 Python 生成的 CSV。版本文件请放入对应槽位。</p>
+        <label>官方题目 CSV <input id="replay-puzzles" type="file" accept=".csv,text/csv"></label>
+        <details open>
+          <summary>导入各版程序</summary>
+          <div id="replay-files" data-versions="v1"></div>
+        </details>
+        <label>题号 <select id="replay-id" disabled><option value="">先导入题目</option></select></label>
+        <label>回放版本 <select id="replay-version"></select></label>
+        <ul id="replay-comparison" aria-label="同题对比"></ul>
+        <p class="status" id="replay-status" role="status"></p>
+      </div>
+    </section>
     <section class="panel input-panel" aria-labelledby="input-title">
       <div class="topline">
-        <h2 id="input-title">题目参数</h2>
+        <h2 id="input-title">自定义题 · JavaScript 求解</h2>
         <button class="example" id="example" type="button">载入示例</button>
       </div>
       <form id="puzzle-form">
@@ -152,6 +178,7 @@
         <div class="chips" id="target-chips"></div>
       </div>
     </section>
+    </div>
     <div class="output">
       <section class="panel summary" aria-label="求解摘要">
         <div class="metric"><span>程序步数</span><strong id="step-count">—</strong></div>
@@ -176,11 +203,12 @@
       <section class="panel playback" aria-labelledby="register-title">
         <div class="topline"><h2 id="register-title">寄存器状态</h2><span class="step-status" id="step-status">初始状态</span></div>
         <div class="buttons">
+          <button id="reset-step" type="button" disabled>重置</button>
           <button id="prev" type="button" disabled>上一步</button>
           <button id="next" type="button" disabled>下一步</button>
           <button id="play" type="button" disabled>播放</button>
         </div>
-        <div id="registers" class="registers" aria-label="已赋值寄存器"></div>
+        <div id="registers" class="registers" aria-label="48 个寄存器"></div>
       </section>
       <details class="panel" id="raw-panel" hidden>
         <summary>原始 JSON 指令</summary><pre id="raw-json"></pre>
@@ -753,6 +781,78 @@ function solve(puzzle) {
 }
 
   </script>
+  <script id="replay-source">
+function readCSV(text, required) {
+  text = text.replace(/^\uFEFF/, "");
+  const field = /"((?:[^"]|"")*)"|([^",\r\n]*)/y;
+  let offset = 0;
+  function record() {
+    const cells = [];
+    while (true) {
+      field.lastIndex = offset;
+      const match = field.exec(text);
+      if (!match) throw new Error("CSV 字段格式无效。");
+      cells.push(match[1] === undefined ? match[2] : match[1].replace(/""/g, '"'));
+      offset = field.lastIndex;
+      const separator = text[offset++];
+      if (separator === ",") continue;
+      if (separator === "\r" && text[offset] === "\n") offset++;
+      if (separator === undefined || separator === "\n" || separator === "\r") return cells;
+      throw new Error("CSV 分隔符无效。");
+    }
+  }
+  const header = record();
+  if (new Set(header).size !== header.length || !required.every(key => header.includes(key))) {
+    throw new Error("CSV 缺少所需列或有重复列名。");
+  }
+  const rows = new Map();
+  while (offset < text.length) {
+    const cells = record();
+    if (cells.length === 1 && cells[0] === "") continue;
+    if (cells.length !== header.length) throw new Error("CSV 行的列数不匹配。");
+    const row = Object.fromEntries(header.map((key, index) => [key, cells[index]]));
+    if (!row.id || rows.has(row.id)) throw new Error("CSV 题号为空或重复。");
+    rows.set(row.id, row);
+  }
+  if (!rows.size) throw new Error("CSV 没有数据行。");
+  return rows;
+}
+
+function importedPuzzle(row) {
+  function integer(text) {
+    if (!/^\d+$/.test(text) || BigInt(text) <= 0n) throw new Error("题目包含无效整数。");
+    return BigInt(text);
+  }
+  function array(text) {
+    const match = /^\[\s*(\d+(?:\s*,\s*\d+)*|)\s*\]$/.exec(text.trim());
+    if (!match) throw new Error("题目的整数数组格式无效。");
+    return match[1] ? match[1].split(",").map(value => integer(value.trim())) : [];
+  }
+  const starting = array(row.starting_values);
+  const targets = [...new Set(array(row.targets))];
+  const limit = integer(row.value_limit.trim());
+  if (integer(row.registers.trim()) !== 48n || starting.length > 48 ||
+      !starting.length || limit > MAX_VALUE ||
+      [...starting, ...targets].some(value => value > limit)) {
+    throw new Error("题目的寄存器容量或数值上限无效。");
+  }
+  return {starting, targets, limit};
+}
+
+function importedProgram(text) {
+  if (new TextEncoder().encode(text).length > 131072) throw new Error("程序超过 128 KiB。");
+  const program = JSON.parse(text);
+  if (!Array.isArray(program) || program.length > MAX_STEPS) throw new Error("程序必须为数组且最多 4096 步。");
+  if (program.some(instruction => !Array.isArray(instruction) || instruction.length !== 4)) {
+    throw new Error("每条指令须有四项。");
+  }
+  // JSON.parse rounds some decimal tokens to integers. Check the original
+  // numeric spelling, excluding quoted strings, as the Python verifier does.
+  const outsideStrings = text.replace(/"(?:\\[\s\S]|[^"\\])*"/g, '""');
+  if (/\d[.eE]/.test(outsideStrings)) throw new Error("寄存器编号必须用整数表示。");
+  return program;
+}
+  </script>
   <script>
   "use strict";
   const el = id => document.getElementById(id);
@@ -843,16 +943,17 @@ function solve(puzzle) {
       if (rowBox.bottom > wrapBox.bottom) wrap.scrollTop += rowBox.bottom - wrapBox.bottom;
     }
 
-    const slots = [...puzzle.starting];
+    const slots = Array.from({length: REGISTERS}, (_, index) => puzzle.starting[index]);
     for (let i = 0; i < currentStep; i++) slots[rows[i].d] = rows[i].value;
     const lastWrite = rows[currentStep - 1]?.d;
-    el("registers").replaceChildren(...slots.flatMap((value, index) => {
+    el("registers").replaceChildren(...slots.map((value, index) => {
       const tile = node("div", "", lastWrite === index ? "register updated" : "register");
-      tile.append(node("span", `R${index}`), node("strong", value));
-      return [tile];
+      tile.append(node("span", `R${index}`), node("strong", value ?? "—"));
+      return tile;
     }));
     targetState(puzzle, rows, currentStep);
     el("step-status").textContent = currentStep === 0 ? "初始状态" : `第 ${currentStep} / ${rows.length} 步后`;
+    el("reset-step").disabled = currentStep === 0;
     el("prev").disabled = currentStep === 0;
     el("next").disabled = currentStep === rows.length;
     el("play").disabled = rows.length === 0;
@@ -905,7 +1006,7 @@ function solve(puzzle) {
     cell.colSpan = 5;
     row.append(cell);
     el("rows").replaceChildren(row);
-    for (const id of ["copy", "print", "prev", "next", "play"]) el(id).disabled = true;
+    for (const id of ["copy", "print", "reset-step", "prev", "next", "play"]) el(id).disabled = true;
     el("step-count").textContent = "—";
     el("coverage").textContent = "—";
     el("step-status").textContent = "等待求解";
@@ -1030,6 +1131,119 @@ self.onmessage = ({data}) => {
     }
   });
   el("print").addEventListener("click", () => window.print());
+  const versions = el("replay-files").dataset.versions.split(",");
+  const submissions = new Map();
+  let importedPuzzles = new Map();
+
+  function showImported() {
+    const id = el("replay-id").value;
+    const row = importedPuzzles.get(id);
+    const version = el("replay-version").value;
+    const results = new Map();
+    let puzzle;
+    try {
+      if (row) puzzle = importedPuzzle(row);
+    } catch (error) {
+      el("replay-status").textContent = error.message;
+    }
+    if (puzzle) {
+      for (const key of versions) {
+        const text = submissions.get(key)?.get(id)?.program;
+        if (text === undefined) continue;
+        try {
+          const program = importedProgram(text);
+          results.set(key, {program, rows: trace(puzzle, program)});
+        } catch (error) {
+          results.set(key, {error: error.message});
+        }
+      }
+    }
+    const baseline = results.get("v1")?.rows?.length;
+    el("replay-comparison").replaceChildren(...versions.map(key => {
+      const data = results.get(key);
+      const count = data?.rows?.length;
+      let summary = submissions.has(key) ? "无此题" : "未导入";
+      if (data?.error) summary = "校验失败";
+      if (count !== undefined) {
+        const comparison = baseline === undefined ? "" : ` · 较 V1 ${baseline - count >= 0 ? "少" : "多"} ${Math.abs(baseline - count)} 步`;
+        summary = `${count} 步 · 合法${comparison}`;
+      }
+      const item = node("li", "");
+      item.append(node("strong", key.toUpperCase()), node("span", summary));
+      if (key === version) item.setAttribute("aria-current", "true");
+      if (data?.error) item.title = data.error;
+      return item;
+    }));
+    if (!row) return;
+    cancelJob();
+    stopPlayback();
+    const result = results.get(version);
+    if (!result?.rows) {
+      clearResult();
+      finishWithError(result?.error || "请选择包含本题的版本 CSV。");
+      el("rows").querySelector("td").textContent = "导入该版本的程序后可回放。";
+      return;
+    }
+    showResult(puzzle, result.program, result.rows, 0);
+    status(`${id} · ${version.toUpperCase()} · 导入程序回放校验通过`);
+  }
+
+  function fileInput(input, onLoad, onClear, onError) {
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      if (!file) return;
+      onClear();
+      el("replay-status").textContent = `正在读取 ${file.name}…`;
+      try {
+        const text = await file.text();
+        if (input.files[0] !== file) return;
+        onLoad(text);
+        el("replay-status").textContent = `已导入 ${file.name}`;
+      } catch (error) {
+        if (input.files[0] !== file) return;
+        onError?.();
+        input.value = "";
+        el("replay-status").textContent = error.message;
+      }
+      showImported();
+    });
+  }
+
+  fileInput(el("replay-puzzles"), text => {
+    const selected = el("replay-id").value;
+    importedPuzzles = readCSV(text, ["id", "starting_values", "targets", "value_limit", "registers"]);
+    const chooser = el("replay-id");
+    chooser.replaceChildren(...Array.from(importedPuzzles.keys(), id => new Option(id, id)));
+    if (importedPuzzles.has(selected)) chooser.value = selected;
+    chooser.disabled = false;
+  }, () => {}, () => {
+    importedPuzzles.clear();
+    el("replay-id").replaceChildren(new Option("先导入题目", ""));
+    el("replay-id").disabled = true;
+    stopPlayback();
+    clearResult();
+    finishWithError("题目文件无法读取。");
+  });
+
+  for (const version of versions) {
+    const select = el("replay-version");
+    select.add(new Option(version.toUpperCase(), version));
+    const label = node("label", `${version.toUpperCase()} 程序 CSV`);
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv,text/csv";
+    input.id = `replay-${version}`;
+    label.append(input);
+    el("replay-files").append(label);
+    fileInput(input, text => {
+      submissions.set(version, readCSV(text, ["id", "program"]));
+      select.value = version;
+    }, () => submissions.delete(version));
+  }
+  el("replay-id").addEventListener("change", showImported);
+  el("replay-version").addEventListener("change", showImported);
+  el("reset-step").addEventListener("click", () => { stopPlayback(); selectStep(0); });
+  showImported();
   startSolve();
   </script>
 </body>

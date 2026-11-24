@@ -83,7 +83,7 @@
 
 ## 4. 我们尝试的新算法与实测结果
 
-新增 `graph_solver.py`（值图改写器）。做法：把一份合法程序的**所有产出值**都当作可用操作数（旧求解器只能用当前 48 个活跃寄存器），再逐目标寻找更短的重新推导，循环到不动点，最后重新分配寄存器；每一步都用 `solve.replay` 校验，只保留更短的程序。
+新增 `legacy/graph_polisher.py`（值图改写器）。做法：把一份合法程序的**所有产出值**都当作可用操作数（旧求解器只能用当前 48 个活跃寄存器），再逐目标寻找更短的重新推导，循环到不动点，最后重新分配寄存器；每一步都用 `solve.replay` 校验，只保留更短的程序。
 
 包含四个改写族：
 
@@ -121,7 +121,7 @@
 | --- | --- | --- | --- |
 | 1 | 现有混合进制 + 全策略组合 + 多轮 `--refine` | `solve.py` | 基线 270,450；再跑一轮 0 改进（已收敛） |
 | 2 | 自顶向下成本传播规划器（共享 DAG + 最小边际成本） | 实验代码，未入库 | 多数题目给不出不劣于参考的程序，差于基线 |
-| 3 | 值图单指令重推 | `graph_solver.py` | 严格模式下 0 改进（现有程序已把 1 步关系用尽） |
+| 3 | 值图单指令重推 | `legacy/graph_polisher.py` | 严格模式下 0 改进（现有程序已把 1 步关系用尽） |
 | 4 | 值图双指令重推（1 个新中间值） | 同上 | 约 −0.02% |
 | 5 | 锚点 ± 偏移重推（偏移递归构造） | 同上 | **−0.36%**（最大单项收益，前提是按整题长度择优） |
 | 6 | 锚点变体搜索（跨度/近邻/方向）+ 逐题合并 | 同上 `--variant` | 再 −0.05% |
@@ -134,8 +134,8 @@
 | 13 | 随机化从零构造（每目标随机进制） | 实验代码，已删除 | 30 题中 21 题构造失败、0 胜 |
 | 14 | 重新调度同一值图（4 种目标顺序） | 实验代码 | 0 改进 |
 | 15 | 贪心列表调度器（减少重算） | 实验代码 | 全部失败/0 改进；重算开销实测仅 0.29%，且难以消除 |
-| 16 | 有理链改写 `t = (a·p + c)/q`（p,q ≤ 64，锚点按 `t*q/p` 反查） | `graph_solver.py --rational` | 生产 −0.08%（单题最多省 11 步）；受 `t*q ≤ value_limit` 限制，只在有裕量的题上生效 |
-| 17 | 共享锚点发现（`t-u` 命中 ≥2 的隐藏锚点） | `graph_solver.py` | 全套目标中仅 ≥2 命中的锚点极少（5% 目标在近邻簇内），收益已含在 #5 内 |
+| 16 | 有理链改写 `t = (a·p + c)/q`（p,q ≤ 64，锚点按 `t*q/p` 反查） | `legacy/graph_polisher.py --rational` | 生产 −0.08%（单题最多省 11 步）；受 `t*q ≤ value_limit` 限制，只在有裕量的题上生效 |
+| 17 | 共享锚点发现（`t-u` 命中 ≥2 的隐藏锚点） | `legacy/graph_polisher.py` | 全套目标中仅 ≥2 命中的锚点极少（5% 目标在近邻簇内），收益已含在 #5 内 |
 
 累计：**270,450 → 269,413（−0.38%）**。
 
@@ -154,13 +154,13 @@
 ```bash
 cd competitions/santa-2026
 python solve.py data/puzzles.csv --check submissions/elf-calculator-score-270450.csv
-python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv --output polished.csv --jobs 8
-python graph_solver.py data/puzzles.csv --check polished.csv
+python legacy/graph_polisher.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv --output polished.csv --jobs 8
+python legacy/graph_polisher.py data/puzzles.csv --check polished.csv
 ```
 
 ### 实现进展：`product_pass`（2026-11-24）
 
-已在 `graph_solver.py` 增加 `product_pass`：对每个目标尝试 `t = a·round(t/a) + c`（`a` 取图上最便宜的值，`c` 为残差），并按整题长度择优。**单独启用时实测 0 收益**——因为 `round(t/a)` 与 `c` 在当前图里都不存在，`ensure` 会按 radix 现造，成本与现有分解持平。
+已在 `legacy/graph_polisher.py` 增加 `product_pass`：对每个目标尝试 `t = a·round(t/a) + c`（`a` 取图上最便宜的值，`c` 为残差），并按整题长度择优。**单独启用时实测 0 收益**——因为 `round(t/a)` 与 `c` 在当前图里都不存在，`ensure` 会按 radix 现造，成本与现有分解持平。
 
 这验证了前面的判断：**收益不来自"乘积形式"本身，而来自共享池**——frontier 的 `M1`、`M2`、`c` 都由同一个约 200 节点的中层池拼出，跨目标复用。因此下一步必须实现"池的选择"（集合覆盖/LNS），而不是再加一种单目标分解形式：
 

@@ -3,6 +3,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,10 +23,25 @@ def build():
     review = json.loads(REVIEW.read_text(encoding='utf-8'))
     if review['python_sha256'] != digest(PYTHON_SOLVER):
         raise ValueError('Santa Python solver changed: review browser solver compatibility and update simulation/santa-review.json before rebuilding.')
+    review_independent_replay(review["independent_replay"])
     payload = {name: base64.b64encode(path.read_bytes()).decode('ascii')
                for name, path in [('square', SQUARE), ('santa', SANTA)]}
     template = (HERE / 'template.html').read_text(encoding='utf-8')
     return template.replace('/* EMBEDDED_DOCUMENTS */', json.dumps(payload, ensure_ascii=True))
+
+
+def review_independent_replay(review):
+    santa = SANTA.parent
+    algorithms = sorted((santa / "algorithms").glob("*.py"))
+    files = [santa / "graph_solver.py", santa / "verify.py", *algorithms]
+    hashes = {path.relative_to(santa).as_posix(): digest(path) for path in files}
+    versions = [path.stem for path in algorithms if re.fullmatch(r"v[1-5]", path.stem)]
+    simulator = SANTA.read_text(encoding="utf-8")
+    mapping = re.search(r'id="replay-files" data-versions="([^"]+)"', simulator)
+    if hashes != review["source_sha256"] or versions != review["versions"]:
+        raise ValueError("Santa independent solver changed: review CSV replay and update santa-review.json.")
+    if not mapping or mapping[1].split(",") != versions:
+        raise ValueError("Santa replay version choices do not match the Python files.")
 
 
 def main():

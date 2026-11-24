@@ -1,5 +1,9 @@
 # Santa 2026 · 解法与实验进展
 
+独立求解 V1 本地全量 **250,642 步**，1,000 题通过独立回放。历代算法、分数、消融及复现命令见[算法演进](algorithm-evolution.md)。
+
+以下保留早期实验及复现记录。
+
 ## 问题建模
 
 每题的状态由当前寄存器值和已覆盖目标组成。每条指令读取两个寄存器，再写入一个寄存器，写入位置可以与输入相同。加减乘除每次均计一步，除法要求整除。每题最多 4,096 步，提交 CSV 的每个程序单元格最多 128 KiB。1,000 题的步数直接求和，任何一题非法会导致整份提交被拒绝。
@@ -50,7 +54,7 @@ python dag_lns.py data/puzzles.csv --reference submissions/elf-calculator-score-
     --rounds 1000 --seed 20261124 --jobs 8 --output lns-history.csv
 python dag_lns.py data/puzzles.csv --reference submissions/elf-calculator-score-269369.csv \
     --rounds 1000 --seed 20261124 --jobs 8 --output lns-main.csv
-python graph_solver.py data/puzzles.csv --merge \
+python legacy/graph_polisher.py data/puzzles.csv --merge \
     submissions/elf-calculator-score-269369.csv lns-history.csv lns-main.csv \
     --output elf-calculator-score-263575.csv
 python solve.py data/puzzles.csv --check elf-calculator-score-263575.csv
@@ -62,20 +66,20 @@ python solve.py data/puzzles.csv --check elf-calculator-score-263575.csv
 
 对公开前沿提交（128,513，见 [对比分析](frontier-analysis.md)）做了逐格阅读与差距测量：该 notebook 只校验并复制一份公开的"逐题最短程序"数据集，不含求解算法。按目标位宽分档对比，我们的每题目标平均指令数在各档都约为其 1.8 倍；对 1,000 题的随机性与共享结构检验显示目标基本是随机大整数，差距来自联合搜索而非某种解析结构。
 
-新增 `graph_solver.py`（值图改写器），把程序产出的所有值当作操作数做单/双指令重推、锚点 ± 偏移重推（偏移递归构造），每步回放校验、只保留更短结果；多轮结果再逐题取最短合并。修正"锚点改写只按整题长度择优"后，对正式集迭代打磨、再做锚点变体搜索（跨度 4–16、单向/双向、`anchor*k ± gap` 倍增锚点）并逐题取最短合并，得到 **270,450 → 269,369**（少 1,081 步，−0.40%；281 题变短、719 题持平、0 题变长，最长程序 525 步），`solve.py --check` 独立回放 1,000 题通过。归档 [elf-calculator-score-269369.csv](../submissions/elf-calculator-score-269369.csv)（中间版本 269,706、269,611、269,474、269,413、269,385 一并保留）。
+新增 `legacy/graph_polisher.py`（值图改写器），把程序产出的所有值当作操作数做单/双指令重推、锚点 ± 偏移重推（偏移递归构造），每步回放校验、只保留更短结果；多轮结果再逐题取最短合并。修正"锚点改写只按整题长度择优"后，对正式集迭代打磨、再做锚点变体搜索（跨度 4–16、单向/双向、`anchor*k ± gap` 倍增锚点）并逐题取最短合并，得到 **270,450 → 269,369**（少 1,081 步，−0.40%；281 题变短、719 题持平、0 题变长，最长程序 525 步），`solve.py --check` 独立回放 1,000 题通过。归档 [elf-calculator-score-269369.csv](../submissions/elf-calculator-score-269369.csv)（中间版本 269,706、269,611、269,474、269,413、269,385 一并保留）。
 
 ```bash
 # 逐轮打磨：单指令 → 双指令 → 双向锚点 → 交替收敛
-python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv \
+python legacy/graph_polisher.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv \
     --one-sided --no-two-step --output a.csv --jobs 8
-python graph_solver.py data/puzzles.csv --reference a.csv --one-sided --output b.csv --jobs 8
-python graph_solver.py data/puzzles.csv --reference b.csv --output c.csv --jobs 8
-python graph_solver.py data/puzzles.csv --reference c.csv --one-sided --output d.csv --jobs 8
-python graph_solver.py data/puzzles.csv --reference d.csv --output e.csv --jobs 8
+python legacy/graph_polisher.py data/puzzles.csv --reference a.csv --one-sided --output b.csv --jobs 8
+python legacy/graph_polisher.py data/puzzles.csv --reference b.csv --output c.csv --jobs 8
+python legacy/graph_polisher.py data/puzzles.csv --reference c.csv --one-sided --output d.csv --jobs 8
+python legacy/graph_polisher.py data/puzzles.csv --reference d.csv --output e.csv --jobs 8
 # 逐题取最短并复核
-python graph_solver.py data/puzzles.csv --merge \
+python legacy/graph_polisher.py data/puzzles.csv --merge \
     submissions/elf-calculator-score-270450.csv a.csv b.csv c.csv d.csv e.csv --output merged.csv
-python graph_solver.py data/puzzles.csv --check merged.csv
+python legacy/graph_polisher.py data/puzzles.csv --check merged.csv
 ```
 
 各轮总步数：a=269,911 · b=269,804 · c=269,741 · d=e=269,739 · 合并=269,611。
@@ -83,20 +87,20 @@ python graph_solver.py data/puzzles.csv --check merged.csv
 ```bash
 # 变体搜索（从 269,611 出发），再与前面的结果逐题取最短
 for v in 1 2 3 4 5; do
-    python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-269611.csv \
+    python legacy/graph_polisher.py data/puzzles.csv --reference submissions/elf-calculator-score-269611.csv \
         --variant $v --output v$v.csv --jobs 8
 done
 for v in 1 2 3; do
-    python graph_solver.py data/puzzles.csv --reference submissions/elf-calculator-score-269611.csv \
+    python legacy/graph_polisher.py data/puzzles.csv --reference submissions/elf-calculator-score-269611.csv \
         --scaled --variant $v --output sc$v.csv --jobs 8
 done
-python graph_solver.py data/puzzles.csv --reference merged.csv --scaled --variant 3 --output wsc.csv --jobs 8
-python graph_solver.py data/puzzles.csv --merge submissions/elf-calculator-score-270450.csv \
+python legacy/graph_polisher.py data/puzzles.csv --reference merged.csv --scaled --variant 3 --output wsc.csv --jobs 8
+python legacy/graph_polisher.py data/puzzles.csv --merge submissions/elf-calculator-score-270450.csv \
     submissions/elf-calculator-score-269611.csv v*.csv sc*.csv merged.csv w*.csv --output best.csv
-python graph_solver.py data/puzzles.csv --check best.csv
+python legacy/graph_polisher.py data/puzzles.csv --check best.csv
 ```
 
-变体表：跨度/最近邻/方向/是否双指令，见 `graph_solver.py` 的 `VARIANTS`；`--scaled` 额外尝试 `t = anchor*k ± gap`（k ≤ 16），`--rational` 尝试 `t = (anchor*p + c)/q`（p,q ≤ 64，需要 `t*q ≤ value_limit`，因此只在有裕量的题上生效）。各变体单独结果 269,422–269,609，合并后 269,474；追加变体 6/7、倍增变体 5、有理链改写后到 **269,385**。
+变体表：跨度/最近邻/方向/是否双指令，见 `legacy/graph_polisher.py` 的 `VARIANTS`；`--scaled` 额外尝试 `t = anchor*k ± gap`（k ≤ 16），`--rational` 尝试 `t = (anchor*p + c)/q`（p,q ≤ 64，需要 `t*q ≤ value_limit`，因此只在有裕量的题上生效）。各变体单独结果 269,422–269,609，合并后 269,474；追加变体 6/7、倍增变体 5、有理链改写后到 **269,385**。
 
 仍与公开前沿（128,513）差约 2.1 倍：该分数是社区逐题最优程序的并集，单算法难以匹配；剩余差距需要"全局共享中间值搜索"而非继续加局部改写规则。
 

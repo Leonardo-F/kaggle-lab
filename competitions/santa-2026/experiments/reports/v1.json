@@ -1,0 +1,37 @@
+{
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 250642,
+  "max_steps": 617,
+  "submission_sha256": "f709e6636854d1185b1b5bc9e0303f110270423e0b7224e92f2361e384d5b71f",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "version": "v1",
+  "jobs": 4,
+  "elapsed_seconds": 156.5,
+  "python": "3.11.15",
+  "command": "python graph_solver.py puzzles.csv --version v1 --output answer.csv --jobs 4",
+  "parameters": {
+    "constructor_seeds": [
+      0
+    ]
+  },
+  "source_hashes": {
+    "graph_solver.py": "2ba946321055eb941b31758267bebaeeb9104985d7a173ff74027269702f96bc",
+    "verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
+    "algorithms/__init__.py": "ffc13e8ebba9d9402e0ea886e31ef545713478e1717b685a3fdf1f85d596a4fc",
+    "algorithms/common.py": "736fab8908b641d1f0373dbc18ba8d186034892a38fe454628b048860854b6e6",
+    "algorithms/v1.py": "9443aa952395ae0936b0766b8c1549f1d36c86ca48feb3d39a1d10061ca5346d"
+  },
+  "handoff": {
+    "puzzles": 1000,
+    "validated": 1000,
+    "score": 250642,
+    "max_steps": 617,
+    "submission_sha256": "f709e6636854d1185b1b5bc9e0303f110270423e0b7224e92f2361e384d5b71f",
+    "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+    "version": "v1",
+    "submission_path": "submissions/v1-score-250642.csv",
+    "source_sha256": "a8d81f026309a7b658d53d8b49b40811f3ec1a25441c4bed3c5043377538363b"
+  },
+  "matches_handoff_bytes": true
+}
