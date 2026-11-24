@@ -37,13 +37,19 @@ def attempt(work):
             break
     if best[1] is None:
         return (n,)
-    repaired = repair(best[1].copy(), .4)
-    if repaired is None:
+    winner = None
+    for trust in (.6, .4, .2, .1):
+        repaired = repair(best[1].copy(), trust)
+        if repaired is None:
+            continue
+        candidate, side = repaired
+        if min_gap(candidate) > 0:
+            continue
+        if side < baseline - 1e-9 and (winner is None or side < winner[1]):
+            winner = (candidate, side)
+    if winner is None:
         return (n,)
-    candidate, side = repaired
-    if min_gap(candidate) > 0 or side >= baseline - 1e-9:
-        return (n,)
-    return n, candidate.tolist(), side, best[0]
+    return n, winner[0].tolist(), winner[1], best[0]
 
 
 def main():

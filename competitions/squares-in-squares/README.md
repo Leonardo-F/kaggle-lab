@@ -2,7 +2,7 @@
 
 把 `n=1…1000` 个可旋转的单位正方形放进尽可能小的轴对齐正方形，两两不得重叠。每题得分为 `L / sqrt(n) - 1`，其中 `L` 是外包边长。1,000 题得分求和，越低越好。[Kaggle 赛题](https://www.kaggle.com/competitions/squares-in-squares)
 
-目前最佳布局的**本地官方 v20 总分为 22.810817879**。11-23 上传的上一版（22.849664303）榜单显示 **22.8496643031**，提交时排名 1817，与本地一致；本版尚未上传。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core-score-22.810817879.csv) · [逐题认证报告](submissions/rectangular_core-score-22.810817879-certification.json) · [各版方案与得分](docs/progress.md)
+目前最佳布局的**本地官方 v20 总分为 22.807888278**。11-23 上传的上一版（22.849664303）榜单显示 **22.8496643031**，提交时排名 1817，与本地一致；本版尚未上传。原始十进制和 pandas 数值读写两条路径均接受 1,000 题。[完整 CSV](submissions/rectangular_core-score-22.807888278.csv) · [逐题认证报告](submissions/rectangular_core-score-22.807888278-certification.json) · [各版方案与得分](docs/progress.md)
 
 ## 查看和导出布局
 
