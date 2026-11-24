@@ -9,6 +9,7 @@
 | V2 | 236,449 | 14,193 | 285.5 秒 | [1,000 / 1,000](../experiments/reports/v2.json) |
 | V3 | 227,799 | 8,650 | 424.8 秒 | [1,000 / 1,000](../experiments/reports/v3.json) |
 | V4 | 219,462 | 8,337 | 624.2 秒 | [1,000 / 1,000](../experiments/reports/v4.json) |
+| V5 | 216,404 | 3,058 | 640.6 秒 | [1,000 / 1,000](../experiments/reports/v5.json) |
 
 耗时取自本次同步复跑，多个版本并行运行。分数为本地指令计数。各版报告同时记录交接 CSV 与本次输出的 SHA-256。
 
@@ -82,4 +83,22 @@ flowchart LR
 ```bash
 python graph_solver.py data/puzzles.csv --version v4 --output submissions/v4-score-219462.csv --jobs 4
 python verify.py data/puzzles.csv submissions/v4-score-219462.csv
+```
+
+## V5 · 乘积池与模余数索引
+
+只看邻近商可能错过成本较低的非标准余数。缓存廉价乘积，通过补数查找匹配两项。针对有限基数按模建索引，从每个桶取廉价余数，并与本轮生成的 V4 候选做 100 轮图优化。
+
+目标 1003、基数 10 时，余数可取 103，商取 90，因为 103 ≡ 1003 (mod 10)。两者已共享时，10×90+103 可能比使用最小余数更省。
+
+```mermaid
+flowchart LR
+    A["低成本乘积池"] --> B["补数匹配与模余数"] --> C["与新生成 V4 融合"]
+```
+
+本次复跑 216,404 步。本次输出与交接 CSV 逐字节一致。较前版 416 题缩短，584 题持平，0 题变长。每桶候选和搜索深度有限。交接包全量记录为 V4 候选 219,462 步、V5 候选择优 217,279 步、融合后 216,404 步。仅构造器的 8 题消融为 1,855 → 1,863 → 1,863 → 1,850 步，依次加入扩大值池、双乘积匹配和模余数。
+
+```bash
+python graph_solver.py data/puzzles.csv --version v5 --output submissions/v5-score-216404.csv --jobs 6
+python verify.py data/puzzles.csv submissions/v5-score-216404.csv
 ```

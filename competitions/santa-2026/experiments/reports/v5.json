@@ -1,0 +1,53 @@
+{
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 216404,
+  "max_steps": 588,
+  "submission_sha256": "89111f50cdfcf9ae5fbdf745c1967a06004331f6605b539f4720835bf3716ea6",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "version": "v5",
+  "jobs": 6,
+  "elapsed_seconds": 640.6,
+  "python": "3.11.15",
+  "command": "python graph_solver.py puzzles.csv --version v5 --output answer.csv --jobs 6",
+  "parameters": {
+    "constructor_seeds": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "graph_rng_seed": 123,
+    "lns_rounds_per_fusion": 100,
+    "modular_residue_search": true
+  },
+  "source_hashes": {
+    "graph_solver.py": "2ba946321055eb941b31758267bebaeeb9104985d7a173ff74027269702f96bc",
+    "verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
+    "algorithms/__init__.py": "ffc13e8ebba9d9402e0ea886e31ef545713478e1717b685a3fdf1f85d596a4fc",
+    "algorithms/common.py": "736fab8908b641d1f0373dbc18ba8d186034892a38fe454628b048860854b6e6",
+    "algorithms/v1.py": "9443aa952395ae0936b0766b8c1549f1d36c86ca48feb3d39a1d10061ca5346d",
+    "algorithms/v2.py": "a7cda59843e8c526f2c208708b059c784524e39f4ed4c3e60fb9f01eeaba75ee",
+    "algorithms/v3.py": "6ff103609476ffd6315f5afaef76041402d2e3d5f01745f754bfa4a103f8900d",
+    "algorithms/v4.py": "6a2d417b9cb87b2a6d58655404da170eb2e634d9b9d0e41a3aeaaf1e130db203",
+    "algorithms/v5.py": "b7b83d47c95ed8ad320171676a7532c4e732437ecc5f64251044ec50b4625145"
+  },
+  "handoff": {
+    "puzzles": 1000,
+    "validated": 1000,
+    "score": 216404,
+    "max_steps": 588,
+    "submission_sha256": "89111f50cdfcf9ae5fbdf745c1967a06004331f6605b539f4720835bf3716ea6",
+    "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+    "version": "v5",
+    "submission_path": "submissions/v5-score-216404.csv",
+    "source_sha256": "bcfe7a885a6676973e24b702ee77d5eb35b6883099f97ef078233bb41173723f"
+  },
+  "matches_handoff_bytes": true,
+  "versus_previous": {
+    "shorter": 416,
+    "unchanged": 584,
+    "longer": 0,
+    "instructions_saved": 3058
+  }
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "scored_0001",
+    "v4_constructor": 342,
+    "pool_only": 322,
+    "pool_plus_match": 322,
+    "full": 321,
+    "seconds": 5.233
+  },
+  {
+    "id": "scored_0126",
+    "v4_constructor": 6,
+    "pool_only": 6,
+    "pool_plus_match": 6,
+    "full": 6,
+    "seconds": 0.004
+  },
+  {
+    "id": "scored_0251",
+    "v4_constructor": 364,
+    "pool_only": 357,
+    "pool_plus_match": 357,
+    "full": 357,
+    "seconds": 6.557
+  },
+  {
+    "id": "scored_0376",
+    "v4_constructor": 36,
+    "pool_only": 34,
+    "pool_plus_match": 34,
+    "full": 34,
+    "seconds": 0.751
+  },
+  {
+    "id": "scored_0501",
+    "v4_constructor": 215,
+    "pool_only": 210,
+    "pool_plus_match": 210,
+    "full": 210,
+    "seconds": 5.142
+  },
+  {
+    "id": "scored_0626",
+    "v4_constructor": 256,
+    "pool_only": 254,
+    "pool_plus_match": 254,
+    "full": 249,
+    "seconds": 5.714
+  },
+  {
+    "id": "scored_0751",
+    "v4_constructor": 356,
+    "pool_only": 389,
+    "pool_plus_match": 389,
+    "full": 379,
+    "seconds": 5.715
+  },
+  {
+    "id": "scored_0876",
+    "v4_constructor": 280,
+    "pool_only": 291,
+    "pool_plus_match": 291,
+    "full": 294,
+    "seconds": 5.764
+  }
+]
