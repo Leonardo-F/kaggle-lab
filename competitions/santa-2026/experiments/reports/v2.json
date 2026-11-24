@@ -1,0 +1,46 @@
+{
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 236449,
+  "max_steps": 600,
+  "submission_sha256": "6d578a661ceff36809beafad6e6a0fee558d20c04d96b38bb8a83799121ef762",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "version": "v2",
+  "jobs": 4,
+  "elapsed_seconds": 285.5,
+  "python": "3.11.15",
+  "command": "python graph_solver.py puzzles.csv --version v2 --output answer.csv --jobs 4",
+  "parameters": {
+    "constructor_seeds": [
+      0,
+      1
+    ],
+    "graph_rng_seed": 123
+  },
+  "source_hashes": {
+    "graph_solver.py": "2ba946321055eb941b31758267bebaeeb9104985d7a173ff74027269702f96bc",
+    "verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
+    "algorithms/__init__.py": "ffc13e8ebba9d9402e0ea886e31ef545713478e1717b685a3fdf1f85d596a4fc",
+    "algorithms/common.py": "736fab8908b641d1f0373dbc18ba8d186034892a38fe454628b048860854b6e6",
+    "algorithms/v1.py": "9443aa952395ae0936b0766b8c1549f1d36c86ca48feb3d39a1d10061ca5346d",
+    "algorithms/v2.py": "a7cda59843e8c526f2c208708b059c784524e39f4ed4c3e60fb9f01eeaba75ee"
+  },
+  "handoff": {
+    "puzzles": 1000,
+    "validated": 1000,
+    "score": 236449,
+    "max_steps": 600,
+    "submission_sha256": "6d578a661ceff36809beafad6e6a0fee558d20c04d96b38bb8a83799121ef762",
+    "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+    "version": "v2",
+    "submission_path": "submissions/v2-score-236449.csv",
+    "source_sha256": "dda25c8ac8a7760bcda4289e2fb84d0d6f883c7ecb2a5062d5c1bc41db5bb871"
+  },
+  "matches_handoff_bytes": true,
+  "versus_previous": {
+    "shorter": 829,
+    "unchanged": 171,
+    "longer": 0,
+    "instructions_saved": 14193
+  }
+}

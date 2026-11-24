@@ -1,9 +1,9 @@
 {
-  "version": "v1",
-  "score": 250642,
+  "version": "v2",
+  "score": 236449,
   "validated": 1000,
-  "submission_sha256": "f709e6636854d1185b1b5bc9e0303f110270423e0b7224e92f2361e384d5b71f",
+  "submission_sha256": "6d578a661ceff36809beafad6e6a0fee558d20c04d96b38bb8a83799121ef762",
   "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
-  "local_filename": "v1-score-250642.csv",
-  "report": "../experiments/reports/v1.json"
+  "local_filename": "v2-score-236449.csv",
+  "report": "../experiments/reports/v2.json"
 }

@@ -6,6 +6,7 @@
 | 版本 | 全量指令数 | 较前版减少 | 本次耗时 | 独立验证 |
 | --- | ---: | ---: | ---: | --- |
 | V1 | 250,642 | — | 156.5 秒 | [1,000 / 1,000](../experiments/reports/v1.json) |
+| V2 | 236,449 | 14,193 | 285.5 秒 | [1,000 / 1,000](../experiments/reports/v2.json) |
 
 耗时取自本次同步复跑，多个版本并行运行。分数为本地指令计数。各版报告同时记录交接 CSV 与本次输出的 SHA-256。
 
@@ -25,4 +26,22 @@ flowchart LR
 ```bash
 python graph_solver.py data/puzzles.csv --version v1 --output submissions/v1-score-250642.csv --jobs 4
 python verify.py data/puzzles.csv submissions/v1-score-250642.csv
+```
+
+## V2 · 扩展搜索与 DAG 压缩
+
+单一自适应搜索容易错过由其他目标先构造的操作数。新增逆目标顺序的宽搜索，然后对产生的有向无环图做六轮局部依赖替换。
+
+若图中已有 10、7、1，目标 17 可用 10+7 替换原来需要新建 16 的 16+1。
+
+```mermaid
+flowchart LR
+    A["V1 同次生成"] --> B["宽搜索与逆序"] --> C["DAG 依赖替换"]
+```
+
+本次复跑 236,449 步。本次输出与交接 CSV 逐字节一致。较前版 829 题缩短，171 题持平，0 题变长。替换受发现顺序约束。交接包的同次运行中，V1 候选 250,642 步，扩大搜索后 239,693 步，DAG 压缩后 236,449 步。
+
+```bash
+python graph_solver.py data/puzzles.csv --version v2 --output submissions/v2-score-236449.csv --jobs 4
+python verify.py data/puzzles.csv submissions/v2-score-236449.csv
 ```
