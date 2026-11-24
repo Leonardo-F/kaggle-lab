@@ -32,11 +32,31 @@
 | 锚点变体搜索（跨度/方向/倍增）+ 两轮合并 | 269,474 |
 | 追加变体 6/7 与倍增变体 5 后再合并 | 269,413 |
 | 有理链改写 `t = (a·p + c)/q` + 合并 | 269,385 |
-| 有理链 p,q 上限放宽到 256 后再合并 | **269,369** |
+| 有理链 p,q 上限放宽到 256 后再合并 | 269,369 |
+| 历史参考程序加入两步中间值，做共享值图搜索 | 266,406 |
+| GitHub 269,369 版单独做同样搜索 | 264,773 |
+| 两个共享值图搜索结果与 GitHub 基线逐题合并 | **263,575** |
 
-本次从本地 285,288 步提交文件继续优化，少 12,540 步（4.40%）。有 951 道题变短。求解器和独立回放器均验证了全部 1,000 道题，最长程序 526 步。该分数为本地计数，待上传 Kaggle 核对。
+早期从本地 285,288 步提交文件继续优化，少 12,540 步（4.40%）。有 951 道题变短。求解器和独立回放器均验证了全部 1,000 道题，最长程序 526 步。该分数为本地计数，待上传 Kaggle 核对。
 
 随后改为从官方 `sample_submission`（1,490,379 步）出发：先按上面的运行命令生成一版，再把自产结果作为 `--reference` 并加 `--refine` 连续压缩三轮，逐题保留更短程序，得到 **270,450**。`--check` 对 1,000 题全量回放通过。该版提交保存为 [elf-calculator-score-270450.csv](../submissions/elf-calculator-score-270450.csv)，与官方示例逐题比较，1,000 题均为更短程序、无一逐字节相同。官方 `data/` 仍不入库，按 README 下载后即可重跑。
+
+## 共享值图大邻域搜索（2026-11-24）
+
+搜索从自研的 270,771 步和 269,369 步提交分别出发。对每个值枚举之前出现的操作数，再从按位宽优先选取的 72 个候选值中构造额外的两步中间值，每个节点最多尝试 24 个此类替代项。每题运行 1,000 轮，随机扰动一小组活跃依赖并以全部目标共用的节点数择优。搜索后的图尝试三种求值顺序，每个程序回放后再与参考比较。两路输出分别为 266,406 和 264,773 步，逐题保留最短合法程序后为 **263,575** 步。正式 1,000 题通过仓库回放和独立回放，453 题较原 GitHub 基线更短，547 题持平，最长 525 步。
+
+```bash
+python dag_lns.py data/puzzles.csv --reference submissions/elf-calculator-score-270771.csv \
+    --rounds 1000 --seed 20261124 --jobs 8 --output lns-history.csv
+python dag_lns.py data/puzzles.csv --reference submissions/elf-calculator-score-269369.csv \
+    --rounds 1000 --seed 20261124 --jobs 8 --output lns-main.csv
+python graph_solver.py data/puzzles.csv --merge \
+    submissions/elf-calculator-score-269369.csv lns-history.csv lns-main.csv \
+    --output elf-calculator-score-263575.csv
+python solve.py data/puzzles.csv --check elf-calculator-score-263575.csv
+```
+
+这是本地验证的指令总数。批量共享值图搜索使用上述 Python 入口。浏览器模拟器的交互求解仍由 JavaScript 实现。[提交 CSV](../submissions/elf-calculator-score-263575.csv)
 
 ## 公开前沿方案对比（2026-11-23）
 
