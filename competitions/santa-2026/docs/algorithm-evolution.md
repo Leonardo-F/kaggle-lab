@@ -7,6 +7,7 @@
 | --- | ---: | ---: | ---: | --- |
 | V1 | 250,642 | — | 156.5 秒 | [1,000 / 1,000](../experiments/reports/v1.json) |
 | V2 | 236,449 | 14,193 | 285.5 秒 | [1,000 / 1,000](../experiments/reports/v2.json) |
+| V3 | 227,799 | 8,650 | 424.8 秒 | [1,000 / 1,000](../experiments/reports/v3.json) |
 
 耗时取自本次同步复跑，多个版本并行运行。分数为本地指令计数。各版报告同时记录交接 CSV 与本次输出的 SHA-256。
 
@@ -44,4 +45,22 @@ flowchart LR
 ```bash
 python graph_solver.py data/puzzles.csv --version v2 --output submissions/v2-score-236449.csv --jobs 4
 python verify.py data/puzzles.csv submissions/v2-score-236449.csv
+```
+
+## V3 · 双向补数查询与多图融合
+
+前向组合受候选池宽度限制。从目标反推另一操作数，再用哈希查候选值。融合本轮生成的两份值图，以 100 轮大邻域搜索优化活跃依赖，再按实际发射步数择优。
+
+要构造 91，池中已有 13 时可直接查 91÷13 是否等于池中的 7。
+
+```mermaid
+flowchart LR
+    A["廉价操作数"] --> B["从目标反推补数"] --> C["融合与大邻域搜索"]
+```
+
+本次复跑 227,799 步。本次输出与交接 CSV 逐字节一致。较前版 734 题缩短，266 题持平，0 题变长。只检索有限候选池。交接包固定其余参数的 24 题消融中，补数查询将 6,941 步降至 6,537 步，22 题改善、2 题变长。全量补数候选择优 228,527 步，融合后 227,799 步。
+
+```bash
+python graph_solver.py data/puzzles.csv --version v3 --output submissions/v3-score-227799.csv --jobs 4
+python verify.py data/puzzles.csv submissions/v3-score-227799.csv
 ```

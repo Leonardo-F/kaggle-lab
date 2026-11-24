@@ -1,0 +1,31 @@
+50/1000 · 11477 instructions · 28.4s
+100/1000 · 23047 instructions · 56.7s
+150/1000 · 34354 instructions · 84.3s
+200/1000 · 46824 instructions · 118.1s
+250/1000 · 58311 instructions · 157.0s
+300/1000 · 70138 instructions · 183.6s
+350/1000 · 82790 instructions · 215.4s
+400/1000 · 93558 instructions · 239.5s
+450/1000 · 106047 instructions · 260.7s
+500/1000 · 116241 instructions · 275.3s
+550/1000 · 127016 instructions · 294.3s
+600/1000 · 137181 instructions · 308.8s
+650/1000 · 148088 instructions · 322.9s
+700/1000 · 159950 instructions · 341.1s
+750/1000 · 171443 instructions · 356.2s
+800/1000 · 184462 instructions · 371.3s
+850/1000 · 196623 instructions · 386.3s
+900/1000 · 205558 instructions · 396.9s
+950/1000 · 216449 instructions · 411.0s
+1000/1000 · 227799 instructions · 424.5s
+{
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 227799,
+  "max_steps": 591,
+  "submission_sha256": "e6d25567b51a98505e7432c74aeeb59afd985a99b881e7c66dd97f436daa9b34",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "version": "v3",
+  "jobs": 4,
+  "elapsed_seconds": 424.8
+}
