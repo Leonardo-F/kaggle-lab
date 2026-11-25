@@ -4,6 +4,6 @@
   "validated": 1000,
   "submission_sha256": "0bd4c26ac3ba32c5fb6aced54e14e6269fde836dbfe671f51cbdb116eb7dacef",
   "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
-  "local_filename": "elf-calculator-independent-v7.csv",
+  "local_filename": "elf-calculator-independent-v7-score-198388.csv",
   "report": "../docs/reports/v7.json"
 }

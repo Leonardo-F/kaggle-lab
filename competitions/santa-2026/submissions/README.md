@@ -4,9 +4,9 @@
 
 | 文件 | 版本 | 本地验证步数 |
 | --- | --- | ---: |
-| `elf-calculator-independent-v7.csv` | V7 | 198,388 |
+| `elf-calculator-independent-v7-score-198388.csv` | V7 | 198,388 |
 
-V8 完成后以 `elf-calculator-independent-v8.csv` 加入，V7 保留用作对照。
+命名规则：`elf-calculator-independent-<版本>-score-<本地验证步数>.csv`。分数写在文件名里，不同结果不会重名，也不会覆盖旧文件。V8 完成后按同一规则加入 `elf-calculator-independent-v8-score-<步数>.csv`，V7 保留用作对照。
 
 `latest.json` 指向当前最佳版本，`../docs/reports/` 保存每次全量复跑的认证报告（题数、最长程序、来源哈希和命令）。
 

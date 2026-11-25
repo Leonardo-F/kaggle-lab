@@ -465,7 +465,7 @@ L_k=\{v:\ v\text{ 已发射且 }\mathrm{next}(v)>k\}.
 ```bash
 # 直接求解，默认参数与交接包一致
 python src/graph_solver.py data/puzzles.csv --version v7 \
-  --output submissions/elf-calculator-independent-v7.csv --jobs 8
+  --output submissions/elf-calculator-independent-v7-score-198388.csv --jobs 8
 
 # 可中断的检查点运行；中断后用同一命令加 --resume
 python src/graph_solver.py data/puzzles.csv --version v7 \
@@ -473,7 +473,7 @@ python src/graph_solver.py data/puzzles.csv --version v7 \
 python src/graph_solver.py data/puzzles.csv --version v7 \
   --output experiments/v7.csv --checkpoint experiments/v7.sqlite --resume --jobs 8
 
-python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v7.csv
+python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v7-score-198388.csv
 ```
 
 检查点只接受同一输入、同一源码指纹、同一 Python 版本和同一组参数；`--jobs` 可以改变，不影响指纹。`--stop-after N` 只调度至多 N 道未完成题，未满 1,000 题时不会导出 CSV。
