@@ -6,12 +6,12 @@ import json
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 SQUARE = ROOT / 'competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html'
 SANTA = ROOT / 'competitions/santa-2026/src/simulator.html'
 REVIEW = HERE / 'santa-review.json'
-OUTPUT = HERE / 'index.html'
+OUTPUT = HERE.parent / 'simulators.html'
 
 
 def digest(path):
@@ -50,7 +50,7 @@ def main():
         content = build()
         if args.check:
             if not args.output.exists() or args.output.read_text(encoding='utf-8') != content:
-                raise ValueError('The bundle is out of date. Run python simulation/build.py.')
+                raise ValueError('The bundle is out of date. Run python web/simulation/build.py.')
         else:
             args.output.write_text(content, encoding='utf-8')
             print(args.output)

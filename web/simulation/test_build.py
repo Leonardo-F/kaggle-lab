@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-BUILDER = ROOT / 'simulation' / 'build.py'
+ROOT = Path(__file__).resolve().parents[2]
+BUILDER = ROOT / 'web' / 'simulation' / 'build.py'
 
 
 class BundleTests(unittest.TestCase):

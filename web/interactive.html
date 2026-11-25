@@ -35,14 +35,14 @@ iframe[hidden] { display: none; }
   <nav aria-label="选择赛题">
     <button type="button" data-page="squares" aria-selected="true">正方形装箱</button>
     <button type="button" data-page="santa" aria-selected="false">Santa 2026</button>
-    <a class="link" href="simulation/index.html">统一模拟器 ↗</a>
+    <a class="link" href="simulators.html">统一模拟器 ↗</a>
     <a class="link" href="https://github.com/Leonardo-F/kaggle-lab">GitHub ↗</a>
   </nav>
 </header>
 <main>
   <p class="notice">只汇总已完成网页的两个赛题：正方形装箱与 Santa 2026。正方形装箱页包含已认证布局和模拟器；Santa 页是算法互动报告并内嵌 V1–V8 程序回放。Google 量子电路暂无网页报告，使用赛题 README 中的命令行入口。页面直接引用各自原始 HTML，不复制内容。</p>
-  <iframe id="squares" title="正方形装箱模拟器" src="competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html" allow="clipboard-write"></iframe>
-  <iframe id="santa" title="Santa 2026 算法互动报告" data-src="competitions/santa-2026/Santa-2026-Interactive-Report.html" allow="clipboard-write" hidden></iframe>
+  <iframe id="squares" title="正方形装箱模拟器" src="../competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html" allow="clipboard-write"></iframe>
+  <iframe id="santa" title="Santa 2026 算法互动报告" data-src="../competitions/santa-2026/Santa-2026-Interactive-Report.html" allow="clipboard-write" hidden></iframe>
 </main>
 <script>
 const pages = [...document.querySelectorAll("[data-page]")];

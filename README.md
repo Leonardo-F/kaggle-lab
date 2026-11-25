@@ -10,15 +10,15 @@
 
 ## 互动页面
 
-[赛题互动页](index.html)汇总两个已完成的网页：正方形装箱模拟器与 Santa 2026 算法互动报告。只包含这两个赛题；Google 量子电路暂无网页报告。页面直接引用各自原始 HTML，不复制内容，需与仓库文件一起打开。各赛题的 HTML 也可单独使用。
+[赛题互动页](web/interactive.html)汇总两个已完成的网页：正方形装箱模拟器与 Santa 2026 算法互动报告。只包含这两个赛题；Google 量子电路暂无网页报告。页面直接引用各自原始 HTML，不复制内容，需与仓库文件一起打开。各赛题的 HTML 也可单独使用。
 
 ## 模拟器
 
-[统一离线模拟器](simulation/index.html)包含正方形装箱和 Santa 计算器。下载此 HTML 后可在浏览器中打开；源码与更新说明见 [simulation/README.md](simulation/README.md)。
+[统一离线模拟器](web/simulators.html)包含正方形装箱和 Santa 计算器。下载此 HTML 后可在浏览器中打开；源码与更新说明见 [web/simulation/README.md](web/simulation/README.md)。
 
 ## 目录
 
-- 各赛题的实验进展、版本结果和策略笔记放在 `competitions/<赛题>/docs/`。
+- 各赛题的实验进展、版本结果和策略笔记放在 `competitions/<赛题>/docs/`。`web/` 存放赛题互动页与统一模拟器。
 - `competitions/<赛题>/algorithms/` 存放求解器和验证入口。`experiments/` 存放实验脚本、结果和测试。
 - 装箱另含 `simulator/`、固定版本的官方评分器 `vendor/`，以及 `submissions/` 中的最佳 CSV 和逐题认证。量子电路和提交包在本地生成。
 
