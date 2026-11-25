@@ -17,8 +17,8 @@
 使用 Python 3.11+。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。在赛题目录运行以下命令。统一入口默认运行 V7，可用 `--version` 选择 V1–V7 中的任一版本。
 
 ```bash
-python src/graph_solver.py data/puzzles.csv --version v7 --output submissions/v7.csv --jobs 8
-python src/verify.py data/puzzles.csv submissions/v7.csv
+python src/graph_solver.py data/puzzles.csv --version v7 --output submissions/elf-calculator-independent-v7.csv --jobs 8
+python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v7.csv
 ```
 
 V7 本地全量 **198,388 步**，1,000 题全部通过独立回放：717 题较同轮 V6 改善、283 题持平、0 题退化。V6 为 204,255 步，V5 为 216,404 步。以上都是本地验证的指令总数，不是 Kaggle 榜单成绩。官方题目和独立求解的完整 CSV 保存在本地，仓库提供[成绩索引](submissions/latest.json)、[复跑报告](docs/reports/)和[算法演进](docs/algorithm-evolution.md)。
