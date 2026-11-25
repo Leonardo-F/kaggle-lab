@@ -27,3 +27,7 @@ competitions/santa-2026/*submission*.csv
 
 # Santa solver checkpoints and run logs (derived from official puzzles)
 competitions/santa-2026/experiments/
+
+# Santa 2026 submission CSVs are tracked: the V7/V8 programs are our own output,
+# not official puzzle data. Keep only files named <version>-score-<steps>.csv.
+!competitions/santa-2026/submissions/*.csv

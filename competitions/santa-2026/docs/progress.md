@@ -71,7 +71,7 @@
 
 仓库版 V7 只读官方 `puzzles.csv`，用 9 个进程和本轮新建的 SQLite 检查点全量求解 1,000 题，耗时 **878.73 秒**。阶段总分为 **204,255 → 200,987 → 200,034 → 199,675 → 199,675 → 198,388**；717 题改善、283 题持平、0 题变差，最长 564 步，独立回放 1,000 / 1,000 通过。生成的 CSV 与交接包内的 `elf-calculator-independent-v7.csv` **逐字节一致**（SHA-256 `0bd4c26ac3ba32c5fb6aced54e14e6269fde836dbfe671f51cbdb116eb7dacef`，本地归档为 `submissions/elf-calculator-independent-v7-score-198388.csv`），每题程序也逐条相同。
 
-本轮同时把交接包的 `v6_trace.py` 合并为 V6 的可选 `trace=True` 返回接口，避免维护两份 V6 实现；`src/checkpoint.py` 与 `graph_solver.py` 的 `--checkpoint / --resume / --stop-after` 支持断点续跑，检查点绑定输入 SHA-256、源码 SHA-256、Python 版本和全部搜索参数，`--jobs` 可以变化。`PRAGMA integrity_check` 返回 `ok`，1,000 条记录全部重放通过。实验日志、SQLite 和答案 CSV 只保留在本地，不进入仓库。
+本轮同时把交接包的 `v6_trace.py` 合并为 V6 的可选 `trace=True` 返回接口，避免维护两份 V6 实现；`src/checkpoint.py` 与 `graph_solver.py` 的 `--checkpoint / --resume / --stop-after` 支持断点续跑，检查点绑定输入 SHA-256、源码 SHA-256、Python 版本和全部搜索参数，`--jobs` 可以变化。`PRAGMA integrity_check` 返回 `ok`，1,000 条记录全部重放通过。实验日志和 SQLite 只保留在本地；V7 的答案 CSV 已入库为 `submissions/elf-calculator-independent-v7-score-198388.csv`。
 
 来源包为 `santa_v7_work_handoff_repacked_198388.zip`。60 题消融、`--retain-v6-graphs` 对照和 4 进程 2,002.7 秒的恢复耗时是交接包记录，本次没有重跑这些样本；本次复跑只读官方题目，历史 CSV 仅在求解完成后用于逐题审计。
 
