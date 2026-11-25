@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Santa 2026 · 算法互动报告</title>
+<style>
+:root{color-scheme:light;--paper:#f6f4ee;--card:#fffdfa;--ink:#1c302c;--muted:#52635d;--line:#d8dfd5;--green:#146b4c;--green-dark:#0e4d38;--mint:#e3f1e8;--blue:#174f8b;--blue-bg:#e6effb;--amber:#93571f;--amber-bg:#faf0da;--shadow:0 10px 36px #1c302c0a;--serif:Georgia,"Songti SC","Noto Serif CJK SC",serif;--sans:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:5rem}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 var(--sans)}a{color:var(--green-dark);text-underline-offset:3px}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.45}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #a1712f;outline-offset:3px}
+.top{position:sticky;top:0;z-index:4;border-bottom:1px solid var(--line);background:var(--paper)}.top-inner,.hero-inner,.layout,.sim-section{width:min(100% - 44px,1160px);margin:auto}.top-inner{min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font:700 15px/1 var(--mono);text-decoration:none;white-space:nowrap}.top nav{display:flex;gap:clamp(12px,2.5vw,30px);font-size:14px}.top nav a{text-decoration:none;white-space:nowrap}
+.hero{background:#18372e;color:#f6f5e9;overflow:hidden}.hero-inner{position:relative;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(240px,1fr);align-items:center;gap:45px;padding:64px 0 66px}.edition{font:700 12px/1.6 var(--mono);letter-spacing:.15em;color:#bbcfb9;margin:0 0 18px}.hero h1{font:700 clamp(36px,5.5vw,70px)/1.12 var(--serif);letter-spacing:-.05em;margin:0;max-width:670px;text-wrap:balance}.hero .intro{max-width:580px;color:#d8e3d6;font-size:17px;margin:17px 0 26px}.actions{display:flex;gap:10px;flex-wrap:wrap}.button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:650;text-decoration:none}.button.primary{background:var(--green);border-color:var(--green);color:white}.hero .primary{background:#d8ead7;color:#18372e;border-color:#d8ead7}.hero .ghost{background:transparent;border-color:#94b29e;color:#f6f5e9}.hero-note{padding:26px;border-left:1px solid #6b8b78}.hero-note .metric{display:block;font:700 clamp(37px,5vw,61px)/1.05 var(--mono);letter-spacing:-.09em;color:#f7eee0;margin:10px 0 8px}.hero-note small{color:#c9ded0}.hero-note .mini{display:flex;gap:14px;margin-top:21px;border-top:1px solid #648270;padding-top:14px;font-size:13px;color:#dceadf}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 222px;align-items:start;gap:48px;padding-top:36px}.guide{position:sticky;top:88px;order:2;border-left:1px solid var(--line);padding-left:15px}.guide h2{font-size:15px;margin:0 0 6px}.guide ol{list-style:none;padding:0;margin:0 0 15px}.guide a{display:block;padding:6px 0;color:var(--muted);text-decoration:none;font-size:13px}.guide a:hover,.top nav a:hover{color:var(--green);text-decoration:underline}.article{min-width:0;padding-bottom:22px}.article>p:first-child{border-left:3px solid #88ab91;padding:14px 17px;background:#edf2e8}.article h2{font:700 clamp(24px,4vw,35px)/1.26 var(--serif);margin:46px 0 16px;letter-spacing:-.025em}.article h3{font-size:20px;margin:29px 0 12px;line-height:1.35}.article p{margin:0 0 16px}.article code{font: .86em var(--mono);background:#eaece4;padding:.15em .3em;border-radius:3px;overflow-wrap:anywhere}.article pre{background:#1d302a;color:#f5f5e9;border-radius:7px;padding:16px;overflow:auto;line-height:1.55}.article pre code{background:none;padding:0}.table-wrap{overflow:auto;margin:14px 0 19px}.article table,.registers{width:100%;border-collapse:collapse;text-align:left;font-size:14px;border-block:1px solid var(--line)}.article th,.article td,.registers th,.registers td{padding:8px 10px;border-bottom:1px solid #e1e7dc;vertical-align:top}.article th,.registers th{background:#e9eee4;font-weight:700}.article math[display="block"]{display:block;overflow-x:auto;max-width:100%;padding:16px 8px;margin:14px 0;background:#fefcf6;border-radius:6px;color:#243b32}.article li{margin-bottom:6px}
+.demo{margin:20px 0 24px;padding:20px;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);background:var(--card)}.demo h3,.demo h4{margin:0 0 10px;line-height:1.3}.demo .sub{margin:0 0 14px;color:var(--muted);font-size:14px}.legend{list-style:none;display:flex;flex-wrap:wrap;gap:11px;padding:0;margin:4px 0 14px;font-size:12px;color:var(--muted)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;background:var(--tone)}.legend li{margin:0}.demo-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(160px,1fr);gap:18px;align-items:start}.graph{width:100%;height:auto;max-height:280px;display:block}.graph path{fill:none;stroke:#9cacaa;stroke-width:2}.graph g rect{stroke:#92a19b;stroke-width:1.4;rx:7}.graph .initial rect{fill:#e7ebe9}.graph .shared rect{fill:var(--blue-bg);stroke:#7b98bf}.graph .target rect{fill:var(--mint);stroke:#6f9a82}.graph .extra rect{fill:var(--amber-bg);stroke:#bf9059}.graph g{opacity:.45}.graph g.active{opacity:1}.graph g.current rect{stroke:#146b4c;stroke-width:3}.graph text{fill:#182c27;text-anchor:middle;font:700 17px var(--mono);dominant-baseline:middle}.op-line{font:700 16px/1.5 var(--mono);margin:0 0 9px!important;min-height:24px}.coverage{font-size:13px;color:var(--green);margin:0 0 10px!important}.coverage strong{font-variant-numeric:tabular-nums}.source-code{font:13px var(--mono);word-break:break-all;color:var(--muted);min-height:20px}.registers td,.registers th{padding:5px 7px}.registers th{white-space:nowrap}.registers td{font-family:var(--mono);font-variant-numeric:tabular-nums}.registers td.written{font-weight:700;background:var(--mint)}
+.tabs,.controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:14px}.tabs button[aria-pressed="true"]{background:#e4eee5;border-color:#77a388;color:var(--green-dark)}.controls .button,.tabs .button{font-size:13px;padding:5px 10px;min-height:37px}.controls input[type=range]{flex:1;min-width:0;accent-color:var(--green);min-height:24px}.controls label{width:100%;display:flex;align-items:center;gap:9px;font:12px/1.3 var(--mono);color:var(--muted)}.controls label span{min-width:4.5ch;white-space:nowrap}.pushlab{margin-top:4px;font-size:13px}.compare-grid,.research-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mini-panel{border:1px solid var(--line);padding:14px;border-radius:8px;background:#fbfcf7}.mini-panel .math-line{font-family:var(--mono);line-height:1.7;font-size:13px;margin:0 0 8px;white-space:normal}.mini-panel .branch{display:block;margin:6px 0;padding:6px 8px;border-radius:5px;background:var(--mint);font:13px var(--mono)}.mini-panel .branch.extra{background:var(--amber-bg)}.compare-grid .button{font-size:13px;margin-top:6px;min-height:34px}.research-grid .mini-panel{background:#f3f7ef;color:var(--muted);font-size:14px}.research-grid .mini-panel strong{display:block;color:var(--ink);font-size:15px}
+.bar-chart{list-style:none;padding:0;margin:0 0 12px}.bar-chart li{margin:0}.bar-row{display:grid;grid-template-columns:31px 1fr 78px;align-items:center;gap:8px;width:100%;background:none;border:1px solid transparent;border-radius:5px;padding:5px;text-align:left;color:var(--ink);font:700 13px var(--mono)}.bar-row[aria-pressed="true"]{border-color:#8aaa96;background:#f2f7ee}.bar-track{background:#e8eae2;height:15px;border-radius:3px;overflow:hidden}.bar-fill{background:#a2b6aa;border-radius:3px;display:block;height:100%}.bar-row[aria-pressed="true"] .bar-fill{background:var(--green)}.bar-count{text-align:right}.chart-info{min-height:48px;border-top:1px solid var(--line);padding:9px 0 0;font-size:14px;color:var(--muted)}.chart-info strong{color:var(--ink)}.scale{font-size:12px;color:var(--muted)}
+.sim-section{padding:27px 0 50px;border-top:1px solid var(--line)}.sim-section h2{font:700 clamp(26px,4vw,37px)/1.25 var(--serif);margin:0 0 8px}.sim-section>p{max-width:800px;margin:0 0 13px}.sim-wrap{margin-top:15px;padding:13px;background:var(--card);border:1px solid var(--line);border-radius:10px}.sim-wrap summary{cursor:pointer;color:var(--green-dark);font-weight:700}.sim-wrap iframe{display:block;width:100%;height:950px;border:1px solid var(--line);border-radius:6px;margin-top:12px;background:white}.sim-wrap iframe[hidden]{display:none}.small{color:var(--muted);font-size:13px}footer{padding:14px 22px 28px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:900px){.layout{display:block}.guide{display:none}.hero-inner{gap:20px}.demo-grid{gap:12px}}
+@media(max-width:640px){.top-inner,.hero-inner,.layout,.sim-section{width:calc(100% - 28px)}.top-inner{min-height:52px}.top nav{gap:10px;font-size:12px}.top nav a.hide-on-mobile{display:none}.brand{font-size:12px}.hero-inner{display:block;padding:38px 0 30px}.hero h1{font-size:clamp(29px,9vw,48px)}.hero .intro{font-size:15px}.hero-note{border-left:0;border-top:1px solid #6b8b78;padding:15px 0 0;margin-top:23px}.hero-note .mini{margin-top:10px;padding-top:8px}.hero-note .metric{font-size:37px}.layout{padding-top:20px}.demo{padding:12px}.demo-grid{grid-template-columns:1fr}.registers{font-size:13px}.compare-grid,.research-grid{gap:7px}.mini-panel{padding:9px}.mini-panel .math-line,.mini-panel .branch{font-size:12px}.top nav a{white-space:normal}.sim-wrap iframe{height:1000px}}
+@media print{.top,.actions,.guide,.controls,.tabs,.sim-wrap,.pushlab,footer{display:none!important}body,.hero,.demo{background:white;color:black;box-shadow:none}.hero-inner{display:block;padding:8px 0}.hero-note{display:none}.hero .intro,.hero .edition{color:black}.layout{display:block}.demo{break-inside:avoid}.article p{orphans:3;widows:3}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+.article details{border:1px solid var(--line);border-radius:9px;background:#fbfcf7;margin:14px 0 18px;padding:2px 16px 12px}
+.article details>summary{cursor:pointer;padding:11px 0;font-weight:700;color:var(--green-dark)}
+.article details[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+.article img{max-width:100%;height:auto}
+.article blockquote{margin:0 0 18px;padding:12px 16px;border-left:3px solid #88ab91;background:#edf2e8;color:var(--muted);border-radius:0 6px 6px 0}
+.article blockquote p{margin:0 0 6px}
+.article blockquote p:last-child{margin-bottom:0}
+.report-figure{margin:18px 0 20px;padding:12px;border:1px solid var(--line);border-radius:9px;background:#fbfcf7}
+.report-figure img{display:block;margin:0 auto}
+.report-figure figcaption{font-size:13px;color:var(--muted);margin-top:8px;text-align:center}
+.mermaid-note{margin:16px 0;padding:11px 14px;border-left:3px solid #bf9059;background:var(--amber-bg);border-radius:0 6px 6px 0;font-size:14px}
+.mermaid-source{font-size:13px;background:#1d302a;color:#f5f5e9;border-radius:7px;padding:13px;overflow:auto}
+.math-block{overflow-x:auto;padding:14px 8px;margin:14px 0;background:#fefcf6;border-radius:6px}
+.math-block math{max-width:100%}
+.article h2 .anchor,.article h3 .anchor{display:none}
+.generated-note{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+</style>
+</head>
+<body id="top">
+<header class="top"><div class="top-inner"><a href="#top" class="brand">SANTA / 2026</a><nav aria-label="报告导航"><a href="#01-赛题与手算">赛题与手算</a><a href="#03-构造搜索" class="hide-on-mobile">构造搜索</a><a href="#05-子图重写" class="hide-on-mobile">子图重写</a><a href="#07-演进与实验" class="hide-on-mobile">实验与历史</a><a href="#simulator">互动回放</a></nav></div></header>
+<section class="hero"><div class="hero-inner">
+<div><p class="edition">KAGGLE · THE ELF CALCULATOR</p><h1>多目标算术程序的独立构造与压缩</h1><p class="intro">从用 3 和 7 算出 100、103、107 开始，逐步看寄存器、共享中间值与依赖图如何影响实际指令数。</p><div class="actions"><a class="button primary" href="#lab">开始逐步演示</a><a class="button ghost" href="#simulator">打开完整模拟器</a></div></div>
+<div class="hero-note"><small>{{BEST_LABEL}}</small><span class="metric">{{BEST_SCORE}}</span><small>{{BEST_SUMMARY}}</small><div class="mini"><span>{{V1_SCORE}}</span><span>{{BEST_DELTA}}</span></div></div>
+</div></section>
+<div class="layout"><aside class="guide" aria-label="目录"><h2>报告目录</h2><ol>{{TOC}}</ol><a href="https://github.com/Leonardo-F/kaggle-lab/blob/main/competitions/santa-2026/docs/algorithm-evolution.md">GitHub Markdown 底稿 ↗</a></aside><main class="article" aria-label="算法报告正文">
+{{ARTICLE}}
+</main></div>
+<section class="sim-section" id="simulator"><h2>Santa 离线模拟器</h2><p>可直接在报告里输入一组初值和目标，查看每条指令与寄存器状态。也可以导入自己的题目 CSV 和 V1–V8 程序 CSV 做回放。V1–V8 是历史 CSV 回放槽位；内嵌的 JavaScript 自定义题求解器是教学实现，不是 Python V8，步数可能不同。</p><details class="sim-wrap" id="sim-gate"><summary>展开模拟器</summary><iframe id="sim-frame" title="Santa 2026 离线计算器" allow="clipboard-write" hidden></iframe></details></section>
+<footer>正文单一来源：<a href="https://github.com/Leonardo-F/kaggle-lab/blob/main/competitions/santa-2026/docs/algorithm-evolution.md">algorithm-evolution.md</a> · 本页由 <code>docs/build_report.py</code> 生成，可离线打开。<p class="generated-note">历史成绩与验证范围来自 submissions/latest.json 与 docs/reports/*.json；V1–V8 为本地独立验证的指令总数，不是 Kaggle 榜单成绩。</p></footer>
+<template data-block="lab"><div class="demo" id="lab" aria-label="共享值的寄存器演示">
+  <h3>逐步执行同一道题</h3>
+  <p class="sub">使用上一步、下一步或进度条，看每一条指令改写了哪个寄存器。</p>
+  <div class="tabs" role="group" aria-label="构造方式">
+    <button class="button" type="button" data-plan="after" aria-pressed="true">共享 100 · 4 步</button>
+    <button class="button" type="button" data-plan="before" aria-pressed="false">经由 110 · 5 步</button>
+  </div>
+  <div class="demo-grid">
+    <div>
+      <svg class="graph" id="live-graph" viewbox="0 0 430 292" role="img" aria-label="初值和目标的实时依赖图">
+        <defs><marker id="lab-arrow" viewbox="0 0 8 8" refx="7" refy="4" markerwidth="6" markerheight="6" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#8a9b97"></path></marker></defs>
+      </svg>
+      <ul class="legend" aria-label="依赖图图例">
+        <li><i style="--tone:#7d8b87"></i>初值</li>
+        <li><i style="--tone:#6d9fd2"></i>共享中间值</li>
+        <li><i style="--tone:#569a70"></i>目标</li>
+        <li><i style="--tone:#c58d3e"></i>被剪去的路径</li>
+      </ul>
+    </div>
+    <div>
+      <p class="op-line" id="op-line" role="status" aria-live="polite"></p>
+      <p class="coverage" id="coverage"></p>
+      <div class="table-wrap"><table class="registers" id="visible-regs" aria-label="本例使用的四个寄存器">
+        <thead><tr><th scope="col">R0</th><th scope="col">R1</th><th scope="col">R2</th><th scope="col">R3</th></tr></thead>
+        <tbody><tr><td>3</td><td>7</td><td>—</td><td>—</td></tr></tbody>
+      </table></div>
+      <p class="source-code" id="instruction-code" aria-label="本步 JSON 指令"></p>
+    </div>
+  </div>
+  <div class="controls" aria-label="回放控制">
+    <button class="button" id="walk-prev" type="button">上一步</button>
+    <button class="button primary" id="walk-next" type="button">下一步</button>
+    <button class="button" id="walk-play" type="button">播放</button>
+    <button class="button" id="walk-reset" type="button">重置</button>
+    <label for="walk-slider"><span id="step-readout">0 / 4</span><input id="walk-slider" type="range" min="0" max="4" value="0" aria-label="跳到指定指令"></label>
+  </div>
+  <a class="pushlab" href="#simulator" data-load-example>把这道题载入完整模拟器 ↗</a>
+</div>
+</template>
+<template data-block="compare"><div class="demo" id="compare" aria-label="依赖改写前后对照">
+  <div class="compare-grid">
+    <div class="mini-panel"><h4>改写前 · 5 步</h4>
+      <p class="math-line">3 + 7 → 10<br>10 × 10 → 100</p>
+      <span class="branch extra">100 + 10 → 110</span>
+      <span class="branch">110 − 7 → 103</span><span class="branch">110 − 3 → 107</span>
+      <button type="button" class="button" data-open-plan="before">回放改写前</button>
+    </div>
+    <div class="mini-panel"><h4>改写后 · 4 步</h4>
+      <p class="math-line">3 + 7 → 10<br>10 × 10 → 100</p>
+      <span class="branch">100 + 3 → 103</span><span class="branch">100 + 7 → 107</span>
+      <button type="button" class="button" data-open-plan="after">回放改写后</button>
+    </div>
+  </div>
+</div>
+</template>
+<template data-block="scores"><div class="demo" id="scores">
+  <h3>八代算法的全量指令数</h3>
+  <p class="sub">点击版本查看相对 V1 的降幅。横条从 0 开始，同一尺度下越短越好。</p>
+  <ol class="bar-chart" aria-label="各版本总指令数">{{SCORE_BARS}}</ol>
+  <div class="chart-info" id="chart-detail" role="status" aria-live="polite"></div>
+</div>
+</template>
+<template data-block="research"><div class="demo" aria-label="按序构造与联合选择对照">
+  <div class="research-grid">
+    <div class="mini-panel"><strong>已实现</strong>按序为目标选依赖，再对已生成的值图做局部改写。</div>
+    <div class="mini-panel"><strong>研究方向</strong>先保留多条构造式，再联合选择三个目标可以共用的值。</div>
+  </div>
+</div>
+</template>
+<script type="application/json" id="score-data">{{SCORE_DATA}}</script>
+<script type="application/json" id="sim-source">{{SIM_SOURCE}}</script>
+<script>"use strict";
+const byId = (id) => document.getElementById(id);
+const plans = {
+  after: [
+    ["+",0,1,2], ["*",2,2,2], ["+",2,0,0], ["+",2,1,1],
+  ],
+  before: [
+    ["+",0,1,2], ["*",2,2,3], ["+",3,2,2], ["-",2,1,1], ["-",2,0,0],
+  ],
+};
+const goals = [100,103,107];
+const operators = {
+  "+": { symbol:"+", evaluate:(a,b) => a+b },
+  "-": { symbol:"−", evaluate:(a,b) => a-b },
+  "*": { symbol:"×", evaluate:(a,b) => a*b },
+};
+const stepsByPlan = Object.fromEntries(Object.entries(plans).map(([name, instructions]) => {
+  const registers = [3,7,null,null];
+  const initial = { registers:registers.slice(), hit:new Set(), seen:new Set([3,7]) };
+  const states = [initial];
+  for (const instruction of instructions) {
+    const [op, i, j, dest] = instruction;
+    const left = registers[i], right = registers[j];
+    const value = operators[op].evaluate(left,right);
+    registers[dest] = value;
+    const hit = new Set(states.at(-1).hit);
+    const seen = new Set(states.at(-1).seen);
+    seen.add(value);
+    if (goals.includes(value)) hit.add(value);
+    states.push({
+      registers:registers.slice(), hit, seen, instruction, value, dest,
+      explanation: left + " " + operators[op].symbol + " " + right + " = " + value + " → R" + dest,
+    });
+  }
+  return [name, states];
+}));
+const edges = {
+  base: ["M90 46 L199 68", "M340 46 L231 68", "M215 108 V127"],
+  after: ["M201 166 L105 245","M229 166 L325 245","M90 46 Q28 146 83 245","M340 46 Q402 146 347 245"],
+  before: ["M215 166 V187","M195 102 Q141 148 199 187","M198 227 L112 245","M232 227 L318 245","M340 46 Q404 156 122 245","M90 46 Q28 156 308 245"],
+};
+const cells = [
+  [3,90,26,"initial"],[7,340,26,"initial"],[10,215,88,"shared"],
+  [100,215,147,"target"],[110,215,207,"extra"],[103,90,265,"target"],[107,340,265,"target"],
+];
+const svgNS = "http://www.w3.org/2000/svg";
+function svgNode(tag, attributes) {
+  const node = document.createElementNS(svgNS, tag);
+  Object.entries(attributes).forEach(([name,value]) => node.setAttribute(name, value));
+  return node;
+}
+const graph = byId("live-graph");
+const paths = svgNode("g", {"aria-hidden":"true"});
+const nodes = svgNode("g", {"aria-hidden":"true"});
+graph.append(paths, nodes);
+const nodeByValue = new Map(cells.map(([value,x,y,kind]) => {
+  const g = svgNode("g",{class:kind,transform:"translate("+x+" "+y+")"});
+  g.append(svgNode("rect",{x:-35,y:-17,width:70,height:34}));
+  const label = svgNode("text",{x:0,y:1});
+  label.textContent = value;
+  g.append(label);
+  nodes.append(g);
+  return [value,g];
+}));
+let selectedPlan = "after", cursor = 0, timer = null;
+function render() {
+  const states = stepsByPlan[selectedPlan];
+  const current = states[cursor];
+  byId("step-readout").textContent = cursor + " / " + (states.length-1);
+  const slider = byId("walk-slider");
+  slider.max = states.length-1;
+  slider.value = cursor;
+  byId("walk-prev").disabled = cursor===0;
+  byId("walk-next").disabled = cursor===states.length-1;
+  byId("walk-play").textContent = timer===null ? "播放" : "暂停";
+  byId("op-line").textContent = current.explanation || "初始状态 · R0 = 3，R1 = 7";
+  byId("coverage").textContent = "目标命中 " + current.hit.size + " / " + goals.length +
+    (current.hit.size ? " · " + goals.filter(v=>current.hit.has(v)).join("、") : "");
+  byId("instruction-code").textContent = current.instruction ? JSON.stringify(current.instruction) : "";
+  byId("visible-regs").querySelectorAll("td").forEach((td,i)=>{
+    td.textContent = current.registers[i] ?? "—";
+    td.classList.toggle("written",i===current.dest);
+  });
+  nodeByValue.forEach((node,value)=>{
+    node.style.display = value===110 && selectedPlan==="after" ? "none" : "";
+    node.classList.toggle("active",current.seen.has(value));
+    node.classList.toggle("current",current.value===value);
+  });
+  document.querySelectorAll("[data-plan]").forEach(button=>{
+    button.setAttribute("aria-pressed",String(button.dataset.plan===selectedPlan));
+  });
+}
+function stop() {
+  if (timer!==null) window.clearInterval(timer);
+  timer=null;
+}
+function jump(step) {
+  stop();
+  cursor=Math.max(0,Math.min(step,stepsByPlan[selectedPlan].length-1));
+  render();
+}
+function choosePlan(plan) {
+  selectedPlan=plan;
+  paths.replaceChildren(...[...edges.base,...edges[plan]].map(d=>svgNode("path",{d,"marker-end":"url(#lab-arrow)"})));
+  jump(0);
+}
+document.querySelectorAll("[data-plan], [data-open-plan]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    choosePlan(button.dataset.plan || button.dataset.openPlan);
+    if (button.dataset.openPlan) {
+      byId("lab").scrollIntoView();
+      byId("walk-next").focus({preventScroll:true});
+    }
+  });
+});
+byId("walk-prev").addEventListener("click",()=>jump(cursor-1));
+byId("walk-next").addEventListener("click",()=>jump(cursor+1));
+byId("walk-reset").addEventListener("click",()=>jump(0));
+byId("walk-slider").addEventListener("input",(event)=>jump(Number(event.target.value)));
+byId("walk-play").addEventListener("click",()=>{
+  if (timer!==null) {
+    stop();
+    render();
+    return;
+  }
+  if (cursor>=stepsByPlan[selectedPlan].length-1) cursor=0;
+  timer=window.setInterval(()=>{
+    cursor++;
+    if (cursor>=stepsByPlan[selectedPlan].length-1) stop();
+    render();
+  },850);
+  render();
+});
+choosePlan("after");
+
+const scores=JSON.parse(byId("score-data").textContent);
+const maxScore=Math.max(...scores.map(row=>row.score));
+const scoreRows=document.querySelectorAll("[data-score]");
+const format=new Intl.NumberFormat("zh-CN");
+function pickScore(index) {
+  scoreRows.forEach((button,i)=>button.setAttribute("aria-pressed",String(i===index)));
+  const row=scores[index];
+  const pct=((scores[0].score-row.score)*100/scores[0].score).toFixed(2);
+  byId("chart-detail").textContent=row.version+" · "+format.format(row.score)+" 步 · "+
+    format.format(row.validated)+" 题通过"+(index ? " · 较 V1 减少 "+pct+"%" : " · 独立构造基线");
+}
+scoreRows.forEach((button,index)=>{
+  const row=scores[index];
+  button.querySelector(".bar-fill").style.width=(100*row.score/maxScore)+"%";
+  button.addEventListener("click",()=>pickScore(index));
+});
+pickScore(scores.length-1);
+
+const frame=byId("sim-frame");
+const simulatorPanel=byId("sim-gate");
+let opened=false, loaded=false, pendingExample=false;
+function injectTutorial() {
+  if (!loaded || !pendingExample) return;
+  const embedded=frame.contentDocument;
+  embedded.getElementById("starting").value="3, 7";
+  embedded.getElementById("targets").value="100, 103, 107";
+  embedded.getElementById("limit").value="120";
+  pendingExample=false;
+}
+function openSimulator(loadExample=false) {
+  if (loadExample) pendingExample=true;
+  simulatorPanel.open=true;
+  if (!opened) {
+    opened=true;
+    frame.hidden=false;
+    frame.addEventListener("load",()=>{
+      loaded=Boolean(frame.contentDocument?.getElementById("solve-button"));
+      injectTutorial();
+    });
+    frame.srcdoc=JSON.parse(byId("sim-source").textContent);
+  } else injectTutorial();
+}
+simulatorPanel.addEventListener("toggle",()=>{
+  if (simulatorPanel.open) openSimulator();
+});
+document.querySelectorAll('a[href="#simulator"]').forEach(link=>{
+  link.addEventListener("click",()=>openSimulator(link.hasAttribute("data-load-example")));
+});
+if (location.hash==="#simulator") openSimulator();
+</script>
+</body>
+</html>

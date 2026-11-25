@@ -17,12 +17,13 @@
 | [web/interactive.html](web/interactive.html) | 赛题互动页：两个标签，分别嵌入正方形装箱模拟器和 Santa 2026 算法互动报告 | 需与仓库文件一起打开；支持 `#squares` / `#santa` |
 | [web/simulators.html](web/simulators.html) | 统一离线模拟器：把两个赛题模拟器嵌入成一个 HTML | 可单独下载，约 8.7 MB |
 | [web/build/](web/build/) | 统一模拟器的构建源码：`build.py`、`template.html`、`santa-review.json` | 见 [web/build/README.md](web/build/README.md) |
+| [Santa 互动报告](competitions/santa-2026/Santa-2026-Interactive-Report.html) | 由 `docs/algorithm-evolution.md` 自动生成的单文件学习报告 | 可单独下载，离线打开 |
 | [web/tests/](web/tests/) | 构建一致性与互动页结构测试 | `python -m unittest discover -s web/tests -p 'test_*.py' -v` |
 
 各赛题的原始页面仍可单独打开：
 
 - 正方形装箱：[SquarePackingStudio-standalone.html](competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html)
-- Santa 2026：[Santa-2026-Interactive-Report.html](competitions/santa-2026/Santa-2026-Interactive-Report.html)
+- Santa 2026：[Santa-2026-Interactive-Report.html](competitions/santa-2026/Santa-2026-Interactive-Report.html)（生成产物，不要手改）
 
 `web/simulators.html` 是生成产物，不要手工修改。修改原始模拟器后按以下顺序重建并检查：
 
@@ -33,7 +34,15 @@ python web/build/build.py
 python -m unittest discover -s web/tests -p 'test_*.py' -v
 ```
 
-`web/build/santa-review.json` 锁定 Santa 求解器源码哈希和回放版本列表；源码变化但未复核时，构建会失败。
+`web/build/santa-review.json` 独立记录当前 Santa 求解器的发布标识与全部源码哈希（`solver`）和历史 CSV 回放槽位（`independent_replay`）。槽位不再由 Python 文件名推断；源码增删改或槽位不一致时构建失败。人工核对回放与测试后用 `python web/build/build.py --refresh-santa-review` 显式刷新，普通构建不会改写审核文件。
+
+Santa 互动报告由学习正文生成，不要手改。正文或模拟器变化后重建并检查：
+
+```bash
+python -m pip install -r competitions/santa-2026/docs/requirements-docs.txt
+python competitions/santa-2026/docs/build_report.py
+python competitions/santa-2026/docs/build_report.py --check
+```
 
 ## 目录
 
@@ -48,12 +57,14 @@ python -m unittest discover -s web/tests -p 'test_*.py' -v
 在 Python 3.11+ 的虚拟环境中，从仓库根目录运行。JavaScript 测试需要 Node.js。[GitHub Actions 工作流](.github/workflows/test.yml)
 
 ```bash
-python -m pip install -r competitions/squares-in-squares/requirements.txt -r competitions/google-quantum-circuit-compilation/requirements.txt
+python -m pip install -r competitions/squares-in-squares/requirements.txt -r competitions/google-quantum-circuit-compilation/requirements.txt -r competitions/santa-2026/docs/requirements-docs.txt
 python -m unittest discover -s competitions/squares-in-squares/experiments -v
 python -m unittest discover -s competitions/google-quantum-circuit-compilation/experiments -v
 python -m unittest discover -s competitions/santa-2026/tests -v
 node --test competitions/squares-in-squares/experiments/test_core.cjs
 node --test competitions/santa-2026/tests/test_replay.cjs
+python competitions/santa-2026/docs/build_report.py --check
+python web/build/build.py --check
 python -m unittest discover -s web/tests -p 'test_*.py' -v
 ```
 

@@ -1,0 +1,4 @@
+# Build-only dependencies for build_report.py (no runtime/server dependency).
+# Math is rendered to MathML at build time, so the report stays offline.
+Markdown==3.10.2
+latex2mathml==3.81.1

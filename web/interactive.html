@@ -40,7 +40,7 @@ iframe[hidden] { display: none; }
   </nav>
 </header>
 <main>
-  <p class="notice">只汇总已完成网页的两个赛题：正方形装箱与 Santa 2026。正方形装箱页包含已认证布局和模拟器；Santa 页是算法互动报告并内嵌 V1–V8 程序回放。Google 量子电路暂无网页报告，使用赛题 README 中的命令行入口。页面直接引用各自原始 HTML，不复制内容。</p>
+  <p class="notice">只汇总已完成网页的两个赛题：正方形装箱与 Santa 2026。正方形装箱页包含已认证布局和模拟器；Santa 页的互动报告由 <code>docs/algorithm-evolution.md</code> 自动生成，正文与公式离线可读，并内嵌 V1–V8 历史 CSV 回放与自定义会话槽位。Google 量子电路暂无网页报告，使用赛题 README 中的命令行入口。页面直接引用各自原始 HTML，不复制内容；直接访问 <code>#santa</code> 可打开 Santa 报告。</p>
   <iframe id="squares" title="正方形装箱模拟器" src="../competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html" allow="clipboard-write"></iframe>
   <iframe id="santa" title="Santa 2026 算法互动报告" data-src="../competitions/santa-2026/Santa-2026-Interactive-Report.html" allow="clipboard-write" hidden></iframe>
 </main>
