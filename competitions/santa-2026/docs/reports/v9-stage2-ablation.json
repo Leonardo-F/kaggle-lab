@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "kind": "ablation",
+  "version": "v9-stage2",
+  "dataset": "official",
+  "puzzles": 1000,
+  "source": "santa_v9_stage2_full_test.zip (research handoff, local reproduction in v9.json)",
+  "handoff": {
+    "archive_sha256": "b1d338d27d3998dc1785ad79217c6ecfbc3254bb51cb1e9993fcff7374cca758",
+    "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "full_report_sha256": "048e7bbbc48389cd1c631969e7863cd74baa2e9d8892fa1a9461ba0483ec66e6",
+    "comparison_csv_sha256": "2206148700a11bd067ec0a23abd0684e2fd6ca1fff9285aaf75a00ee2732b3e0",
+    "run_log_sha256": "e08282867e7419a5ba3107d12f844948f93bc0efed1b6180f8f3eee38aff1f88",
+    "checkpoint_sha256": "7215aa8f49b64743429434241ca7e85a3124de190ff3e2b0776549e08386c781"
+  },
+  "original_run": {
+    "validated": 1000,
+    "score": 175604,
+    "max_steps": 415,
+    "v9_stage1_score": 182205,
+    "reduction_vs_stage1": 6601,
+    "reduction_vs_v8": 18840,
+    "resumed_rows": 8,
+    "newly_solved_rows": 992,
+    "final_batch_seconds": 797.97,
+    "baseline_match_count": 1000,
+    "comparison_vs_stage1": {
+      "improved": 394,
+      "unchanged": 606,
+      "worse": 0
+    },
+    "comparison_vs_v8": {
+      "improved": 833,
+      "unchanged": 30,
+      "worse": 137
+    },
+    "bit_width_buckets": {
+      "40": {
+        "puzzles": 228,
+        "v8": 56337,
+        "v9_stage1": 52115,
+        "v9_stage2": 49992,
+        "saved": 2123,
+        "improved": 159
+      },
+      "50": {
+        "puzzles": 141,
+        "v8": 45847,
+        "v9_stage1": 45630,
+        "v9_stage2": 42579,
+        "saved": 3051,
+        "improved": 130
+      },
+      "20": {
+        "puzzles": 224,
+        "v8": 28393,
+        "v9_stage1": 25996,
+        "v9_stage2": 25996,
+        "saved": 0,
+        "improved": 0
+      },
+      "30": {
+        "puzzles": 251,
+        "v8": 49607,
+        "v9_stage1": 44429,
+        "v9_stage2": 43753,
+        "saved": 676,
+        "improved": 89
+      },
+      "10": {
+        "puzzles": 123,
+        "v8": 7580,
+        "v9_stage1": 7610,
+        "v9_stage2": 7610,
+        "saved": 0,
+        "improved": 0
+      },
+      "60": {
+        "puzzles": 16,
+        "v8": 6604,
+        "v9_stage1": 6347,
+        "v9_stage2": 5596,
+        "saved": 751,
+        "improved": 16
+      },
+      "0": {
+        "puzzles": 17,
+        "v8": 76,
+        "v9_stage1": 78,
+        "v9_stage2": 78,
+        "saved": 0,
+        "improved": 0
+      }
+    },
+    "checkpoint_integrity": "ok",
+    "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+    "config": {
+      "schedule_eviction_modes": 6,
+      "schedule_top": 12,
+      "schedule_tries": 32,
+      "stage1_routes": [
+        [
+          "constructor_wide_polish",
+          6,
+          3
+        ],
+        [
+          "constructor_wide_polish",
+          6,
+          4
+        ],
+        [
+          "constructor_mitm_polish",
+          6,
+          3
+        ],
+        [
+          "constructor_mitm_polish",
+          6,
+          4
+        ]
+      ]
+    },
+    "sources": {
+      "constructor_mitm": "a249637380aa2f8e41be431b1a85da53d378f983f098f2049a99d37c7f2a8d65",
+      "constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+      "constructor_wide": "54848d529281d3d61b7bdb03b6da294f82bfbde8a8f0a72e25d66b41c3dc50fe",
+      "constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
+      "experiment.py": "61d1d68e1730ead72dd0ee0733e20336dff66c25b7a626292a3304f27d08aa51",
+      "optimized.py": "24def1bcd6680f071551ea43ec5e6ce2a3de1d2a5243388b5b8996333278ebd0",
+      "polish.py": "d6ac456a0fe4a5a41de2168f50ab714ad9a102fc74514edfb19ac9d17ed06b41",
+      "run_full.py": "6b4eeacd38fa650a5c3b526825befd1dd2903a5c7149f0f8591ab845a70aac23",
+      "run_stage2.py": "918b285dc296270424dcb9d75f0a6df03c3eabbe746851c3b1f6f6d33020a825",
+      "scheduler.py": "44807ce9fc75e2644c07c64f3f5918eb61bf9cefd1d10b4f83ec1b550e490b31",
+      "stage2.py": "62ad575f32e68ddbbcb68512f3df926a8e13600cd2c59edb77e51041545c8428"
+    }
+  },
+  "note": "冻结 V9 Stage 2 研究包的原始全量记录，用于对照阶段研究和逐题证据；本仓库的独立复跑结果记录在 v9.json。该文件不进入正式版本曲线。",
+  "limitations": [
+    "原始记录由研究包工具链产生（Python 3.13.5 / 报告中的 GCC 构建信息），耗时与环境不可直接与本地复跑比较。",
+    "原始记录使用打包的预编译 Linux 二进制；本仓库用同一源码在本机重新构建。"
+  ]
+}

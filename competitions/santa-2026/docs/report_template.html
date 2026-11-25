@@ -40,7 +40,7 @@
 </style>
 </head>
 <body id="top">
-<header class="top"><div class="top-inner"><a href="#top" class="brand">SANTA / 2026</a><nav aria-label="报告导航"><a href="#01-赛题与手算">赛题与手算</a><a href="#03-构造搜索" class="hide-on-mobile">构造搜索</a><a href="#05-子图重写" class="hide-on-mobile">子图重写</a><a href="#07-演进与实验" class="hide-on-mobile">实验与历史</a><a href="#simulator">互动回放</a></nav></div></header>
+<header class="top"><div class="top-inner"><a href="#top" class="brand">SANTA / 2026</a><nav aria-label="报告导航"><a href="#01-赛题与手算">赛题与手算</a><a href="#03-构造搜索" class="hide-on-mobile">构造搜索</a><a href="#05-子图重写" class="hide-on-mobile">子图重写</a><a href="#07-v9动态字典构造与寄存器压力调度" class="hide-on-mobile">V9 管线</a><a href="#08-演进与实验" class="hide-on-mobile">实验与历史</a><a href="#simulator">互动回放</a></nav></div></header>
 <section class="hero"><div class="hero-inner">
 <div><p class="edition">KAGGLE · THE ELF CALCULATOR</p><h1>多目标算术程序的独立构造与压缩</h1><p class="intro">从用 3 和 7 算出 100、103、107 开始，逐步看寄存器、共享中间值与依赖图如何影响实际指令数。</p><div class="actions"><a class="button primary" href="#lab">开始逐步演示</a><a class="button ghost" href="#simulator">打开完整模拟器</a></div></div>
 <div class="hero-note"><small>{{BEST_LABEL}}</small><span class="metric">{{BEST_SCORE}}</span><small>{{BEST_SUMMARY}}</small><div class="mini"><span>{{V1_SCORE}}</span><span>{{BEST_DELTA}}</span></div></div>
@@ -48,8 +48,8 @@
 <div class="layout"><aside class="guide" aria-label="目录"><h2>报告目录</h2><ol>{{TOC}}</ol><a href="https://github.com/Leonardo-F/kaggle-lab/blob/main/competitions/santa-2026/docs/algorithm-evolution.md">GitHub Markdown 底稿 ↗</a></aside><main class="article" aria-label="算法报告正文">
 {{ARTICLE}}
 </main></div>
-<section class="sim-section" id="simulator"><h2>Santa 离线模拟器</h2><p>可直接在报告里输入一组初值和目标，查看每条指令与寄存器状态。也可以导入自己的题目 CSV 和 V1–V8 程序 CSV 做回放。V1–V8 是历史 CSV 回放槽位；内嵌的 JavaScript 自定义题求解器是教学实现，不是 Python V8，步数可能不同。</p><details class="sim-wrap" id="sim-gate"><summary>展开模拟器</summary><iframe id="sim-frame" title="Santa 2026 离线计算器" allow="clipboard-write" hidden></iframe></details></section>
-<footer>正文单一来源：<a href="https://github.com/Leonardo-F/kaggle-lab/blob/main/competitions/santa-2026/docs/algorithm-evolution.md">algorithm-evolution.md</a> · 本页由 <code>docs/build_report.py</code> 生成，可离线打开。<p class="generated-note">历史成绩与验证范围来自 submissions/latest.json 与 docs/reports/*.json；V1–V8 为本地独立验证的指令总数，不是 Kaggle 榜单成绩。</p></footer>
+<section class="sim-section" id="simulator"><h2>Santa 离线模拟器</h2><p>可直接在报告里输入一组初值和目标，查看每条指令与寄存器状态。也可以导入自己的题目 CSV 和 V1–V9 程序 CSV 做回放。V1–V9 是历史 CSV 回放槽位；内嵌的 JavaScript 自定义题求解器是教学实现，不是 Python/C++ V9，步数可能不同。</p><details class="sim-wrap" id="sim-gate"><summary>展开模拟器</summary><iframe id="sim-frame" title="Santa 2026 离线计算器" allow="clipboard-write" hidden></iframe></details></section>
+<footer>正文单一来源：<a href="https://github.com/Leonardo-F/kaggle-lab/blob/main/competitions/santa-2026/docs/algorithm-evolution.md">algorithm-evolution.md</a> · 本页由 <code>docs/build_report.py</code> 生成，可离线打开。<p class="generated-note">历史成绩与验证范围来自 submissions/latest.json 与 docs/reports/*.json；V1–V9 为本地独立验证的指令总数，不是 Kaggle 榜单成绩。</p></footer>
 <template data-block="lab"><div class="demo" id="lab" aria-label="共享值的寄存器演示">
   <h3>逐步执行同一道题</h3>
   <p class="sub">使用上一步、下一步或进度条，看每一条指令改写了哪个寄存器。</p>

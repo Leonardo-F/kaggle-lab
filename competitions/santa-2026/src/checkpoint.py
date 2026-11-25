@@ -1,15 +1,21 @@
 """Crash-safe, resumable execution of the single functional Santa solver.
 
 Each solved puzzle is replayed and committed in its own durable SQLite
-transaction.  A checkpoint is bound to the exact input file, the CLI,
-checkpoint and verifier sources, every file in ``algorithms/``, the Python
-implementation and the solver parameters, so a resumed run can only continue
-the same experiment.  No submission is exported until every input ID has been
-collected and the complete CSV passes the independent verifier.
+transaction.  A checkpoint is bound to the exact input file, the CLI, the
+checkpoint and verifier sources, every production Python file in
+``algorithms/`` (including the native build helper and its ``.cpp`` sources and
+headers), the actual compiled binary hashes, the compiler identity/flags, the
+Python implementation/platform and the frozen solver parameters, so a resumed
+run can only continue the same experiment.  No submission is exported until
+every input ID has been collected and the complete CSV passes the independent
+verifier.
 
-Checkpoints written by the legacy V1-V8 layout (schema 1) are rejected: resume
-them with the original Git commit, or start a new SQLite file.
+Layouts older than schema 3 are rejected: resume a V1-V7 checkpoint with the
+historical versioned-layout commit, a V8 functional-layout checkpoint with the
+V8 baseline commit, or start a new SQLite file.  The safety checks are never
+relaxed to make an old file resumable.
 """
+
 import csv
 import fcntl
 import hashlib
@@ -18,34 +24,40 @@ import os
 import platform
 import sqlite3
 import time
-from contextlib import closing
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from contextlib import closing
 from pathlib import Path
 
 from algorithms.solver import DEFAULT_CONFIG, STAGES
+from algorithms.native import build as native_build
 from verify import verify
 
 SRC = Path(__file__).resolve().parent
-SCHEMA = 2
-LAYOUT = "functional"
+SCHEMA = 3
+LAYOUT = "v9-functional"
+LEGACY_REVISIONS = {
+    "versioned": "9337a3549bea09257cbf36ae1f8da2cbd452942b",
+    "functional": "287519977aa85a19ef9e3074e6bfd2b9e578b5c3",
+}
 
 ALGORITHM_SOURCES = tuple(sorted(
     path.relative_to(SRC).as_posix()
-    for path in (SRC / "algorithms").rglob("*.py")
-    if "__pycache__" not in path.parts
+    for path in (SRC / "algorithms").rglob("*")
+    if path.is_file() and "__pycache__" not in path.parts
+    and path.suffix in {".py", ".cpp", ".h", ".hpp"}
 ))
 BOUND_SOURCES = ("checkpoint.py", "graph_solver.py", "verify.py") + ALGORITHM_SOURCES
 
 CONFIGS = {
-    "v8": {
+    "v9": {
         "stages": STAGES,
-        "baseline": "v7",
-        "final": "v8final",
+        "baseline": "v9_stage1",
+        "final": "v9final",
         "parameters": tuple(DEFAULT_CONFIG),
     },
 }
 
-DEFAULTS = {"v8": dict(DEFAULT_CONFIG)}
+DEFAULTS = {"v9": dict(DEFAULT_CONFIG)}
 
 
 def sha(path):
@@ -71,12 +83,32 @@ def validate_record(version, row, program, metrics):
     from algorithms.common import replay
     if replay(row, program) != len(program):
         raise ValueError(f'{row["id"]}: replay count mismatch')
-    stages = CONFIGS[version]["stages"]
+    config = CONFIGS[version]
+    stages = config["stages"]
     costs = [metrics[k] for k in stages]
     if any(type(x) is not int or x < 0 for x in costs) or costs[-1] != len(program):
-        raise ValueError(f'{row["id"]}: invalid metrics')
+        raise ValueError(f'{row["id"]}: invalid stage metrics')
     if any(a < b for a, b in zip(costs, costs[1:])):
-        raise ValueError(f'{row["id"]}: increasing candidate cost')
+        raise ValueError(f'{row["id"]}: increasing incumbent cost')
+    for key in ("nodes", "schedule_attempts"):
+        if type(metrics.get(key)) is not int or metrics[key] < 0:
+            raise ValueError(f'{row["id"]}: invalid {key} metric')
+    routes = metrics.get("routes")
+    expected = len(DEFAULT_CONFIG["stage1_routes"])
+    if type(routes) is not list or len(routes) != expected:
+        raise ValueError(f'{row["id"]}: invalid route metrics')
+    for entry in routes:
+        if not isinstance(entry, dict) or not isinstance(entry.get("config"), list):
+            raise ValueError(f'{row["id"]}: invalid route entry')
+        if len(entry["config"]) != 3 or type(entry["config"][1]) is not int:
+            raise ValueError(f'{row["id"]}: invalid route configuration')
+        error = entry.get("error")
+        if error is not None:
+            if not isinstance(error, str) or entry.get("nodes") is not None or entry.get("score") is not None:
+                raise ValueError(f'{row["id"]}: malformed failed route')
+            continue
+        if any(type(entry.get(key)) is not int or entry[key] < 0 for key in ("nodes", "score")):
+            raise ValueError(f'{row["id"]}: invalid route score')
 
 
 def atomic_json(path, value):
@@ -100,6 +132,18 @@ def read_rows(puzzles):
     return rows
 
 
+def native_binding():
+    """Compiler, flags and binary hashes of the native constructors used for this run."""
+    manifest = native_build.ensure_built()
+    return {
+        "compiler": dict(manifest["compiler"]),
+        "flags": list(manifest["flags"]),
+        "compat_include": bool(manifest.get("compat_include")),
+        "binaries": {kernel: info["sha256"] for kernel, info in manifest["binaries"].items()},
+        "sources": dict(manifest["sources"]),
+    }
+
+
 def fingerprint(version, puzzles, rows, parameters):
     config = CONFIGS[version]
     return dict(
@@ -110,26 +154,49 @@ def fingerprint(version, puzzles, rows, parameters):
         count=len(rows),
         python=platform.python_version(),
         implementation=platform.python_implementation(),
+        platform={"system": platform.system(), "machine": platform.machine()},
         sources={name: sha(SRC / name) for name in BOUND_SOURCES},
+        native=native_binding(),
         parameters={key: parameters[key] for key in config["parameters"]},
     )
 
 
-def _is_legacy_metadata(payload):
+def _layout_of(payload):
     try:
         stored = json.loads(payload)
     except (TypeError, ValueError):
-        return False
-    return not (isinstance(stored, dict)
-                and stored.get("schema") == SCHEMA
-                and stored.get("layout") == LAYOUT)
+        return None
+    if not isinstance(stored, dict):
+        return None
+    return stored.get("layout")
 
 
-def run_checkpoint(puzzles, output, checkpoint, version="v8", jobs=4, resume=False,
+def _reject_legacy_metadata(payload):
+    layout = _layout_of(payload)
+    if layout == "versioned":
+        raise ValueError(
+            "checkpoint uses the legacy versioned layout; resume it with the original "
+            f"Git commit ({LEGACY_REVISIONS['versioned']}) or create a new SQLite file"
+        )
+    if layout == "functional":
+        raise ValueError(
+            "checkpoint uses the V8 functional layout (schema 2); resume it with the V8 "
+            f"baseline commit ({LEGACY_REVISIONS['functional']}) or create a new SQLite file"
+        )
+    raise ValueError(
+        "checkpoint layout is not the current v9-functional schema; "
+        "resume it with the commit that produced it or create a new SQLite file"
+    )
+
+
+def run_checkpoint(puzzles, output, checkpoint, version="v9", jobs=4, resume=False,
                    stop_after=None, parameters=None):
-    """Solve ``puzzles`` with the functional solver, persisting every result."""
+    """Solve ``puzzles`` with the frozen solver, persisting every result."""
     if version not in CONFIGS:
-        raise ValueError(f"the functional solver only supports v8, not {version}")
+        hint = ""
+        if version == "v8":
+            hint = f" resume it with the V8 baseline commit ({LEGACY_REVISIONS['functional']})"
+        raise ValueError(f"the functional solver only supports v9, not {version};{hint}")
     config = CONFIGS[version]
     stages = config["stages"]
     resolved = dict(DEFAULTS[version])
@@ -144,6 +211,7 @@ def run_checkpoint(puzzles, output, checkpoint, version="v8", jobs=4, resume=Fal
         raise ValueError(f"missing parameters: {missing}")
     rows = read_rows(puzzles)
     row_by_id = {row["id"]: row for row in rows}
+    native_build.ensure_built()
     metadata = canon(fingerprint(version, puzzles, rows, parameters))
     started = time.monotonic()
     checkpoint.parent.mkdir(parents=True, exist_ok=True)
@@ -168,13 +236,16 @@ def run_checkpoint(puzzles, output, checkpoint, version="v8", jobs=4, resume=Fal
                 stored = db.execute("SELECT payload FROM meta WHERE id=1").fetchone()
                 if stored is None:
                     raise ValueError("checkpoint has no provenance metadata")
-                if _is_legacy_metadata(stored[0]):
-                    raise ValueError(
-                        "checkpoint uses the legacy versioned layout; resume it with the original "
-                        "Git commit (9337a35) or create a new SQLite file"
-                    )
-                if stored[0] != metadata:
-                    raise ValueError("checkpoint provenance mismatch: input, source, Python or parameters changed")
+                stored_payload = stored[0]
+                try:
+                    stored_layout = json.loads(stored_payload).get("layout")
+                except (TypeError, ValueError):
+                    stored_layout = None
+                if stored_layout != LAYOUT:
+                    _reject_legacy_metadata(stored_payload)
+                if stored_payload != metadata:
+                    raise ValueError("checkpoint provenance mismatch: input, source, Python, "
+                                     "native build or parameters changed")
             programs, metrics = {}, {}
             for pid, raw, mraw, digest in db.execute("SELECT pid,program,metrics,digest FROM results"):
                 if pid not in row_by_id or digest != record_digest(pid, raw, mraw, metadata):

@@ -1,6 +1,6 @@
 # Santa 2026 · 解法与实验进展
 
-独立求解 V8 Final 本地全量 **194,444 步**，1,000 题通过独立回放；较 V7 的 198,388 步改善 775 题、持平 225 题、退化 0 题。历代算法、分数、消融及复现命令见[算法演进](algorithm-evolution.md)。
+独立求解 V9 本地全量 **175,604 步**，1,000 题通过独立回放：Stage 1 为 182,205 步，Stage 2 调度再省 6,601 步（394 题改善、606 持平、0 退化）；较 V8 Final 的 194,444 步改善 833 题、持平 30 题、退化 137 题，共省 18,840 步（9.689%），最长程序 415 步。V8+V9 混合归档 174,884 步（最长 392）只是独立后处理结果，不是算法版本，也不计入独立版本曲线。历代算法、分数、消融及复现命令见[算法演进](algorithm-evolution.md)。
 
 以下记录早期参考程序实验。
 
@@ -90,3 +90,31 @@ V8 的正式管线由 `v8_rewrite`（双运算改写与图编译）、`v8_three`
 重构后的默认入口只运行当前求解器，`--version v8` 为兼容别名；旧版本参数会明确报错并给出固定提交的 worktree 命令。检查点绑定输入、CLI、检查点、验证器与 `algorithms/` 全部源码、Python 版本和全部搜索参数，旧布局 SQLite 会被明确拒绝。
 
 2026-11-25 用 6 个进程和新建的 SQLite 检查点从官方 `puzzles.csv` 独立全量求解 1,000 题，耗时 **2,421.59 秒**（同时另有一个 4 进程的冻结基线复跑，非等资源 benchmark）。结果 **194,444 步**、1,000/1,000 合法、最长 535 步；八阶段总分为 **198,388 → 198,374 → 195,705 → 195,090 → 194,881 → 194,819 → 194,797 → 194,444**，775 题较 V7 改善、225 题持平、0 题退化。输出 CSV 与归档 V8 **逐字节一致**（SHA-256 `6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd`），1000 条检查点记录全部重放通过，`PRAGMA integrity_check` 为 `ok`。冻结基线另一次全量复跑用于逐题八阶段指标对照；逐题程序、指标、测试、文件统计和命令见 [重构报告](reports/v8-refactor.json)。另用 practice 数据独立核验 200/200 题合法，40,207 步，最长 557 步，耗时 373.0 秒（8 进程）。重构只做等价迁移，没有混入 V9 算法改动。
+
+## 2026-11-26 · V9 合入与全量独立复跑
+
+在分支 `feat/santa-v9` 上把冻结 V9 移植进功能化模块并完成发布验收。基线 HEAD 为 `2875199`（V8 功能化布局与全量验收记录），历史 V1–V7 仍固定在提交 `9337a3549bea09257cbf36ae1f8da2cbd452942b`。
+
+算法上，V9 用两个冻结的 C++17 原生构造内核（`algorithms/native/constructor_wide.cpp`、`constructor_mitm.cpp`，RNG 1909、每个目标反向递归深度 5、每值最多 3 条表达式）替换 V8 的 Python 构造与重写链：Stage 1 严格按 `wide 6:3 → wide 6:4 → mitm 6:3 → mitm 6:4` 四条路线构造，每条路线先用 8 个确定性顺序编译（seed 919），再经两轮 polish（每轮只评估 top 20 值）重新编译，严格更短才替换、等长保留先到路线；Stage 2 从 Stage 1 程序提取首现 DAG，用种子 202609、32 次根置换、压力三元组 `(overflow, peak, area)` 排序取前 12 个顺序，每组再试 6 种淘汰/求值策略，所有候选实际回放，只有严格更短才替换 incumbent，达到 DAG 节点下界即提前停止。冻结管线没有 LNS、全局锚点或大整数构造；`nodes` 只是固定 DAG 的下界。
+
+工程上，`SOLVER_VERSION = "v9"` 是唯一版本权威（CLI `DEFAULT_VERSION` 引用）；`native/build.py` 在求解前构建内核到 git-ignored 的 `experiments/native-build/`，把编译器/版本/flags/源码哈希/二进制 SHA-256 写入 manifest；检查点升级为 schema 3，绑定输入 SHA、全部生产 Python、两个 `.cpp`、兼容头、`build.py`、实际二进制哈希、编译器/平台/参数，旧 V8/schema 2 检查点拒绝恢复并提示 V8 基线提交 `2875199`；`web/build/build.py` 用 AST 静态读取唯一版本字面量并把 cpp/header/build.py 纳入源码清单（普通构建不编译求解器）；模拟器回放槽位更新为 V1–V9（当前 V9，混合 CSV 用自定义标签回放）。新增独立后处理工具 `src/merge_submissions.py`，不属于求解管线。
+
+**本次独立全量复跑（正式 1,000 题，从零）：** 分数 **175,604**、1,000/1,000 合法、最长程序 **415**；Stage 1 总分 **182,205**、Stage 2 节省 **6,601**（3.6228%）；对 Stage 1 **394 改善 / 606 持平 / 0 退化**；对 V8 **833 改善 / 30 持平 / 137 退化**，较 V8 节省 **18,840**（9.689%）。本机 Apple Clang 21.0.0（C++17、`-O3`，通过 `native/compat/bits/stdc++.h` 兼容头）+ Python 3.13.2，6 个进程，`session_elapsed_seconds` 约 **443.85 秒**，使用新 SQLite schema 3 检查点、无 resume。本机输出 CSV SHA-256 `05e7b630f9b9a26889a74e09dbc1317ece799e5d28d948ce28c02b99b0660cb8`。完整记录见 [v9.json](reports/v9.json)；逐题位宽桶与阶段对照见[算法演进](algorithm-evolution.md)。
+
+**与冻结研究记录的对照：** 原始研究包 archive SHA-256 为 `b1d338d2…`，其全量报告 `v9_stage2_full_report.json` 记录 1,000 题、175,604、Stage1 182,205（resume 8 行、剩余 992 行 797.97 秒，Python 3.13.5/GCC 14.2 构建信息），原始研究配置/日志/耗时不能与本次本机复跑直接比较；逐题对照 CSV 与运行日志哈希见 [v9-stage2-ablation.json](reports/v9-stage2-ablation.json)。本机输出与冻结研究包 CSV（SHA-256 `5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63`）**不是逐字节相同**：逐题程序 999/1000 相同，唯一差异题 `scored_0775` 两版程序等长（均 181 步）但寄存器选择不同；两阶段总分、逐题分数/节点/调度尝试数与逐题选择性差异桶完全一致。用冻结研究源码在本机重新编译运行会得到与移植版完全相同的程序，因此该差异归因于本机 Apple Clang 工具链与冻结记录 Linux GCC 工具链在等分候选平局时的顺序差异，不是移植逻辑差异。**不声称逐字节复现或"精确复现 5ab0b72"**。
+
+**练习集与混合归档：** 练习 200 题独立复跑为 **36,045 步**、200/200 合法、最长 413、Stage 1 为 37,742、Stage 2 节省 1,697（86 改善/114 持平/0 退化），约 131.15 秒；V8 重构报告记录的练习成绩为 40,207 步。练习集是独立数据集，不能与正式题混算。V8+V9 混合归档为 **174,884 步**、最长 392：V8 严格更短 137 题、V9 胜出 863 题（其中 30 题平局按"平局取 V9"），较独立 V9 再省 720 步；由 `src/merge_submissions.py`（独立后处理工具，先完整验证两份输入再逐题取短）生成，不是算法版本、不进入正式独立版本曲线。混合 CSV SHA-256 `fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a`，归档路径 `submissions/elf-calculator-merged-v8-v9-score-174884.csv`，报告 [v8-v9-merged.json](reports/v8-v9-merged.json)；与用户上传的参考混合文件 999/1000 程序相同（同 `scored_0775` 等长差异），分数与最长步数一致。
+
+**测试、构建与验证状态（全部实际执行）：**
+- Santa Python：`python3 -m unittest discover -s tests -p 'test_*.py'` → **98 tests OK**；Santa Node：`node --test tests/test_replay.cjs` → **7/7 pass**。
+- 统一 Web：`python3 -m unittest discover -s web/tests -p 'test_*.py'` → **17 tests OK**；`python web/build/build.py --check` → exit 0。
+- 报告构建：`python3 docs/build_report.py` → 重建 `Santa-2026-Interactive-Report.html`；`python3 docs/build_report.py --check` → exit 0（up to date）。
+- 原生构建：`python3 src/algorithms/native/build.py` → 两个内核构建成功并写入 manifest；重复 `ensure_built(force=True)` 二进制 SHA 稳定。
+- 其他赛题（共享 Web 构建后回归）：装箱 Python **27 tests OK**、装箱 Node **15/15 pass**、量子 Python **13 tests OK（无 skip）**（本机用 `/tmp` 临时依赖目录安装 requirements，未改动仓库）。
+- 浏览器真实验收（Google Chrome 158.0.8127.88 headless，macOS 27.0.1 arm64）：模拟器页 **23/23** 项通过（V1–V9 槽位、三步教学解、BigInt、V7/V8/V9/混合 CSV 回放、自定义槽位、非法 CSV 反馈）；互动报告/统一入口/互动页 **26/26** 项通过（V9 成绩与独立曲线、混合单列、MathML、V9 章锚点、V8 重构面板、内嵌模拟器回放、390px 窄屏、`#santa`/`#squares`）。三份单文件在 `file://` 下打开且拦截全部 http(s) 请求；互动页用本地 HTTP 检查相对路径。未在 Safari/Firefox 或真实手机设备上验证。
+- 归档 CSV 独立复核：V9 `175,604`、V8 `194,444`、V8+V9 混合 `174,884`，三者均 1,000/1,000 合法；`git diff --check` 通过。
+- 提交链：`c404706`（V8 报告校验收尾）、`d3f4cae`（V9 功能化合入，即 [v9.json](reports/v9.json) 的 `solver_commit`），后续提交记录复现证据与文档/Web 重建。分步提交中的中间态不单独视为可发布构建，最终分支以完整测试与 `--check` 为准。
+
+**限制与未完成项：** 175,604 是本地独立验证的指令总数，不是 Kaggle 榜单成绩，未做 Kaggle 提交；全局最优未知，`nodes` 只是固定 DAG 下界；本机工具链有 1/1000 等长程序平局差异（分数不变）；冻结 V9 未使用 LNS/锚点/大整数构造；V10 未开始；仓库内互动报告 HTML 与统一入口由根代理重建并做浏览器验收，本文档不声称已重建或已人工逐项验证。
+
+**V8 重构任务书收尾：** 原 `docs/santa-v8-refactor-plan.md` 的收尾要点已并入本记录与[算法演进](algorithm-evolution.md)：V8 等价重构已完成并通过 1,000 题逐题/八阶段一致验收（报告 [v8-refactor.json](reports/v8-refactor.json)，固定对照 [v8.json](reports/v8.json)，代码重构提交 `0ec0ec0`，基线提交 `9337a354`、V8 功能化布局基线 `2875199`）；V9 直接从功能模块演进而非新增版本文件；全部算法从官方题目独立求解、历史答案仅用于回放与回归比较；未获明确同意不推送。该任务书在记录完成后从工作树移除，历史原文可从固定提交查看：[santa-v8-refactor-plan.md](https://github.com/Leonardo-F/kaggle-lab/blob/287519977aa85a19ef9e3074e6bfd2b9e578b5c3/competitions/santa-2026/docs/santa-v8-refactor-plan.md)。
