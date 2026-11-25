@@ -211,19 +211,19 @@ flowchart LR
 
 ### V4 · 哪个商更好，应该看数值距离还是构造成本？
 
-固定基数 10 去造 103，通常先试 $`10\times10+3`$ 或 $`10\times11-7`$ 。如果 9 和 13 已经有了， $`10\times9+13`$ 也只需要一乘一加。V4 对已有值排序，查找标准商附近已经容易构造的值 $`q'`$ ，然后重新计算乘积和偏移量。
+固定基数 10 去造 103，通常先试 $`10\times10+3`$ 或 $`10\times11-7`$ 。如果 9 和 13 已经有了， $`10\times9+13`$ 也只需要一乘一加。V4 对已有值排序，查找标准商附近已经容易构造的值 $`\tilde{q}`$ ，然后重新计算乘积和偏移量。
 
 ```math
-p=bq',\qquad r'=|t-p|,\qquad t=p+\operatorname{sgn}(t-p)\,r'
+p=b\tilde{q},\qquad \tilde{r}=|t-p|,\qquad t=p+\mathrm{sgn}(t-p)\,\tilde{r}.
 ```
 
-重新评价方案。在 $`p`$ 尚需构造且 $`r'>0`$ 时，该方案的图上边际开销是
+当 $`p`$ 尚需构造且 $`\tilde{r}>0`$ 时，该方案的图上边际开销是
 
 ```math
-\left|\left(D_G(b)\cup D_G(q')\cup D_G(r')\cup\{p,t\}\right)\setminus U\right|.
+\left|\left(D_G(b)\cup D_G(\tilde{q})\cup D_G(\tilde{r})\cup\{p,t\}\right)\setminus U\right|.
 ```
 
-已有 $`p`$ 时可复用 $`D_G(p)`$ 。 $`r'=0`$ 时乘积本身便是目标，少一次加减。这个成本衡量的是新增节点数，意味着一个数值更远的商仍可能更便宜。V4 的邻近搜索只看有限候选，再与本轮重新生成的 V3 程序融合。历史的 24 题对照记录为 **6,473 → 6,310 → 6,290** 步，依次对应 V3、加入 V4 候选后逐题择优、再做图融合。全量为 **219,462 步**，**723 题**缩短。[V4 源码](../src/algorithms/v4.py) · [24 题历史记录](https://github.com/Leonardo-F/kaggle-lab/blob/35a688db3a01182d07d1ae2000a75f3191e1b57e/competitions/santa-2026/docs/algorithm-evolution.md) · [复跑报告](reports/v4.json)
+已有 $`p`$ 时可复用 $`D_G(p)`$ 。 $`\tilde{r}=0`$ 时乘积本身便是目标，少一次加减。这个成本衡量的是新增节点数，意味着一个数值更远的商仍可能更便宜。V4 的邻近搜索只看有限候选，再与本轮重新生成的 V3 程序融合。历史的 24 题对照记录为 **6,473 → 6,310 → 6,290** 步，依次对应 V3、加入 V4 候选后逐题择优、再做图融合。全量为 **219,462 步**，**723 题**缩短。[V4 源码](../src/algorithms/v4.py) · [24 题历史记录](https://github.com/Leonardo-F/kaggle-lab/blob/35a688db3a01182d07d1ae2000a75f3191e1b57e/competitions/santa-2026/docs/algorithm-evolution.md) · [复跑报告](reports/v4.json)
 
 ### V5 · 便宜的余数藏在哪个桶里？
 
