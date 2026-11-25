@@ -1,0 +1,340 @@
+{
+  "schema_version": 1,
+  "kind": "santa-v9-integration-acceptance",
+  "status": "conditional_pass",
+  "summary": "V9 在 Linux + GCC 14.2.0 参考工具链下从官方 1,000 题独立求解，得到 175,604 步、最长 415，输出 CSV 与冻结 V9 CSV 逐字节一致（SHA-256 5ab0b72c…）；同环境下冻结研究源码与功能化移植实现逐题对照 1,000/1,000 程序与全部确定性指标一致，scored_0775 的 macOS差异被确认为工具链平局行为而非移植错误。",
+  "baseline_commit": "287519977aa85a19ef9e3074e6bfd2b9e578b5c3",
+  "integration_commit": "d3f4cae70282e6a091670e6aa4c5a2743e5c21e5",
+  "reviewed_commit": "8858a6a09e4ba37498f831e4350a8787d1e08c2c",
+  "acceptance_branch": "fix/santa-v9-final-acceptance",
+  "reference_environment": {
+    "source": "santa_v9_stage2_full_test.zip research handoff (checkpoint_meta)",
+    "python": "3.13.5 (main, Jul 15 2026, 20:25:40) [GCC 14.2.0]",
+    "compiler_note": "frozen research archive records Python build info GCC 14.2.0; C++ compiler flags -O3 -std=c++17",
+    "puzzles": 1000,
+    "score": 175604,
+    "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "resumed_rows": 8,
+    "final_batch_seconds": 797.97
+  },
+  "actual_environment": {
+    "os": "Ubuntu 25.04",
+    "kernel": "Linux 6.14.0-37-generic aarch64",
+    "gcc": "g++-14 (Ubuntu 14.2.0-19ubuntu2) 14.2.0",
+    "glibc": "2.41",
+    "python": "3.13.3",
+    "cpus": 6
+  },
+  "reference_source_hashes": {
+    "constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
+    "constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+    "experiment.py": "61d1d68e1730ead72dd0ee0733e20336dff66c25b7a626292a3304f27d08aa51",
+    "polish.py": "d6ac456a0fe4a5a41de2168f50ab714ad9a102fc74514edfb19ac9d17ed06b41",
+    "scheduler.py": "44807ce9fc75e2644c07c64f3f5918eb61bf9cefd1d10b4f83ec1b550e490b31",
+    "stage2.py": "62ad575f32e68ddbbcb68512f3df926a8e13600cd2c59edb77e51041545c8428",
+    "optimized.py": "24def1bcd6680f071551ea43ec5e6ce2a3de1d2a5243388b5b8996333278ebd0"
+  },
+  "integrated_source_hashes": {
+    "checkpoint.py": "7741c228ea49256a895b83588dcc5b331e0b676ef5386fe0ef98dea99b6a713b",
+    "graph_solver.py": "a62d885327d5cb94bf2f7917dd4e827204c70efea96c371ea78797437c5e8137",
+    "verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4",
+    "algorithms/__init__.py": "c1ce4af331e4611dc1637ae3f6a3d46cc30bc457a11b98048b3f5559719658c4",
+    "algorithms/common.py": "7009d0558aafe3fe814e5e7674050dcad7a8b67bcdd9619f1e316c844e24175a",
+    "algorithms/construct.py": "00ab73e409409a76cbcae19e2537771d46839ee25fbc43c52a0d39763f4c49c9",
+    "algorithms/graph.py": "0580d2523178a35ff95acb7127cc80dbcea90671f7fb7eaeb586b312503f9d73",
+    "algorithms/native/build.py": "2b1c447b3c1102c8d80032a26aec90745b0f296179def8e8286450b5b6a63e2e",
+    "algorithms/native/compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+    "algorithms/native/constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+    "algorithms/native/constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
+    "algorithms/rewrite.py": "bbe61b6423ce19bf49525450676a4307462b8cded2a300cf3adf48ca4fa5cade",
+    "algorithms/schedule.py": "9798c6df7915a30f8989d94ce55bbd697aed2f1ea64773797d46670d44f31dc1",
+    "algorithms/solver.py": "78ffc0c41ba5759ce809d786164472139aa0cf75baab68a204e46b5f6b900673"
+  },
+  "native_build": {
+    "command": "SANTA_CXX=/usr/bin/g++-14 python3 src/algorithms/native/build.py",
+    "manifest_schema": 2,
+    "compiler": {
+      "family": "gcc",
+      "path": "/usr/bin/aarch64-linux-gnu-g++-14",
+      "source": "SANTA_CXX",
+      "version": "aarch64-linux-gnu-g++-14 (Ubuntu 14.2.0-19ubuntu2) 14.2.0"
+    },
+    "flags": [
+      "-O3",
+      "-std=c++17"
+    ],
+    "compat_include": false,
+    "binaries": {
+      "constructor_mitm": "8379e5b354c7eba8300d189805bb04df20b23fc259fa91b39a1c99cfaac5f908",
+      "constructor_wide": "9682b6e6994e36e6e4267829a88895dde7d7650b0d88eabfc1b05c3f2e7b26b4"
+    },
+    "sources": {
+      "build.py": "2b1c447b3c1102c8d80032a26aec90745b0f296179def8e8286450b5b6a63e2e",
+      "compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+      "constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+      "constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3"
+    },
+    "reference_run_artifacts": [
+      "9682b6e6994e36e6e4267829a88895dde7d7650b0d88eabfc1b05c3f2e7b26b4  constructor_wide",
+      "8379e5b354c7eba8300d189805bb04df20b23fc259fa91b39a1c99cfaac5f908  constructor_mitm",
+      "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3  constructor_wide.cpp",
+      "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd  constructor_mitm.cpp"
+    ],
+    "note": "final build.py (metadata-junk filtering) rebuilds byte-identical GCC binaries; the run-time manifest additionally contained macOS AppleDouble entries that were filtered from the fingerprint afterwards without changing the binaries",
+    "runtime_binary_sha256": {
+      "constructor_wide": "9682b6e6994e36e6e4267829a88895dde7d7650b0d88eabfc1b05c3f2e7b26b4",
+      "constructor_mitm": "8379e5b354c7eba8300d189805bb04df20b23fc259fa91b39a1c99cfaac5f908"
+    }
+  },
+  "full_scale_reproduction": {
+    "implementation": "current GitHub functional V9 (Python pipeline + two C++ kernels)",
+    "command": "SANTA_CXX=/usr/bin/g++-14 python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 --checkpoint experiments/v9-gcc.sqlite --output experiments/v9-gcc.csv",
+    "jobs": 6,
+    "elapsed_seconds": 443.96,
+    "puzzles": 1000,
+    "validated": 1000,
+    "stage1_total": 182205,
+    "score": 175604,
+    "max_steps": 415,
+    "saved_vs_stage1": 6601,
+    "improved_vs_stage1": 394,
+    "unchanged_vs_stage1": 606,
+    "worse_vs_stage1": 0,
+    "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+    "frozen_submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "csv_bytes_equal_to_frozen": true,
+    "bit_width_buckets_match_frozen": true,
+    "checkpoint_sha256": "c5d7f159f7cc2b8a73208c90f3e15c1dcb5df007dc8892ea3e2c034a5f5b749c",
+    "checkpoint_integrity_check": "ok",
+    "checkpoint_results": 1000,
+    "stage2_metrics": {
+      "improved": 394,
+      "unchanged": 606,
+      "worse": 0
+    }
+  },
+  "same_toolchain_comparison": {
+    "reference_implementation": "frozen research package sources, rebuilt locally with /usr/bin/g++-14 -O3 -std=c++17 and run from scratch",
+    "integrated_implementation": "current functional V9 (this repository)",
+    "environment_identical": {
+      "puzzles": true,
+      "cpp_sources": true,
+      "compiler": true,
+      "flags": true,
+      "python": true,
+      "frozen_parameters": true,
+      "seeds": true
+    },
+    "puzzles_compared": 1000,
+    "program_differences": 0,
+    "program_difference_ids": [],
+    "metric_differences": {
+      "v9_stage1": {
+        "differ": 0,
+        "ids": []
+      },
+      "v9final": {
+        "differ": 0,
+        "ids": []
+      },
+      "nodes": {
+        "differ": 0,
+        "ids": []
+      },
+      "schedule_attempts": {
+        "differ": 0,
+        "ids": []
+      }
+    },
+    "route_metric_differences": {
+      "differ": 0,
+      "ids": []
+    },
+    "route_failures": {
+      "reference": 0,
+      "port": 0
+    },
+    "reference_submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "integrated_submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "reference_score": 175604,
+    "integrated_score": 175604,
+    "legality": {
+      "reference": {
+        "puzzles": 1000,
+        "validated": 1000,
+        "score": 175604,
+        "max_steps": 415,
+        "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+        "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428"
+      },
+      "integrated": {
+        "puzzles": 1000,
+        "validated": 1000,
+        "score": 175604,
+        "max_steps": 415,
+        "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+        "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428"
+      }
+    },
+    "reference_elapsed_seconds": 429.97,
+    "integrated_elapsed_seconds": 443.96,
+    "reference_csv_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "integrated_csv_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "frozen_csv_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "all_three_csvs_byte_identical": true
+  },
+  "scored_0775": {
+    "port_len": 181,
+    "reference_len": 181,
+    "frozen_len": 181,
+    "port_equals_reference": true,
+    "port_equals_frozen": true,
+    "reference_equals_frozen": true,
+    "port_stage1": 181,
+    "port_final": 181,
+    "port_nodes": 181,
+    "port_attempts": 0,
+    "reference_metrics": {
+      "base": 181,
+      "score": 181,
+      "nodes": 181,
+      "attempts": 0
+    }
+  },
+  "archive_verification": {
+    "v8": {
+      "path": "submissions/elf-calculator-independent-v8-score-194444.csv",
+      "puzzles": 1000,
+      "validated": 1000,
+      "score": 194444,
+      "max_steps": 535,
+      "sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+      "report_sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+      "consistent": true
+    },
+    "v9": {
+      "path": "submissions/elf-calculator-independent-v9-score-175604.csv",
+      "puzzles": 1000,
+      "validated": 1000,
+      "score": 175604,
+      "max_steps": 415,
+      "sha256": "05e7b630f9b9a26889a74e09dbc1317ece799e5d28d948ce28c02b99b0660cb8",
+      "report_sha256": "05e7b630f9b9a26889a74e09dbc1317ece799e5d28d948ce28c02b99b0660cb8",
+      "consistent": true
+    },
+    "merged": {
+      "path": "submissions/elf-calculator-merged-v8-v9-score-174884.csv",
+      "puzzles": 1000,
+      "validated": 1000,
+      "score": 174884,
+      "max_steps": 392,
+      "sha256": "fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a",
+      "report_sha256": "fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a",
+      "consistent": true
+    },
+    "mixed_regeneration": {
+      "tool": "src/merge_submissions.py",
+      "from_v8_strictly_shorter": 137,
+      "from_v9": 863,
+      "ties_to_v9": 30,
+      "formula_errors": 0,
+      "formula_error_ids": [],
+      "regenerated_sha256": "fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a",
+      "regenerated_bytes_equal_to_archive": true
+    }
+  },
+  "checkpoint_validation": {
+    "schema": 3,
+    "layout": "v9-functional",
+    "binding": "input SHA-256, all production Python, C++ sources, compat header, native/build.py, compiled binary SHA-256, compiler identity/flags, platform, Python version, frozen parameters",
+    "gcc_run_checkpoint": {
+      "path": "experiments/v9-gcc.sqlite (local, not committed)",
+      "sha256": "c5d7f159f7cc2b8a73208c90f3e15c1dcb5df007dc8892ea3e2c034a5f5b749c",
+      "integrity_check": "ok (Python sqlite3 PRAGMA integrity_check)",
+      "results": 1000
+    },
+    "tests": {
+      "stop_after_no_export": "covered by test_checkpoint.py",
+      "resume_after_partial_run": "covered by test_checkpoint.py and test_native_build.py",
+      "changed_compiler_rejected_on_resume": "test_native_build.CheckpointCompilerFingerprintTests",
+      "changed_input_source_binary_parameters_rejected": "test_checkpoint.py"
+    }
+  },
+  "toolchain_cache_fix": {
+    "problem": "ensure_built/_manifest_matches ignored an explicitly requested SANTA_CXX, so a cached Clang build could satisfy a later GCC request; _build_locked could also reuse the manifest compiler when a rebuild was triggered by other reasons.",
+    "fix": "SANTA_CXX is resolved (PATH/absolute/symlink) and has top priority; manifest matching compares resolved compiler path, version, family, flags, compat-header usage, source hashes and binary hashes; explicit failures raise; auto-detection remains the fallback only when SANTA_CXX is unset; manifest schema 2 records compiler source; construct binary cache is keyed by the manifest signature so rebuilds are noticed in long-lived processes. AppleDouble/._ metadata files are excluded from the source fingerprint.",
+    "tests": 15,
+    "test_file": "tests/test_native_build.py"
+  },
+  "test_results": {
+    "santa_python_local_macos": 120,
+    "santa_node_local_macos": 7,
+    "web_python_local_macos": 17,
+    "squares_python": 27,
+    "squares_node": 15,
+    "quantum_python": 13,
+    "linux_gcc_python_total": 120,
+    "linux_gcc_modules": {
+      "test_verify": 5,
+      "test_merge": 11,
+      "test_checkpoint": 11,
+      "test_solver": 27,
+      "test_native_build": 15,
+      "test_report": 44,
+      "test_acceptance_report": 7
+    },
+    "native_build": "ok on macOS Apple Clang 21 and Linux GCC 14.2.0",
+    "report_check": "ok (exit 0)",
+    "web_bundle_check": "ok (exit 0)",
+    "git_diff_check": "ok",
+    "browser": {
+      "browser": "Google Chrome 158.0.8127.88 (headless, real Chrome channel)",
+      "os": "macOS 27.0.1 arm64",
+      "mode": "file:// with all http(s) requests blocked; portal over local HTTP",
+      "full_matrix_previous_round": "simulator 23/23 and report/bundle/portal 26/26 (2026-11-26, equivalent markup)",
+      "final_rebuild_smoke": "report page loads offline with V9 label, 175,604, reference-toolchain note, 9 score bars and no page errors; web/simulators.html loads",
+      "not_rerun_this_round": "full Playwright matrices were attempted after the final rebuild but the headless Chrome session hung and was killed; only the smoke checks above were completed"
+    }
+  },
+  "ci_validation": {
+    "workflow": ".github/workflows/test.yml",
+    "latest_main_run": {
+      "commit": "8858a6a09e4ba37498f831e4350a8787d1e08c2c",
+      "url": "https://github.com/Leonardo-F/kaggle-lab/actions/runs/45673883392",
+      "conclusion": "success",
+      "status": "completed",
+      "duration": "1m10s",
+      "native_build_step": "success",
+      "all_steps": "success (checkout/setup/deps/packing/quantum/sample/JS/CSV/report/standalone/unified)"
+    },
+    "note": "verified via gh CLI on 2026-11-26; acceptance commits are local-only (not pushed) so CI for them has not run"
+  },
+  "historical_fingerprint_audit": {
+    "v8_json": {
+      "commit": "c9fdd61",
+      "files_checked": 4,
+      "matches": 4,
+      "files": [
+        "checkpoint.py",
+        "verify.py",
+        "algorithms/v8.py",
+        "algorithms/common.py"
+      ]
+    },
+    "v8_refactor_json": {
+      "commit": "0ec0ec0",
+      "files_checked": 10,
+      "matches": 10
+    }
+  },
+  "limitations": [
+    "最终验收提交（fix/santa-v9-final-acceptance）只做本地提交，未获推送授权，因此 GitHub Actions 尚未对本次提交运行；已验证的是当前 main（8858a6a）的 CI 运行结果。",
+    "GCC 参考复跑环境为 Ubuntu 25.04 + GCC 14.2.0 + Python 3.13.3（冻结记录 Python 3.13.5）；输出 CSV 仍与冻结记录逐字节一致。",
+    "浏览器验收只使用 Chrome 158 headless 自动化，未覆盖 Safari/Firefox、真实手机和人工逐项点击。",
+    "历史报告源码指纹抽查了 v8.json 4 个文件与 v8-refactor.json 10 个文件，未逐份全量复核历史 JSON。",
+    "V9 搜索算法本身没有全局最优性证明；nodes 是固定 DAG 下界。",
+    "本轮未开始 V10，也未引入未验证的探索算法。"
+  ],
+  "acceptance_status": "conditional_pass"
+}
