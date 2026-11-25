@@ -1,0 +1,10 @@
+flowchart TB
+ subgraph S1["构造与改写"]
+  direction LR
+  A[官方原题] --> B[同轮重算 V7] --> C[列表调度重编译] --> D[双运算子图重写] --> E[三运算子图重写]
+ end
+ subgraph S2["成组与寄存器"]
+  direction LR
+  F[等成本探索] --> G[严格成组重构] --> H[等成本成组重构] --> I[最终寄存器优化] --> J[独立回放]
+ end
+ E --> F

@@ -1,0 +1,34 @@
+flowchart LR
+    subgraph B["优化前 · 5 步"]
+        direction TB
+        B0["初值 3、7"]:::initial
+        B1["3 + 7 = 10"]:::shared
+        B2["10 × 10 = 100"]:::target
+        B3["100 + 10 = 110"]:::pruned
+        B4["110 − 7 = 103"]:::target
+        B5["110 − 3 = 107"]:::target
+        B0 --> B1 --> B2 --> B3
+        B1 --> B3
+        B3 --> B4
+        B3 --> B5
+        B0 --> B4
+        B0 --> B5
+    end
+    subgraph A["优化后 · 4 步"]
+        direction TB
+        A0["初值 3、7"]:::initial
+        A1["3 + 7 = 10"]:::shared
+        A2["10 × 10 = 100"]:::target
+        A4["100 + 3 = 103"]:::target
+        A5["100 + 7 = 107"]:::target
+        A0 --> A1 --> A2
+        A0 --> A4
+        A0 --> A5
+        A2 --> A4
+        A2 --> A5
+    end
+    B -->|"替换两处依赖"| A
+    classDef initial fill:#EDF0F4,stroke:#677486,color:#172434,stroke-width:1.5px
+    classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
+    classDef target fill:#E7F5EA,stroke:#29804C,color:#133C28,stroke-width:1.5px
+    classDef pruned fill:#FFF1DC,stroke:#AE6E21,color:#563319,stroke-width:1.5px

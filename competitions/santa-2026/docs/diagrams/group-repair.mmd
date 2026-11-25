@@ -1,0 +1,11 @@
+flowchart LR
+ F["冻结依赖 F"] --> C1["切断节点 v₁"]
+ F --> C2["切断节点 v₂"]
+ N["共享新值 b"] --> C1
+ N --> C2
+ C1 --> T1["目标 / 后续节点"]
+ C2 --> T2["目标 / 后续节点"]
+ classDef cut fill:#FFF3D6,stroke:#B7791F,color:#3D2A05,stroke-width:1.5px
+ classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
+ class C1,C2 cut
+ class N shared

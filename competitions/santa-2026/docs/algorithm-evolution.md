@@ -2,6 +2,8 @@
 
 **摘要**　每道题给定一组初值和一组目标值，要求用 48 个寄存器和尽量少的算术指令，让所有目标至少出现一次。求解分两层。先搜索可共享中间值的算术依赖图，再编译成满足寄存器限制的程序，用独立回放比较实际指令数。V1–V5 均从题目重新生成程序。在同一批 1,000 道题上，V1–V5 的总指令数由 **250,642** 降至 **216,404**，减少 **34,238 步（13.66%）**，五代输出均通过独立验证；后续 V6 为 **204,255**，V7 为 **198,388**，V8 Final 为 **194,444**。
 
+> 图表说明：本文图表以 `diagrams/` 下的 PNG 显示，Mermaid 源文件同名保存，便于修改后重新渲染。这样即使 Markdown 预览器不支持 Mermaid，图也能正常出现。
+
 ## 1. 赛题在问什么？
 
 想象桌上有 48 个格子，叫寄存器。题目先把几个正整数放进去，再给你一张目标清单。每一步从两个有值的格子读数，做一次加、减、乘或整除，把结果写回一个格子。**同一个中间值可以服务多个目标，某个目标一旦出现，就可以覆盖它所在的寄存器。**
@@ -29,25 +31,7 @@
 
 **图 1　共享值池如何覆盖三个目标**
 
-```mermaid
-flowchart TB
-    S3["3 · 初值"]:::initial
-    S7["7 · 初值"]:::initial
-    T10["第 1 步 · 3 + 7 = 10"]:::shared
-    T100["第 2 步 · 10 × 10 = 100"]:::target
-    T103["第 3 步 · 100 + 3 = 103"]:::target
-    T107["第 4 步 · 100 + 7 = 107"]:::target
-    S3 --> T10
-    S7 --> T10
-    T10 --> T100
-    S3 --> T103
-    T100 --> T103
-    T100 --> T107
-    S7 --> T107
-    classDef initial fill:#EDF0F4,stroke:#677486,color:#172434,stroke-width:1.5px
-    classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
-    classDef target fill:#E7F5EA,stroke:#29804C,color:#133C28,stroke-width:1.5px
-```
+![图 1　共享值池如何覆盖三个目标](diagrams/shared-value-pool.png)
 
 灰色表示初值，蓝色表示共享中间值，绿色表示目标。箭头从操作数指向结果。100 同时是目标和共享操作数，图中按目标着色。平方读取同一个值两次，因此图上只画一条依赖箭头。
 
@@ -153,42 +137,7 @@ V2 增加逆序构造和更宽的候选搜索。程序生成后，它再枚举�
 
 **图 2　同一组目标的依赖改写**
 
-```mermaid
-flowchart LR
-    subgraph B["优化前 · 5 步"]
-        direction TB
-        B0["初值 3、7"]:::initial
-        B1["3 + 7 = 10"]:::shared
-        B2["10 × 10 = 100"]:::target
-        B3["100 + 10 = 110"]:::pruned
-        B4["110 − 7 = 103"]:::target
-        B5["110 − 3 = 107"]:::target
-        B0 --> B1 --> B2 --> B3
-        B1 --> B3
-        B3 --> B4
-        B3 --> B5
-        B0 --> B4
-        B0 --> B5
-    end
-    subgraph A["优化后 · 4 步"]
-        direction TB
-        A0["初值 3、7"]:::initial
-        A1["3 + 7 = 10"]:::shared
-        A2["10 × 10 = 100"]:::target
-        A4["100 + 3 = 103"]:::target
-        A5["100 + 7 = 107"]:::target
-        A0 --> A1 --> A2
-        A0 --> A4
-        A0 --> A5
-        A2 --> A4
-        A2 --> A5
-    end
-    B -->|"替换两处依赖"| A
-    classDef initial fill:#EDF0F4,stroke:#677486,color:#172434,stroke-width:1.5px
-    classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
-    classDef target fill:#E7F5EA,stroke:#29804C,color:#133C28,stroke-width:1.5px
-    classDef pruned fill:#FFF1DC,stroke:#AE6E21,color:#563319,stroke-width:1.5px
-```
+![图 2　同一组目标的依赖改写](diagrams/v2-dependency-shortening.png)
 
 橙色标出改写后失去所有引用的 110。两侧都能用同一组初值合法回放，步数从 5 降到 4。V2 在六轮局部扫描中按有效依赖数比较替换，并尝试不同的求值顺序。全量记录中，宽搜索先把 **250,642** 降到 **239,693**，图压缩再降到 **236,449**。[V2 源码](../src/algorithms/v2.py) · [复跑报告](reports/v2.json)
 
@@ -255,12 +204,7 @@ r\equiv \sigma t\pmod b,\qquad q=\frac{t-\sigma r}{b}.
 
 **图 3　同一批 1,000 道题的全量指令数**
 
-```mermaid
-xychart-beta
-    x-axis ["V1", "V2", "V3", "V4", "V5"]
-    y-axis "总指令数" 210000 --> 255000
-    line [250642, 236449, 227799, 219462, 216404]
-```
+![图 3　同一批 1,000 道题的全量指令数](diagrams/version-scores.png)
 
 | 版本 | 全量指令数 | 比上一代少 | 变短 / 持平 / 变长题数 | 本次复跑耗时 | 独立验证 |
 | --- | ---: | ---: | ---: | ---: | --- |
@@ -280,30 +224,7 @@ xychart-beta
 
 **图 4　按序构造与全局联合选择**
 
-```mermaid
-flowchart LR
-    subgraph SEQ["已实现 · 按序构造后局部改写"]
-        direction TB
-        SA["先为目标 A 选依赖"]:::target
-        SB["再为目标 B 选依赖"]:::target
-        SC["最后为目标 C 选依赖"]:::target
-        SD["对已生成的图局部改写"]:::shared
-        SA --> SB --> SC --> SD
-    end
-    subgraph JOINT["研究方向 · 联合选择候选表达式"]
-        direction TB
-        JA["目标 A"]:::target
-        JB["目标 B"]:::target
-        JC["目标 C"]:::target
-        JD["共同选择共享依赖"]:::shared
-        JA -.-> JD
-        JB -.-> JD
-        JC -.-> JD
-    end
-    SEQ -->|"扩大共同搜索范围"| JOINT
-    classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
-    classDef target fill:#E7F5EA,stroke:#29804C,color:#133C28,stroke-width:1.5px
-```
+![图 4　按序构造与全局联合选择](diagrams/sequential-vs-joint.png)
 
 实线表示构造和改写的顺序，虚线表示三个目标共同作用于选值决策。图右是研究模型，下面的整数规划未用于表中的 V1–V5 成绩。
 
@@ -359,17 +280,9 @@ $$\min_{p_t} \left|\bigcup_{t\in T} D_{t,p_t}\right|.$$
 
 候选空间有限，该目标也不含寄存器重算开销，并非指令数的精确全局最优。算法通过坐标搜索和 300 轮模拟退火选路径，正向重建依赖图、尝试目标调度并按下一次使用位置分配寄存器；仅在完整回放合法且实际指令更少时接受。节点搜索默认 180 轮，`--no-extra` 可关闭额外构造器进行消融。
 
-```mermaid
-flowchart TD
- A[原始题目] --> B[现场生成 V5]
- A --> C[seed 4 升序构造]
- B --> D[动态无环替换]
- C --> E[多图融合]
- D --> E
- E --> F[依赖路径并集搜索]
- F --> G[寄存器调度与合法回放]
- G --> H[输出程序]
-```
+**图 5　V6 的候选生成、图融合与路径选择**
+
+![图 5　V6 的候选生成、图融合与路径选择](diagrams/v6-pipeline.png)
 
 交接包此前 100 题样本的阶段结果依次为 22,653、22,602、21,492、21,476、21,298 步；样本并非均匀随机，不能当成全量结果。此前全量实验记录的消融阶段为：同轮 V5 216,404、动态无环搜索 215,938、额外候选及融合 205,959、路径联合选择 **204,255**；799 题变短、201 持平、0 变长，路径联合选择额外改善 125 题。这些是交接包记录，不是 Kaggle 榜单成绩；当前仓库版本的复跑结果见 V6 报告。
 
@@ -377,16 +290,9 @@ flowchart TD
 
 V6 的搜索仍然从一条固定的升序构造链出发，最后由一张依赖图编译成指令。V7 保留同一次调用内重新生成的 V6 程序作为基线，再按题目特征增加最多三个构造候选，把所有当前轮候选放进同一个路径联合选择，做动态无环融合，最后在真实寄存器限制下重排指令。求解器只读官方题目 CSV，不读历史答案或检查点中的程序。
 
-```mermaid
-flowchart LR
- A[官方原题] --> B[同轮重算 V6]
- A --> C[特征驱动构造器组合]
- B --> D[多图路径联合选择]
- C --> D
- D --> E[动态无环融合]
- E --> F[寄存器感知调度]
- F --> G[实际步数择优与独立回放]
-```
+**图 6　V7 的自适应构造与寄存器联合调度**
+
+![图 6　V7 的自适应构造与寄存器联合调度](diagrams/v7-pipeline.png)
 
 ### 7.1 候选构造器如何按题目特征选择？
 
@@ -488,18 +394,9 @@ python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v7-
 
 V8 以同一次调用里重新生成的 V7 程序为起点，把“构造图”继续当作可改写对象：先用两运算、三运算表达式替换较长的子图，再用切断—修复的束搜索联合改写一组互不依赖的节点，最后按寄存器压力重排指令。V8 Final 是冻结后的正式管线，不包含开发期单独的模拟退火、交替重写和额外构造器实验。
 
-```mermaid
-flowchart LR
- A[官方原题] --> B[同轮重算 V7]
- B --> C[列表调度重编译]
- C --> D[双运算子图重写]
- D --> E[三运算子图重写]
- E --> F[等成本探索]
- F --> G[严格成组重构]
- G --> H[等成本成组重构]
- H --> I[最终寄存器优化]
- I --> J[独立回放]
-```
+**图 7　V8 Final 的冻结管线**
+
+![图 7　V8 Final 的冻结管线](diagrams/v8-pipeline.png)
 
 ### 8.1 列表调度重编译
 
@@ -538,19 +435,9 @@ v=o_1(a,b),\qquad b=o_2(c,d),
 \min_{\,e_v\in A_v}\ \left|F\cup C\cup\bigcup_{v\in C}D(e_v)\right|,
 ```
 
-```mermaid
-flowchart LR
- F["冻结依赖 F"] --> C1["切断节点 v₁"]
- F --> C2["切断节点 v₂"]
- N["共享新值 b"] --> C1
- N --> C2
- C1 --> T1["目标 / 后续节点"]
- C2 --> T2["目标 / 后续节点"]
- classDef cut fill:#FFF3D6,stroke:#B7791F,color:#3D2A05,stroke-width:1.5px
- classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
- class C1,C2 cut
- class N shared
-```
+**图 8　成组重构的切断、共享新值与修复**
+
+![图 8　成组重构的切断、共享新值与修复](diagrams/group-repair.png)
 
 黄色是被切断、允许改写的节点，蓝色是多个候选共享的新中间值；冻结部分保持原表达式。
 

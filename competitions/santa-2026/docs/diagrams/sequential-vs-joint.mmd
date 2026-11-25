@@ -1,0 +1,22 @@
+flowchart LR
+    subgraph SEQ["已实现 · 按序构造后局部改写"]
+        direction TB
+        SA["先为目标 A 选依赖"]:::target
+        SB["再为目标 B 选依赖"]:::target
+        SC["最后为目标 C 选依赖"]:::target
+        SD["对已生成的图局部改写"]:::shared
+        SA --> SB --> SC --> SD
+    end
+    subgraph JOINT["研究方向 · 联合选择候选表达式"]
+        direction TB
+        JA["目标 A"]:::target
+        JB["目标 B"]:::target
+        JC["目标 C"]:::target
+        JD["共同选择共享依赖"]:::shared
+        JA -.-> JD
+        JB -.-> JD
+        JC -.-> JD
+    end
+    SEQ -->|"扩大共同搜索范围"| JOINT
+    classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
+    classDef target fill:#E7F5EA,stroke:#29804C,color:#133C28,stroke-width:1.5px

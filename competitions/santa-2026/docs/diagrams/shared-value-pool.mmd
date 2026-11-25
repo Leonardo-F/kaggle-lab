@@ -1,0 +1,17 @@
+flowchart TB
+    S3["3 · 初值"]:::initial
+    S7["7 · 初值"]:::initial
+    T10["第 1 步 · 3 + 7 = 10"]:::shared
+    T100["第 2 步 · 10 × 10 = 100"]:::target
+    T103["第 3 步 · 100 + 3 = 103"]:::target
+    T107["第 4 步 · 100 + 7 = 107"]:::target
+    S3 --> T10
+    S7 --> T10
+    T10 --> T100
+    S3 --> T103
+    T100 --> T103
+    T100 --> T107
+    S7 --> T107
+    classDef initial fill:#EDF0F4,stroke:#677486,color:#172434,stroke-width:1.5px
+    classDef shared fill:#E9F2FF,stroke:#3375BE,color:#172434,stroke-width:1.5px
+    classDef target fill:#E7F5EA,stroke:#29804C,color:#133C28,stroke-width:1.5px
