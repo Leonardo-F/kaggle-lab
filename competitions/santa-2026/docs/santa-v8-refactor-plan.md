@@ -4,7 +4,7 @@
 >
 > 审计基线：`Leonardo-F/kaggle-lab` 的 main，commit `9337a3549bea09257cbf36ae1f8da2cbd452942b`。工作开始时重新核对实际 HEAD；如果 V9 或其他修改已进入 main，不得覆盖，须先记录差异并调整本计划。
 
-> **执行状态（2026-11-25）：** 本计划已执行。功能模块、CLI、检查点、测试、文档与模拟器均已更新；1,000 题独立复跑的逐题程序与八阶段比对可另存为可选的 `docs/reports/v8-refactor.json`；该文件缺失时 Web 构建使用原始 V8 记录，不视为遗漏或失败。历史 V1–V8 仍由提交 `9337a3549bea09257cbf36ae1f8da2cbd452942b` 保存，main 不再保留版本模块。
+> **执行状态（2026-11-25）：** 本计划已执行并通过验收。功能模块、CLI、检查点、测试、文档与模拟器均已更新；practice 200/200 与正式 1,000/1,000 均从官方题目独立求解，逐题程序、八阶段总分及逐题指标与冻结 V8 一致。完整记录见 [v8-refactor.json](reports/v8-refactor.json)。历史 V1–V8 仍由提交 `9337a3549bea09257cbf36ae1f8da2cbd452942b` 保存，main 不再保留版本模块。
 
 ## 0. 任务目标与边界
 
@@ -49,11 +49,11 @@ competitions/santa-2026/
 
 ## 2. P0：冻结基线
 
-- [ ] 在本地执行 `git status --short`、`git branch --show-current`、`git log -1 --oneline`，阅读根 `AGENTS.md`、赛题 README、现有 docs/reports 与相关测试。
-- [ ] 有未提交修改时保护它们，不用 `reset --hard`、`clean -fd` 或覆盖用户文件。创建本地分支 `refactor/santa-v8`（若已存在，先检查）。
-- [ ] 记录实际基线完整 commit、Python 实现/版本、平台、输入 SHA-256、参数、进程数、`PYTHONHASHSEED`（若设置）、历史输出及报告哈希。
-- [ ] 核查历史复现入口；本审计提交同时含 V1–V8，可直接用这个 SHA 的 Git worktree 执行旧版本。进一步核对各版本的真实发布提交；Tag 仅在获授权后创建，不伪造历史标签。
-- [ ] 在独立 worktree 运行当前 V8 的原有单测及固定小样本，记录逐题 program、阶段指标和耗时。若资源允许，原版全量复跑；若不执行，注明以既有归档为全量回归参考，不称为新鲜复跑。
+- [x] 在本地执行 `git status --short`、`git branch --show-current`、`git log -1 --oneline`，阅读根 `AGENTS.md`、赛题 README、现有 docs/reports 与相关测试。
+- [x] 有未提交修改时保护它们，不用 `reset --hard`、`clean -fd` 或覆盖用户文件。创建本地分支 `refactor/santa-v8`（若已存在，先检查）。
+- [x] 记录实际基线完整 commit、Python 实现/版本、平台、输入 SHA-256、参数、进程数、`PYTHONHASHSEED`（若设置）、历史输出及报告哈希。
+- [x] 核查历史复现入口；本审计提交同时含 V1–V8，可直接用这个 SHA 的 Git worktree 执行旧版本。进一步核对各版本的真实发布提交；Tag 仅在获授权后创建，不伪造历史标签。
+- [x] 在独立 worktree 运行当前 V8 的原有单测及固定小样本，记录逐题 program、阶段指标和耗时。若资源允许，原版全量复跑；若不执行，注明以既有归档为全量回归参考，不称为新鲜复跑。
 
 ```bash
 # 从仓库根目录，在无冲突且有本地可用 Git 对象时
@@ -88,8 +88,8 @@ from .solver import SOLVER_VERSION, solve
 
 **实际执行顺序必须按原 V8 冻结代码迁移，而不是按架构图重新排序。** 构造、全局融合及编译存在交叉调用，不能简单写成四次独立调用。保留 `portfolio=3`、`path_rounds=400`、`schedule=True`、`retain_v6_graphs=False` 的 V7 内部配置及 V8 后续所有默认配置。保留 V8 双运算两轮、三运算/等成本阶段原预算、严格成组 6 轮、等成本成组 8 轮、最终 32 个顺序候选的行为；以源码为准逐个核对。
 
-- [ ] 迁移后运行小样本对比，先确认逐题程序、阶段成本、错误回退一致，再删除旧实现文件。
-- [ ] 从根目录搜索 `algorithms.v*`、`--version`、`optimize_v*`、`DEFAULT_VERSION`、`CONFIGS`、`santa-review` 等引用，分类处理。历史文档中的版本名允许存在。
+- [x] 迁移后运行小样本对比，先确认逐题程序、阶段成本、错误回退一致，再删除旧实现文件。
+- [x] 从根目录搜索 `algorithms.v*`、`--version`、`optimize_v*`、`DEFAULT_VERSION`、`CONFIGS`、`santa-review` 等引用，分类处理。历史文档中的版本名允许存在。
 
 ## 4. P2：去重（只做经过证明的等价修改）
 
@@ -109,10 +109,10 @@ python src/graph_solver.py data/puzzles.csv --output experiments/v8-refactored.c
 
 `checkpoint.py`：统一 worker 调用同一个 `solve`，自动从算法模块目录收集源码文件指纹（排序、相对路径确定），同时绑定 CLI/检查点/验证器源码、输入、参数及 Python 版本；保留记录摘要、回放、原子导出、文件锁和拒绝篡改的机制。旧布局的检查点必须明确拒绝续算，提示使用原 SHA 或新建 SQLite；不要跨指纹复制结果来凑全量测试。完整输出的条件是所有输入题均已完成，而正式集的验收数量为 1,000。
 
-- [ ] 更新 `tests/test_solver.py`，测试默认入口、显式 v8 别名、旧版本错误信息、只读 puzzle CSV、3 步小题、阶段输出接口、禁止 `--reference`。
-- [ ] 更新 `tests/test_checkpoint.py`，覆盖中断/续跑、源码和配置不匹配、记录篡改、重复运行、并发锁、完整后才导出、V8 八阶段指标。
-- [ ] 保持 `verify.py` 独立；增加/保留除法、未初始化、寄存器编号、边界、目标曾经命中和指令限制测试。
-- [ ] 使用 practice 数据核验（实际行数以 CSV 为准），再使用正式数据独立求解；测试 jobs=1 与多进程，固定样本逐题比对。
+- [x] 更新 `tests/test_solver.py`，测试默认入口、显式 v8 别名、旧版本错误信息、只读 puzzle CSV、3 步小题、阶段输出接口、禁止 `--reference`。
+- [x] 更新 `tests/test_checkpoint.py`，覆盖中断/续跑、源码和配置不匹配、记录篡改、重复运行、并发锁、完整后才导出、V8 八阶段指标。
+- [x] 保持 `verify.py` 独立；增加/保留除法、未初始化、寄存器编号、边界、目标曾经命中和指令限制测试。
+- [x] 使用 practice 数据核验（实际行数以 CSV 为准），再使用正式数据独立求解；测试 jobs=1 与多进程，固定样本逐题比对。
 
 ```bash
 # 在赛题目录，命令以实际可用数据位置为准
@@ -130,11 +130,11 @@ python src/verify.py data/puzzles.csv experiments/v8-refactored.csv
 
 ## 6. P4：文档和交互模拟器
 
-- [ ] 将随附的 `algorithm-evolution.md` 放入 `competitions/santa-2026/docs/`；保留原 `diagrams/`、`reports/` 目录。该稿清晰标记目标架构未验证，待重构完成后按实际实现更新状态、函数名、测试记录和命令。
-- [ ] README 默认运行命令、Git worktree 复现、checkpoint 指南同步；保留历史提交 CSV 和 `submissions/latest.json`（等价重构不需要替换当前最佳结果）。
-- [ ] 根 `AGENTS.md` 增加：main 仅保留当前求解器，历史代码使用 Git；算法变更必须独立求解与验证；历史结果和证据不得随源码删除。
-- [ ] 检查 `src/simulator.html`、`Santa-2026-Interactive-Report.html`：旧版 CSV 导入和逐步回放保持，清楚标注内置 JS 自定义求解器不是 Python V8；更新实际源码链接与使用说明。保留现有离线交互能力。
-- [ ] 根据根规则更新 `web/build/santa-review.json`，阅读 `web/build/README.md` 后运行已有生成脚本，不只手工编辑产物。
+- [x] 将随附的 `algorithm-evolution.md` 放入 `competitions/santa-2026/docs/`；保留原 `diagrams/`、`reports/` 目录。该稿清晰标记目标架构未验证，待重构完成后按实际实现更新状态、函数名、测试记录和命令。
+- [x] README 默认运行命令、Git worktree 复现、checkpoint 指南同步；保留历史提交 CSV 和 `submissions/latest.json`（等价重构不需要替换当前最佳结果）。
+- [x] 根 `AGENTS.md` 增加：main 仅保留当前求解器，历史代码使用 Git；算法变更必须独立求解与验证；历史结果和证据不得随源码删除。
+- [x] 检查 `src/simulator.html`、`Santa-2026-Interactive-Report.html`：旧版 CSV 导入和逐步回放保持，清楚标注内置 JS 自定义求解器不是 Python V8；更新实际源码链接与使用说明。保留现有离线交互能力。
+- [x] 根据根规则更新 `web/build/santa-review.json`，阅读 `web/build/README.md` 后运行已有生成脚本，不只手工编辑产物。
 
 ```bash
 # 仓库根目录

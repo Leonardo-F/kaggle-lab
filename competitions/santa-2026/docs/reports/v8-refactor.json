@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "title": "Santa 2026 V8 Final 等价重构验收",
+  "status": "accepted",
+  "baseline": {
+    "commit": "9337a3549bea09257cbf36ae1f8da2cbd452942b",
+    "branch": "main",
+    "python": "3.13.2",
+    "implementation": "CPython",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+    "archived_submission": "submissions/elf-calculator-independent-v8-score-194444.csv",
+    "archived_submission_sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+    "archived_score": 194444,
+    "archived_max_steps": 535,
+    "archived_stage_totals": {
+      "v7": 198388,
+      "list_schedule": 198374,
+      "v8": 195705,
+      "v81": 195090,
+      "v82": 194881,
+      "v8group_strict": 194819,
+      "v8group_neutral": 194797,
+      "v8final": 194444
+    },
+    "PYTHONHASHSEED": null,
+    "note": "未设置 PYTHONHASHSEED；确定性来自固定 seed、整数排序与逐题独立随机数实例。"
+  },
+  "refactor": {
+    "branch": "refactor/santa-v8",
+    "commit": "0ec0ec0",
+    "report_workflow_commits": [
+      "9b4b71a",
+      "40122d4"
+    ],
+    "solver_version": "v8",
+    "module_count_before": 14,
+    "module_count_after": 7,
+    "modules": [
+      "common.py",
+      "construct.py",
+      "graph.py",
+      "rewrite.py",
+      "schedule.py",
+      "solver.py",
+      "__init__.py"
+    ],
+    "removed_version_modules": [
+      "v1.py",
+      "v2.py",
+      "v3.py",
+      "v4.py",
+      "v5.py",
+      "v6.py",
+      "v7.py",
+      "v8.py",
+      "v8_group.py",
+      "v8_register.py",
+      "v8_rewrite.py",
+      "v8_three.py"
+    ],
+    "code_lines_before": 2126,
+    "code_lines_after": 2525,
+    "deduplication": [
+      "共享值 DAG 编译器由 4 份内联副本（V1/V3/V4/V5）合并为 common.compile_dag",
+      "V4/V5 两个近似相同的自适应构造器合并为 construct.adaptive_quotient；关闭乘积池/模余数开关时逐候选等价",
+      "V1/V2 不在 V8 调用链上的重复实现删除；历史实现保留在固定提交",
+      "阶段编排提升到 solver.py，消除版本模块之间的转发依赖"
+    ]
+  },
+  "commands": {
+    "refactored_full": "python3 src/graph_solver.py data/puzzles.csv --output experiments/v8-refactored.csv --checkpoint experiments/v8-refactored.sqlite --jobs 6",
+    "refactored_verify": "python3 src/verify.py data/puzzles.csv experiments/v8-refactored.csv",
+    "baseline_full": "python3 src/graph_solver.py <abs>/data/puzzles.csv --version v8 --output /tmp/v8-baseline-full/old.csv --checkpoint /tmp/v8-baseline-full/old.sqlite --jobs 4",
+    "baseline_worktree": "git worktree add --detach /tmp/kaggle-lab-santa-baseline 9337a3549bea09257cbf36ae1f8da2cbd452942b"
+  },
+  "refactored_run": {
+    "puzzles": 1000,
+    "validated": 1000,
+    "score": 194444,
+    "max_steps": 535,
+    "improved": 775,
+    "unchanged": 225,
+    "worse": 0,
+    "jobs": 6,
+    "elapsed_seconds": 2421.59,
+    "note": "与 4 进程冻结基线复跑并发执行，耗时不是等资源 benchmark。",
+    "submission_sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+    "stage_totals": {
+      "v7": 198388,
+      "list_schedule": 198374,
+      "v8": 195705,
+      "v81": 195090,
+      "v82": 194881,
+      "v8group_strict": 194819,
+      "v8group_neutral": 194797,
+      "v8final": 194444
+    },
+    "checkpoint": {
+      "integrity_check": "ok",
+      "results": 1000,
+      "fingerprint_schema": 2,
+      "layout": "functional"
+    }
+  },
+  "baseline_run": {
+    "puzzles": 1000,
+    "validated": 1000,
+    "score": 194444,
+    "max_steps": 535,
+    "jobs": 4,
+    "elapsed_seconds": 3224.5,
+    "submission_sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+    "stage_totals": {
+      "v7": 198388,
+      "list_schedule": 198374,
+      "v8": 195705,
+      "v81": 195090,
+      "v82": 194881,
+      "v8group_strict": 194819,
+      "v8group_neutral": 194797,
+      "v8final": 194444
+    },
+    "checkpoint": {
+      "integrity_check": "ok",
+      "results": 1000,
+      "fingerprint_schema": 1
+    }
+  },
+  "equivalence": {
+    "csv_byte_identical_to_archived": true,
+    "csv_byte_identical_to_baseline_run": true,
+    "per_puzzle_programs_identical_to_archived": true,
+    "per_puzzle_programs_identical_to_baseline_run": true,
+    "eight_stage_totals_identical_to_archived": true,
+    "eight_stage_totals_identical_to_baseline_run": true,
+    "per_puzzle_stage_metrics_identical_to_baseline_run": true,
+    "per_puzzle_metric_diff_count": 0,
+    "comparison_note": "逐题比较在两次求解全部完成后进行；归档 CSV 和基线结果均未作为求解输入。"
+  },
+  "tests": {
+    "santa_python": {
+      "command": "python3 -m unittest discover -s competitions/santa-2026/tests -p 'test_*.py' -v",
+      "tests": 45,
+      "result": "ok",
+      "duration_seconds": 5.32
+    },
+    "santa_node": {
+      "command": "node --test competitions/santa-2026/tests/test_replay.cjs",
+      "tests": 7,
+      "result": "ok",
+      "duration_ms": 79
+    },
+    "web": {
+      "command": "python3 -m unittest discover -s web/tests -p 'test_*.py' -v",
+      "tests": 15,
+      "result": "ok"
+    },
+    "independent_verify": {
+      "puzzles": 1000,
+      "validated": 1000,
+      "score": 194444,
+      "result": "ok"
+    },
+    "report_check": {
+      "command": "python3 competitions/santa-2026/docs/build_report.py --check",
+      "result": "up to date"
+    },
+    "bundle_check": {
+      "command": "python3 web/build/build.py --check",
+      "result": "ok"
+    },
+    "full_equivalence": {
+      "programs_identical": 1000,
+      "stage_totals_identical": true,
+      "per_puzzle_metrics_identical": true
+    },
+    "passed": 67,
+    "failed": 0
+  },
+  "sources": {
+    "refactor_commit_solver_sources": {
+      "graph_solver.py": "4b2a00db379ecec8b9a7c3c93f8c6330eda83aca7aa65f749551c91465884e4f",
+      "checkpoint.py": "07fac04d2f3124f4a031e0753e91ef42f7983a288ed49e8aaa0a550e50432779",
+      "verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4",
+      "algorithms/__init__.py": "c1ce4af331e4611dc1637ae3f6a3d46cc30bc457a11b98048b3f5559719658c4",
+      "algorithms/common.py": "ec9ef4acc4441769273df811dc462f09464aca2ad330dd996e2e1c4d98dfe4a6",
+      "algorithms/construct.py": "f6d06dc7fcc03501353775eb6c8255e075cfc8d34840ed4e1d692f31f63e5450",
+      "algorithms/graph.py": "b6b236cb79c27b3e5ed39c6e94074a81b128d1c21eaf3e689c4d84e3393936cb",
+      "algorithms/rewrite.py": "ada119e9353d5f310870680d31933657c4d551b5863bd71980cb2688b05457f2",
+      "algorithms/schedule.py": "3d4798c78688aa2ac6b3c7534bd841ed4d3588f44b95c048d3e4c46c83aad7be",
+      "algorithms/solver.py": "97a4c4cdbd9211534e150830c481d0bbed373b8676986d8bedd61cbc8f0a73a9"
+    }
+  },
+  "limitations": [
+    "等价性由 1,000 题全量逐题程序、八阶段总分与逐题指标对照证明，不是形式化证明。",
+    "全量耗时在两次并发运行时测得，不能作为等资源性能 benchmark。",
+    "未向 Kaggle 上传或核对排行榜；所有分数均为本地独立回放结果。",
+    "未手工在浏览器中逐项点击交互；由 Node 回放测试、报告内容测试与构建/嵌入一致性检查覆盖。",
+    "历史 V1–V7 未在本次会话全量复跑；V8 冻结基线已全量复跑并与归档逐字节一致。"
+  ],
+  "pushed": false,
+  "practice_run": {
+    "puzzles": 200,
+    "validated": 200,
+    "score": 40207,
+    "max_steps": 557,
+    "jobs": 8,
+    "elapsed_seconds": 373.0,
+    "submission_sha256": "9e1542b34f77957d017c6f824a5f1640027d56b2824660ac34862a7444c0dcb2",
+    "puzzles_sha256": "a87e4e0ad263f31af1a9e51459117212b03404339c5940be3aa6afd1596ff6d9",
+    "command": "python3 src/graph_solver.py data/practice_puzzles.csv --output experiments/practice-refactored.csv --jobs 8"
+  },
+  "kind": "santa-v8-refactor",
+  "baseline_commit": "9337a3549bea09257cbf36ae1f8da2cbd452942b",
+  "refactor_commit": "0ec0ec0",
+  "puzzles": 1000,
+  "score": 194444,
+  "validated": 1000,
+  "submission_sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+  "per_puzzle_programs_match": true,
+  "stage_metrics_match": true,
+  "score_matches_archived_v8": true,
+  "unverified": []
+}

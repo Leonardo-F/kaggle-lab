@@ -38,6 +38,8 @@ python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v8-
 
 V8 Final 本地全量 **194,444 步**，1,000 题全部通过独立回放：775 题较 V7 改善、225 题持平、0 题退化。V7 为 **198,388 步**（较同轮 V6 改善 717 题），V6 为 204,255 步，V5 为 216,404 步。以上都是本地验证的指令总数，不是 Kaggle 榜单成绩。V7、V8 的完整 CSV 见 [submissions/README.md](submissions/README.md)，另有[成绩索引](submissions/latest.json)、[复跑报告](docs/reports/)和[算法演进](docs/algorithm-evolution.md)。
 
+2026-11-25 的功能化等价重构再次从官方题目独立全量求解，得到同样的 **194,444 步**、1,000/1,000 合法、八阶段总分与归档 V8 一致，输出 CSV 逐字节相同。逐题程序、阶段指标、输入哈希、测试和耗时的记录见[重构报告](docs/reports/v8-refactor.json)。
+
 耗时较长的全量运行可加 SQLite 检查点；中断后用同一命令加 `--resume` 继续，未满 1,000 题不会导出 CSV：
 
 ```bash
