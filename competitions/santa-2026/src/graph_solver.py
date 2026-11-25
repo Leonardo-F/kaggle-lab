@@ -11,8 +11,10 @@ from verify import verify
 
 
 def solve_job(job):
-    version, row = job
+    version, row, rounds, extra = job
     solver = import_module(f"algorithms.{version}")
+    if version == "v6":
+        return solver.optimize_v6((row, rounds, extra))[1]
     if version == "v5":
         return solver.optimize_v5((row, True, True))[1]
     if version == "v4":
@@ -21,16 +23,20 @@ def solve_job(job):
 
 
 def main():
-    versions = sorted(path.stem for path in
-                      Path(__file__).with_name("algorithms").glob("v[1-5].py"))
+    versions = sorted((p.stem for p in Path(__file__).with_name("algorithms").glob("v[0-9]*.py")
+                       if p.stem[1:].isdigit()), key=lambda v: int(v[1:]))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("puzzles", type=Path)
     parser.add_argument("--version", choices=versions, default=versions[-1])
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--rounds", type=int, default=180, help="V6 node search rounds")
+    parser.add_argument("--no-extra", action="store_true", help="V6: disable extra constructor")
     args = parser.parse_args()
     if args.jobs < 1:
         parser.error("--jobs must be positive")
+    if args.rounds < 0:
+        parser.error("--rounds must be nonnegative")
     if args.output.exists():
         parser.error(f"output already exists: {args.output}")
 
@@ -44,7 +50,7 @@ def main():
         parser.error("expected nonempty input with unique puzzle IDs")
 
     start = time.monotonic()
-    jobs = ((args.version, row) for row in rows)
+    jobs = ((args.version, row, args.rounds, not args.no_extra) for row in rows)
     score = 0
     with ProcessPoolExecutor(max_workers=args.jobs) as executor:
         programs = []

@@ -4,7 +4,7 @@
 
 ## 互动算法报告
 
-下载 [Santa-2026-Interactive-Report.html](Santa-2026-Interactive-Report.html) 后用浏览器离线打开。报告包含寄存器逐步演示、V1–V5 成绩对比和内嵌求解模拟器。
+下载 [Santa-2026-Interactive-Report.html](Santa-2026-Interactive-Report.html) 后用浏览器离线打开。报告展示 V1–V5 的历史成绩与寄存器逐步演示，其内嵌模拟器可回放 V1–V6。最新 V6 分析见算法演进文档。
 
 ## 离线模拟器
 
@@ -12,14 +12,14 @@
 
 ## 独立求解
 
-使用 Python 3.11+。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。在赛题目录运行以下命令。统一入口默认运行 V5，可用 `--version` 选择任一已集成版本。
+使用 Python 3.11+。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。在赛题目录运行以下命令。统一入口默认运行 V6，可用 `--version` 选择任一已集成版本。
 
 ```bash
-python src/graph_solver.py data/puzzles.csv --version v5 --output submissions/v5-score-216404.csv --jobs 4
-python src/verify.py data/puzzles.csv submissions/v5-score-216404.csv
+python src/graph_solver.py data/puzzles.csv --version v6 --output submissions/v6.csv --jobs 4
+python src/verify.py data/puzzles.csv submissions/v6.csv
 ```
 
-V5 本地全量 **216,404 步**，1,000 题全部通过独立回放。官方题目和独立求解的完整 CSV 保存在本地，仓库提供[成绩索引](submissions/latest.json)、[复跑报告](docs/reports/)和[算法演进](docs/algorithm-evolution.md)。
+V6 本地全量 **204,255 步**，1,000 题全部通过独立回放，与交接结果逐字节一致；这是本地分数，不是 Kaggle 榜单成绩。V5 为 216,404 步。官方题目和独立求解的完整 CSV 保存在本地，仓库提供[成绩索引](submissions/latest.json)、[复跑报告](docs/reports/)和[算法演进](docs/algorithm-evolution.md)。
 
 在离线模拟器的 **Python 版本回放** 区导入官方题目 CSV，再将实际输出放入对应版本的槽位。选同一题号即可比较合法性和指令数，切换版本查看寄存器、命中目标或复制 JSON 指令。自定义题由页面内置的 JavaScript 求解器处理。
 

@@ -1,0 +1,47 @@
+{
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 204255,
+  "max_steps": 587,
+  "submission_sha256": "7c16ca7b564a737db53d9c167c912292fe6c466880b01ec214f5fc067fd460c4",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "version": "v6",
+  "jobs": 4,
+  "elapsed_seconds": 1015.1,
+  "python": "3.12.14",
+  "command": "python src/graph_solver.py data/puzzles.csv --version v6 --output submissions/v6.csv --jobs 4 --rounds 180",
+  "parameters": {
+    "node_rounds": 180,
+    "path_rounds": 300,
+    "extra_seed": 4,
+    "extra_order": "ascending"
+  },
+  "source_hashes": {
+    "graph_solver.py": "37fcd185849328f8dd3f221c80f9ac057f0b7da91ada51fe8c143d71322a2db9",
+    "verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
+    "algorithms/__init__.py": "ffc13e8ebba9d9402e0ea886e31ef545713478e1717b685a3fdf1f85d596a4fc",
+    "algorithms/common.py": "736fab8908b641d1f0373dbc18ba8d186034892a38fe454628b048860854b6e6",
+    "algorithms/v1.py": "9443aa952395ae0936b0766b8c1549f1d36c86ca48feb3d39a1d10061ca5346d",
+    "algorithms/v2.py": "a7cda59843e8c526f2c208708b059c784524e39f4ed4c3e60fb9f01eeaba75ee",
+    "algorithms/v3.py": "6ff103609476ffd6315f5afaef76041402d2e3d5f01745f754bfa4a103f8900d",
+    "algorithms/v4.py": "6a2d417b9cb87b2a6d58655404da170eb2e634d9b9d0e41a3aeaaf1e130db203",
+    "algorithms/v5.py": "b7b83d47c95ed8ad320171676a7532c4e732437ecc5f64251044ec50b4625145",
+    "algorithms/v6.py": "70a202f6377cd252737826f8d050d22e2020a522a3bd44da462e61ff68084940"
+  },
+  "matches_handoff_bytes": true,
+  "per_puzzle_lengths_match": true,
+  "handoff_ablation": {
+    "v5": 216404,
+    "dynamic_graph": 215938,
+    "extra_and_fusion": 205959,
+    "v6": 204255,
+    "shorter": 799,
+    "unchanged": 201,
+    "longer": 0,
+    "path_improved": 125,
+    "note": "Recorded in handoff; not separately re-executed during this integration."
+  },
+  "note": "After the full run, only the negative-rounds error message and trailing whitespace were adjusted; search behavior is unchanged.",
+  "run_graph_solver_sha256": "7e1f704ad58211b3172c0c354556bfbd85bee18a6ed6628d5478ab5ad72d739d",
+  "run_v6_sha256": "1f9b75592cc418731e5a6a9affe39792a5a5a4fedd0b15d97f7bae0cf1577343"
+}

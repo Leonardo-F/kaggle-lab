@@ -32,7 +32,7 @@ def review_independent_replay(review):
     algorithms = sorted((santa / "algorithms").glob("*.py"))
     files = [santa / "graph_solver.py", santa / "verify.py", *algorithms]
     hashes = {path.relative_to(santa).as_posix(): digest(path) for path in files}
-    versions = [path.stem for path in algorithms if re.fullmatch(r"v[1-5]", path.stem)]
+    versions = sorted((path.stem for path in algorithms if re.fullmatch(r"v[0-9]+", path.stem)), key=lambda v: int(v[1:]))
     simulator = SANTA.read_text(encoding="utf-8")
     mapping = re.search(r'id="replay-files" data-versions="([^"]+)"', simulator)
     if hashes != review["source_sha256"] or versions != review["versions"]:

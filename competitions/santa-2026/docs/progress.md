@@ -62,3 +62,7 @@
 当前独立算法的复现命令见[算法演进](algorithm-evolution.md)。
 
 [官方题面与评分](https://www.kaggle.com/competitions/santa-2026/overview) · [数据与规则](https://www.kaggle.com/competitions/santa-2026/data)
+
+## 2026-11-25 · V6 完整复跑
+
+仓库版 V6 以原始题目为唯一输入，4 进程、180 轮节点搜索和 300 轮路径搜索，耗时 1015.1 秒。1,000 / 1,000 题合法，总计 **204,255 步**、最长 587 步；每题长度和输出 SHA-256 均与交接包一致。交接包的阶段消融与样本统计详见[算法演进](algorithm-evolution.md)，本次复跑证据见 [V6 报告](reports/v6.json)。结果为本地验证，未提交 Kaggle。

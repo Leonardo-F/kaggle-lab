@@ -19,7 +19,7 @@ class SolverTest(unittest.TestCase):
                 'test,[3],"[9,27,81]",100,48\n'
             )
             output = root / "answer.csv"
-            versions = sorted(p.stem for p in (SRC / "algorithms").glob("v[1-5].py"))
+            versions = [f"v{i}" for i in range(1, 7)]
             for version in [*versions, None]:
                 with self.subTest(version=version):
                     args = ["--version", version] if version else []
@@ -29,6 +29,7 @@ class SolverTest(unittest.TestCase):
                         cwd=root, capture_output=True, text=True,
                     )
                     self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn('"version": "' + (version or "v6") + '"', result.stdout)
                     with output.open(newline="") as stream:
                         program = json.loads(next(csv.DictReader(stream))["program"])
                     self.assertEqual(len(program), 3)
