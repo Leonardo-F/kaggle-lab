@@ -43,6 +43,8 @@ python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v9-
 
 V9 本地全量 **175,604 步**，1,000 题全部通过独立回放：Stage 1 为 182,205 步，Stage 2 调度再省 6,601 步（394 题改善、606 持平、0 退化）；较 V8 Final 的 194,444 步改善 833 题、持平 30 题、退化 137 题，共省 18,840 步（9.69%）。最长程序 415 步。V8 为 194,444 步，V7 为 198,388 步。以上都是本地验证的指令总数，不是 Kaggle 榜单成绩。完整 CSV 见 [submissions/README.md](submissions/README.md)，另有[成绩索引](submissions/latest.json)、[复跑报告](docs/reports/)和[算法演进](docs/algorithm-evolution.md)。
 
+**参考工具链复现（2026-11-26）：** 在 Ubuntu 25.04 + GCC 14.2.0 + Python 3.13.3（Linux aarch64、6 进程）上从官方 1,000 题重新独立求解，得到同样的 **175,604 步、最长 415 步、1,000/1,000 合法**，输出 CSV 与冻结研究包 `submission_v9_stage2.csv` **逐字节一致**（SHA-256 `5ab0b72c…`）。同一工具链下，冻结研究源码与当前功能化移植实现各自从零求解 1,000 题，逐题程序、两阶段分数、DAG 节点数、调度尝试数与四条路线指标 **1,000/1,000 一致（0 差异）**；macOS Apple Clang 与 Linux GCC 之间唯一的 `scored_0775` 等长平局差异在 GCC 下完全消失。完整证据见 [v9-integration.json](docs/reports/v9-integration.json)。
+
 本次 V9 从官方题目用全新 SQLite 检查点独立全量复跑：1,000/1,000 合法、175,604 步、最长 415 步；逐题程序与冻结研究记录 999/1000 相同，唯一差异题 `scored_0775` 等长（均 181 步）但寄存器选择不同。用冻结研究源码在本机重新编译运行会得到与移植版相同的程序，因此该差异归因于本机 Apple Clang 21 工具链与冻结记录 Linux GCC 在等分候选平局时的顺序差异，不是移植逻辑差异；两阶段总分、逐题分数/节点/调度尝试数和选择桶全部一致。输出 CSV SHA-256 为 `05e7b630…`，与冻结交接包的 `5ab0b72c…` 不同，未声称逐字节复现。详见 [v9.json](docs/reports/v9.json) 和 [v9-stage2-ablation.json](docs/reports/v9-stage2-ablation.json)。
 
 V8+V9 混合提交（逐题取两份独立结果中较短程序，平局取 V9）为 **174,884 步**、最长 392 步：137 题取 V8、863 题取 V9（含 30 道平局），比独立 V9 再省 720 步。它由独立于求解器的后处理工具生成，不是算法版本，也不进入正式版本曲线：

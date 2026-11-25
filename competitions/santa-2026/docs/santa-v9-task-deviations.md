@@ -2,6 +2,8 @@
 
 > 本文件供推送前的独立审查（如交给 GPT/代码评审）使用。它只记录**偏差、调整原因、影响与证据**，完整交付总结见对话回复和 `competitions/santa-2026/docs/progress.md`。审查时请优先核对第 3 节的 D1–D14，以及第 4 节的未验证清单。
 
+> **状态（2026-11-26 更新）：** 本文件 §0–§7 是 **V9 推送前的审查快照**，内容按当时事实保留不改；V9 已随后合入远程 `main`（`8858a6a`），并完成 Linux + GCC 参考工具链的最终验收，结果见文末 **§8 合入后独立审查与最终验收**。§8 中的状态表取代 §0–§7 中"未推送/未验证"的旧状态，但历史偏差本身不追溯改写。
+
 ## 0. 审查上下文
 
 | 项目 | 值 |
@@ -225,3 +227,163 @@ python3 src/verify.py data/puzzles.csv experiments/gcc-v9.csv
 ---
 
 **D10 补充说明：** 同工具链逐题对照已覆盖 11 题代表性样本 + 差异题 `scored_0775` + 全量对照中的 368/1000 题，均为 0 处不一致；受本次时间窗口限制未跑完 1,000 题。"同工具链全量一致"未完整证明，但移植版与冻结记录的 999/1000 逐题一致、且唯一差异题可由同工具链参考实现复现移植版程序，足以支持"差异来自工具链而非移植逻辑"的结论。
+
+---
+
+# 8. 合入后独立审查与最终验收（2026-11-26）
+
+本节是 V9 合入远程 `main` 后的收尾验收记录，按"实际执行结果"填写；不修改 §0–§7 的历史快照。
+
+## 8.1 远程与本地状态
+
+| 项目 | 值 |
+|---|---|
+| 远程 `main`（合入后） | `8858a6a09e4ba37498f831e4350a8787d1e08c2c`（merge `feat/santa-v9`） |
+| V9 合入内容 | `c404706`、`d3f4cae`、`96ac38e`、`584652b`、`b0f63bd`、`105cc83` 六个提交 |
+| GitHub Actions（main 合并提交） | [run 45673883392](https://github.com/Leonardo-F/kaggle-lab/actions/runs/45673883392)，**completed / success**，含 `Build Santa native C++17 constructors` 步骤，全部 16 个步骤 success（使用 `gh run view --json jobs` 核实） |
+| 本轮验收分支 | `fix/santa-v9-final-acceptance`（从 `8858a6a` 创建，本地提交，未推送） |
+
+## 8.2 D1–D14 当前状态
+
+| 偏差 | 原状态 | 最终状态 | 依据 |
+|---|---|---|---|
+| D1 本机无 GCC，用 Apple Clang 构建 | 未解决 | **关闭** | Linux + GCC 14.2.0 参考工具链全量复现，输出与冻结 CSV 逐字节一致（§8.3） |
+| D2 1/1000 等长程序平局差异 | 已披露 | **关闭** | GCC 环境下 port、参考实现、冻结记录三方 `scored_0775` 程序完全相同；三份 CSV SHA 均为 `5ab0b72c…` |
+| D3 中间提交非独立可发布 | 可接受 | 保持可接受（未改历史） | 最终 `main` 与验收分支树已验证 |
+| D4 测试夹具用 V10 模拟未来版本 | 可接受 | 保持 | — |
+| D5 正式报告平铺 schema 1 | 可接受 | 保持 | 未迁移；验收报告独立为 `v9-integration.json` |
+| D6 未用独立 worktree | 可接受 | 保持 | — |
+| D7 CI 未远端执行 | 未解决 | **关闭（针对已合入 main）** | 真实 Actions run 成功；本轮本地验收提交因未推送仍未跑 CI（见 §8.9） |
+| D8 报告 README 扩展 | 可接受 | 保持，补充 v9-integration 条目 | `docs/reports/README.md` |
+| D9 混合归档用本次 V9 重建 | 可接受 | 保持，并完成逐题公式校验 | §8.6 |
+| D10 同工具链全量等价性未完成 | 部分完成（368/1000） | **关闭** | Linux GCC 同环境双实现 1,000/1,000 全量对照，0 差异（§8.4） |
+| D11 浏览器为 Chrome headless 自动化 | 可接受 | 保持（本轮复验报告/模拟器） | §8.8 |
+| D12 version-scores.png 未重绘 | 未解决 | **关闭** | 已用 mermaid.ink 由更新后的 `version-scores.mmd` 重新渲染 V1–V9 PNG，正文说明同步更新 |
+| D13 历史指纹未逐文件复核 | 未完成 | **部分完成** | 抽查 `v8.json` 4 个文件、`v8-refactor.json` 10 个文件，全部与会话记录提交一致（§8.7） |
+| D14 练习集 6 进程 | 可接受 | 保持 | — |
+
+## 8.3 P0-2：Linux + GCC 参考工具链全量复现（实际结果）
+
+环境（VM 内实测）：Ubuntu 25.04、Linux 6.14.0-37-generic aarch64（Apple 虚拟化，6 vCPU）、
+`g++-14 (Ubuntu 14.2.0-19ubuntu2) 14.2.0`、glibc 2.41、`libstdc++-14-dev 14.2.0-19ubuntu2`、
+Python 3.13.3（GCC 14.2.0 构建）。原生构建记录：`SANTA_CXX=/usr/bin/g++-14`、flags `-O3 -std=c++17`、
+`compat_include=false`；GCC 二进制 SHA-256：`constructor_wide 9682b6e6…`、`constructor_mitm 8379e5b3…`；
+两个 `.cpp` 与冻结研究包逐字节相同（`99a05ebc…` / `14b3885b…`）。
+
+命令（全新 schema 3 检查点、6 进程、无 resume）：
+
+```bash
+cd competitions/santa-2026
+export SANTA_CXX=/usr/bin/g++-14
+python3 src/algorithms/native/build.py
+python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6   --checkpoint experiments/v9-gcc.sqlite --output experiments/v9-gcc.csv
+python3 src/verify.py data/puzzles.csv experiments/v9-gcc.csv
+```
+
+结果：
+
+| 指标 | 冻结 V9 | 本次 Linux/GCC 实测 |
+|---|---:|---:|
+| 题数 / 合法 | 1,000 / 1,000 | **1,000 / 1,000** |
+| Stage 1 | 182,205 | **182,205** |
+| Final | 175,604 | **175,604** |
+| Stage 2 节省 | 6,601（394/606/0） | **6,601（394/606/0）** |
+| 最长程序 | 415 | **415** |
+| CSV SHA-256 | `5ab0b72c…` | **`5ab0b72c…`（逐字节一致）** |
+| 耗时 / 进程 | 研究包记录 797.97 s（8 行 resume 后 992 行，不可直接比较） | **443.96 s / 6 进程** |
+| 检查点 | 研究包完整 | schema 3、1,000 条、`PRAGMA integrity_check=ok`、SHA `c5d7f15…` |
+
+逐题与冻结记录对照：程序 1,000/1,000 相同、base/score/nodes/schedule_attempts 0 差异、四路线
+（config/nodes/score/error）0 差异、7 个位宽桶完全一致；`scored_0775` 在本环境下程序与冻结记录
+完全相同（181 步、`attempts=0`）。**未直接替换历史归档**：仓库归档仍保留 macOS 运行产出的
+`05e7b630…`，两份都是独立的合法 175,604 结果，差异仅来自工具链平局；参考工具链结果与冻结记录的
+一致性记录在 `docs/reports/v9-integration.json`。
+
+## 8.4 P0-3：同工具链全量等价性验收（实际结果）
+
+方法：使用冻结研究包源码（`v9_stage2/` 的 `experiment/optimized/polish/scheduler/stage2/run_full`）
+与当前功能化移植实现，分别用**同一台 VM、同一 Python 3.13.3、同一 `g++-14`、同一 flags、同一官方
+题目数据、同一冻结参数/种子**从零独立求解 1,000 题；参考实现使用本机重新编译的 GCC 二进制，
+移植实现使用 `native/build.py` 构建的同一 SHA 二进制。两个实现进程互相独立，不共享输出或检查点。
+参考实现结果：1,000/1,000、175,604、最长 415、CSV `5ab0b72c…`、耗时 429.97 s（6 进程）。
+
+| 对照项 | 差异数 |
+|---|---:|
+| 完整最终程序 | **0 / 1,000** |
+| Stage 1 分数 | 0 |
+| Stage 2 最终分数 | 0 |
+| DAG 节点数 | 0 |
+| 调度尝试次数 | 0 |
+| 四条构造路线（config/nodes/score/error） | 0 |
+| 路线失败状态 | 参考 0 / 移植 0 |
+| 最终程序合法性（独立 `verify.py`） | 两者均 1,000/1,000 |
+| 三份 CSV（冻结、参考实现、移植实现）逐字节 | **全部相同** |
+
+两者与冻结记录也完全一致（`submission_v9_stage2.csv` / 研究检查点逐题 0 差异），因此
+"同工具链原版 vs 移植版一致"的验收条件已满足，且 `scored_0775` 的差异被确认为 macOS Apple Clang
+与 Linux GCC 的容器迭代/平局行为差异，不是移植逻辑错误。证据汇总：`docs/reports/v9-integration.json`。
+
+## 8.5 P0-1：原生编译器缓存修复
+
+发现的真实问题（两处）：`_manifest_matches()` 不比较显式 `SANTA_CXX`，缓存 Clang 构建会静默满足
+后来的 GCC 请求；`_build_locked()` 在因其他原因重建时优先复用旧 manifest 编译器，忽略新显式指定。
+修复：显式编译器（`SANTA_CXX`/参数）经 PATH/绝对路径/symlink 解析后拥有最高优先级；manifest
+（schema 2）比较 resolved 路径、版本、family、flags、compat 使用、源码哈希、二进制路径与哈希；
+显式编译器缺失/不可用立即报错且不回退；未指定时保持原有自动探测与缓存复用；`construct.py` 的
+进程级二进制缓存改为按 manifest 文件签名失效，重建/换编译器后不会沿用旧路径；AppleDouble
+`._*`/`.DS_Store` 元数据文件排除出源码指纹。新增 `tests/test_native_build.py` 15 个回归测试
+（本地 macOS 与 Linux GCC 均通过），覆盖任务要求的 9 个场景 + manifest 字段篡改 + 检查点因编译器
+变化拒绝恢复；CI 的 Ubuntu 环境使用真实 g++，macOS 使用真实 Apple Clang，双编译器切换用包装脚本
+模拟身份差异（真实编译仍由本机编译器完成）。
+
+## 8.6 P1-1：正式归档 CSV 回放与混合重建（实际结果）
+
+用官方 `puzzles.csv` + 独立 `src/verify.py` 完整回放：
+
+| 归档 | 题数/合法 | 指令数 | 最长程序 | SHA-256 | 与报告一致 |
+|---|---:|---:|---:|---|---|
+| V8 独立 | 1,000/1,000 | 194,444 | 535 | `6f15091b…` | 是 |
+| V9 独立 | 1,000/1,000 | 175,604 | 415 | `05e7b630…` | 是 |
+| V8+V9 混合 | 1,000/1,000 | 174,884 | 392 | `fe973ac4…` | 是 |
+
+用 `src/merge_submissions.py` 从两份独立 CSV 重新生成到临时目录：1,000/1,000、174,884、392、
+`from_first=137`、`from_second=863`（含 30 平局按规则取 V9）、逐题公式错误 **0**，重新生成文件与
+归档混合 CSV **逐字节一致**（`fe973ac4…`）。混合工具不在求解/检查点路径中。
+
+## 8.7 P1-2 / P2-3：验收报告与历史指纹审计
+
+- 新增 `docs/reports/v9-integration.json`（kind=`santa-v9-integration-acceptance`，不进入 V1–V9
+  成绩曲线，不被 `build_report.py` 当作正式报告），包含环境、源码/原生指纹、全量复现、同工具链对照、
+  归档校验、检查点、测试、CI、限制与 `acceptance_status=conditional_pass`；
+  新增 `tests/test_acceptance_report.py` 7 个一致性测试（归档哈希与工作树、源码指纹、曲线隔离）。
+- 历史指纹抽查（`git show <commit>:<path>` + SHA-256）：`v8.json` 的 4 个记录文件全部对应
+  `c9fdd61`；`v8-refactor.json` 的 10 个 solver 源码全部对应 `0ec0ec0`。未全量复核所有历史报告，
+  已列为限制。
+
+## 8.8 P0-4 / P1-4 / P2：CI、文档与 Web
+
+- CI：main 合并提交的真实 Actions run **success**（见 §8.1）；本轮验收提交未推送，未跑 CI。
+- 文档：更新 `docs/progress.md`（追加本节验收记录）、`competitions/santa-2026/README.md`
+  （参考工具链复现与缓存规则）、`docs/reports/README.md`（v9-integration 类别）、`AGENTS.md`
+  （`SANTA_CXX` 优先级规则）。
+- 生成物：`Santa-2026-Interactive-Report.html`、`web/simulators.html` 重建并通过
+  `--check`；`web/build/santa-review.json` 按项目流程在测试与回放核对后显式刷新；
+  `version-scores.png` 由 `version-scores.mmd` 用 mermaid.ink 重绘为 V1–V9；浏览器复验
+  模拟器与报告（Chrome 158 headless、离线）见 `docs/progress.md` 与 `v9-integration.json`。
+- 仓库卫生：确认无官方数据、SQLite、编译产物、日志、`._*`/`.DS_Store` 被跟踪；
+  `.gitignore` 增加 `._*`；无新增临时/重复文档。
+
+## 8.9 剩余限制与最终结论
+
+仍未完成/不可验证：
+
+1. **本轮验收提交未推送**（未获推送授权），因此没有针对 `fix/santa-v9-final-acceptance` 的 CI 结果；
+   已验证的是已合入 `main`（`8858a6a`）的 CI。
+2. GCC 参考复现环境为 Ubuntu 25.04 / GCC 14.2.0 / Python 3.13.3（冻结记录 Python 3.13.5），
+   输出仍逐字节一致；未在 x86_64 或 Windows 复验。
+3. 浏览器只做 Chrome 158 headless 自动化离线验收，未测 Safari/Firefox、真机与人工逐项点击。
+4. 历史报告源码指纹为抽查（14 个文件），未全量复核。
+5. V9 无全局最优性证明；本轮未改动冻结搜索策略，未开始 V10。
+
+**最终状态：V9 有条件通过**。条件：把本轮验收提交推送并让 GitHub Actions 通过（本地测试、构建、
+Linux/GCC 全量复现、同工具链全量等价、归档回放、检查点与浏览器复验均已实际执行并通过）。
