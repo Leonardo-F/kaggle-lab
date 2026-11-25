@@ -40,6 +40,10 @@
     #replay-comparison { list-style: none; padding: 0; margin: 0; font-size: .78rem; }
     #replay-comparison li { padding: 5px 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 4px; }
     #replay-comparison li[aria-current] { background: var(--accent-light); }
+    #replay-totals { margin: 6px 0 0; overflow-wrap: anywhere; }
+    #replay-graph { margin-top: 6px; font-size: .78rem; }
+    #replay-graph div { padding: 4px 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 6px; }
+    #replay-graph span { text-align: right; color: var(--muted); }
     form { display: grid; gap: 15px; margin-top: 17px; }
     label { display: grid; gap: 5px; font-size: .88rem; font-weight: 650; }
     textarea, input {
@@ -146,11 +150,14 @@
         <label>官方题目 CSV <input id="replay-puzzles" type="file" accept=".csv,text/csv"></label>
         <details open>
           <summary>导入各版程序</summary>
-          <div id="replay-files" data-versions="v1,v2,v3,v4,v5,v6"></div>
+          <div id="replay-files" data-versions="v1,v2,v3,v4,v5,v6,v7"></div>
         </details>
         <label>题号 <select id="replay-id" disabled><option value="">先导入题目</option></select></label>
         <label>回放版本 <select id="replay-version"></select></label>
+        <p class="hint" id="replay-totals" role="status"></p>
         <ul id="replay-comparison" aria-label="同题对比"></ul>
+        <p class="hint">计算图对比：指令数 · 唯一中间值 · 共享值 · 重算步</p>
+        <div id="replay-graph" aria-label="计算图对比"></div>
         <p class="status" id="replay-status" role="status"></p>
       </div>
     </section>
@@ -852,6 +859,24 @@ function importedProgram(text) {
   if (/\d[.eE]/.test(outsideStrings)) throw new Error("寄存器编号必须用整数表示。");
   return program;
 }
+
+function graphStats(puzzle, rows) {
+  const initial = new Set(puzzle.starting.map(String));
+  const produced = new Set();
+  const consumers = new Map();
+  rows.forEach((row, index) => {
+    const value = String(row.value);
+    if (!initial.has(value)) produced.add(value);
+    for (const operand of [row.left, row.right]) {
+      const key = String(operand);
+      if (initial.has(key)) continue;
+      if (!consumers.has(key)) consumers.set(key, new Set());
+      consumers.get(key).add(index);
+    }
+  });
+  const shared = [...consumers.values()].filter(steps => steps.size > 1).length;
+  return {steps: rows.length, nodes: produced.size, shared};
+}
   </script>
   <script>
   "use strict";
@@ -1133,7 +1158,31 @@ self.onmessage = ({data}) => {
   el("print").addEventListener("click", () => window.print());
   const versions = el("replay-files").dataset.versions.split(",");
   const submissions = new Map();
+  const totals = new Map();
   let importedPuzzles = new Map();
+
+  function renderTotals() {
+    const items = versions.filter(key => totals.has(key)).map(key => {
+      const entry = totals.get(key);
+      const invalid = entry.invalid ? ` · ${entry.invalid} 条程序无法解析` : "";
+      return `${key.toUpperCase()} ${entry.total.toLocaleString()} 步 / ${entry.count} 题${invalid}`;
+    });
+    el("replay-totals").textContent = items.length ? `已导入文件：${items.join("；")}` : "";
+  }
+
+  function renderGraph(puzzle, results) {
+    if (!puzzle) { el("replay-graph").replaceChildren(); return; }
+    const items = versions.map(key => {
+      const data = results.get(key);
+      if (!data?.rows) return null;
+      const stats = graphStats(puzzle, data.rows);
+      const item = node("div", "");
+      item.append(node("strong", key.toUpperCase()),
+        node("span", `${stats.steps} 步 · 图 ${stats.nodes} · 共享 ${stats.shared} · 重算 ${stats.steps - stats.nodes}`));
+      return item;
+    }).filter(Boolean);
+    el("replay-graph").replaceChildren(...items);
+  }
 
   function showImported() {
     const id = el("replay-id").value;
@@ -1146,6 +1195,7 @@ self.onmessage = ({data}) => {
     } catch (error) {
       el("replay-status").textContent = error.message;
     }
+    renderTotals();
     if (puzzle) {
       for (const key of versions) {
         const text = submissions.get(key)?.get(id)?.program;
@@ -1158,6 +1208,7 @@ self.onmessage = ({data}) => {
         }
       }
     }
+    renderGraph(puzzle, results);
     const baseline = results.get("v1")?.rows?.length;
     el("replay-comparison").replaceChildren(...versions.map(key => {
       const data = results.get(key);
@@ -1236,9 +1287,15 @@ self.onmessage = ({data}) => {
     label.append(input);
     el("replay-files").append(label);
     fileInput(input, text => {
-      submissions.set(version, readCSV(text, ["id", "program"]));
+      const rows = readCSV(text, ["id", "program"]);
+      submissions.set(version, rows);
+      let total = 0, count = 0, invalid = 0;
+      for (const row of rows.values()) {
+        try { total += importedProgram(row.program).length; count++; } catch { invalid++; }
+      }
+      totals.set(version, {total, count, invalid});
       select.value = version;
-    }, () => submissions.delete(version));
+    }, () => { submissions.delete(version); totals.delete(version); });
   }
   el("replay-id").addEventListener("change", showImported);
   el("replay-version").addEventListener("change", showImported);

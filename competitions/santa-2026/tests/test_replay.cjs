@@ -8,7 +8,7 @@ const html = fs.readFileSync(path.join(__dirname, "../src/simulator.html"), "utf
 const scripts = [...html.matchAll(/<script id="(?:solver|replay)-source">([\s\S]*?)<\/script>/g)];
 const context = vm.createContext({ TextEncoder });
 for (const [, source] of scripts) vm.runInContext(source, context);
-const { readCSV, importedPuzzle, importedProgram, trace } = context;
+const { readCSV, importedPuzzle, importedProgram, trace, graphStats } = context;
 
 test("CSV import preserves quoted fields, BOM, doubled quotes and CRLF", () => {
   const rows = readCSV('\uFEFFid,program\r\nfoo,"[[""+"" ,0,0,1]]"\r\n', ["id", "program"]);
@@ -38,4 +38,20 @@ test("replay rejects invalid instructions and enforces file limits", () => {
   }
   assert.throws(() => importedProgram(" ".repeat(131073)), /128/);
   assert.throws(() => importedProgram("[" + Array(4097).fill('["+",0,0,1]').join(",") + "]"), /4096/);
+});
+
+test("graph comparison counts unique nodes, shared values and recomputation", () => {
+  const puzzle = importedPuzzle({
+    starting_values: "[3]", targets: "[9,27,81]", value_limit: "100", registers: "48",
+  });
+  const rows = trace(puzzle, importedProgram('[["*",0,0,1],["*",1,0,2],["*",1,1,3]]'));
+  assert.deepEqual(
+    [graphStats(puzzle, rows).steps, graphStats(puzzle, rows).nodes, graphStats(puzzle, rows).shared],
+    [3, 3, 1],
+  );
+  const repeated = trace(puzzle, importedProgram('[["*",0,0,1],["*",0,0,2],["+",1,2,3]]'), false);
+  assert.deepEqual(
+    [graphStats(puzzle, repeated).steps, graphStats(puzzle, repeated).nodes, graphStats(puzzle, repeated).shared],
+    [3, 2, 0],
+  );
 });

@@ -20,7 +20,7 @@ python -m unittest discover -s simulation -p 'test_*.py' -v
 
 ## Santa 独立版本回放
 
-在 Santa 页导入官方题目 CSV 与相应槽位的版本程序 CSV。可对同题比较指令数与合法性，查看逐步寄存器状态，并复制当前程序 JSON。文件读取与 BigInt 回放在本地完成。Python 版本的复现命令见 [算法演进](../competitions/santa-2026/docs/algorithm-evolution.md)。
+在 Santa 页导入官方题目 CSV 与相应槽位的版本程序 CSV。导入文件时会显示该 CSV 的总指令数；选同一题号可比较各版本的实际步数、合法性和计算图规模（唯一中间值、共享值、重算步），查看逐步寄存器状态，并复制当前程序 JSON。文件读取与 BigInt 回放在本地完成。Python 版本的复现命令见 [算法演进](../competitions/santa-2026/docs/algorithm-evolution.md)。
 
 变更统一入口、验证器或算法模块后，核对离线 CSV 回放与版本列表。通过检查后同步 `santa-review.json` 的 `independent_replay` 版本列表和文件 SHA-256，再重建统一 HTML。文件路径以 Santa 的 `src/` 为基准。
 

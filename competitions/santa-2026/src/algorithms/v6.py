@@ -272,12 +272,16 @@ def path_union(row, programs, rounds=300):
     return best
 
 
-def optimize_v6(job):
+def optimize_v6(job, trace=False):
+    """Run V6. With ``trace=True`` also return every in-memory candidate programme,
+    the optional interface V7 uses to fuse current-run graphs without a duplicate
+    V6 implementation."""
     row,rounds,extra=job
     pid,baseline,*_=v5.optimize_v5((row,True,True))
     s=json.loads(row['starting_values']);ts=json.loads(row['targets']);L=int(row['value_limit'])
     if len(baseline)==len(set(ts)-set(s)):
-        return pid,baseline,{'v5':len(baseline),'single':len(baseline),'alternate':None,'pre_path':len(baseline),'v6':len(baseline)}
+        metrics={'v5':len(baseline),'single':len(baseline),'alternate':None,'pre_path':len(baseline),'v6':len(baseline)}
+        return (pid,baseline,metrics,[baseline]) if trace else (pid,baseline,metrics)
     best=global_select(row,baseline,rounds=rounds);single=len(best);candidates=[baseline,best];alt=None;raw=None
     if extra:
         try:
@@ -293,4 +297,5 @@ def optimize_v6(job):
     new=path_union(row,candidates,rounds=300)
     if len(new)<len(best):best=new
     replay(row,best)
-    return pid,best,{'v5':len(baseline),'single':single,'alternate':raw,'pre_path':pre_path,'v6':len(best)}
+    metrics={'v5':len(baseline),'single':single,'alternate':raw,'pre_path':pre_path,'v6':len(best)}
+    return (pid,best,metrics,candidates) if trace else (pid,best,metrics)

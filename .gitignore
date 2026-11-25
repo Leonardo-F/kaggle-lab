@@ -24,3 +24,6 @@ competitions/google-quantum-circuit-compilation/official/
 # Official Santa 2026 data (accept-rules download; do not redistribute) and local working CSVs
 competitions/santa-2026/data/
 competitions/santa-2026/*submission*.csv
+
+# Santa solver checkpoints and run logs (derived from official puzzles)
+competitions/santa-2026/experiments/
