@@ -32,7 +32,16 @@
 - `web/simulators.html` 是统一离线入口，从各赛题原始 HTML 生成。修改原始模拟器或相关数据后，按 `web/build/README.md` 重建并检查统一文件，不要只手工修改生成产物。
 - 装箱模拟器先执行 `python competitions/squares-in-squares/simulator/build_standalone.py`，再执行 `python web/build/build.py`；修改 Santa 原始 HTML 后也要重新生成统一文件。
 - Santa 网页使用内置 JavaScript 求解自定义题，并支持导入 Python 独立算法生成的 CSV。修改 `competitions/santa-2026/src/` 下的求解入口、验证器或算法模块后，核对网页回放和版本列表，再更新 `web/build/santa-review.json`。
+- `web/build/santa-review.json` 分开记录当前求解器（`solver.current_version`、全部源码 SHA-256）与历史 CSV 回放槽位（`independent_replay.versions`）。回放槽位不得由 Python 文件名推断；只有相关测试通过并人工核对回放后，才可执行 `python web/build/build.py --refresh-santa-review`，普通构建不得隐式刷新。
+- Santa 互动报告以 `competitions/santa-2026/docs/algorithm-evolution.md` 为唯一正文来源，由 `docs/build_report.py` 生成，不要手改生成产物；修改正文、图表或模拟器后重建并运行 `--check`。页面自定义结果槽位只在当前会话有效，不持久化、不上传。
 - 尽可能保持单文件离线可用、原有交互和导出功能。若增加浏览器 Python 运行环境，必须说明依赖、体积、离线支持和与命令行解法的差异，并实际验证；不得声称浏览器原生直接运行 Python。
+
+## Santa 2026 求解器
+
+- main 只保留一套按功能组织的 Santa 求解器；V1–V8 历史实现通过 Git 提交和独立 worktree 复现，不再以 `v1.py`–`v8*.py` 作为运行依赖。
+- 算法变更必须从官方题目独立求解，并用 `src/verify.py` 与测试验证；等价重构必须逐题比较程序及阶段指标，不能只比较总分。
+- 历史报告、提交 CSV、互动报告与离线回放是研究证据，不得随源码重组删除。官方题目数据、SQLite 检查点和临时结果不提交到 Git。
+- 修改 `src/` 求解入口、验证器或算法模块后，同步检查模拟器回放、`web/build/santa-review.json` 与统一入口的构建状态。
 
 ## 验证和交付
 

@@ -8,7 +8,8 @@ const html = fs.readFileSync(path.join(__dirname, "../src/simulator.html"), "utf
 const scripts = [...html.matchAll(/<script id="(?:solver|replay)-source">([\s\S]*?)<\/script>/g)];
 const context = vm.createContext({ TextEncoder });
 for (const [, source] of scripts) vm.runInContext(source, context);
-const { readCSV, importedPuzzle, importedProgram, trace, graphStats } = context;
+const { readCSV, importedPuzzle, importedProgram, trace, graphStats,
+  normalizeSlotLabel, nextSlotKey, summarizeVersion } = context;
 
 test("CSV import preserves quoted fields, BOM, doubled quotes and CRLF", () => {
   const rows = readCSV('\uFEFFid,program\r\nfoo,"[[""+"" ,0,0,1]]"\r\n', ["id", "program"]);
@@ -54,4 +55,43 @@ test("graph comparison counts unique nodes, shared values and recomputation", ()
     [graphStats(puzzle, repeated).steps, graphStats(puzzle, repeated).nodes, graphStats(puzzle, repeated).shared],
     [3, 2, 0],
   );
+});
+
+test("custom result labels are trimmed, limited and unique", () => {
+  assert.equal(normalizeSlotLabel("  V8-draft  ", ["V1", "V2"]), "V8-draft");
+  assert.throws(() => normalizeSlotLabel("   ", []), /请输入/);
+  assert.throws(() => normalizeSlotLabel("x".repeat(41), []), /40/);
+  assert.equal(normalizeSlotLabel("x".repeat(40), []), "x".repeat(40));
+  assert.throws(() => normalizeSlotLabel("v1", ["V1"]), /重复/);
+  assert.throws(() => normalizeSlotLabel("V8,2", []), /逗号/);
+  assert.throws(() => normalizeSlotLabel("a\u0007b", []), /控制/);
+  // Labels are rendered with textContent, so markup stays literal text.
+  assert.equal(normalizeSlotLabel("<img src=x onerror=alert(1)>", []),
+    "<img src=x onerror=alert(1)>");
+  assert.equal(nextSlotKey(["v1", "custom-1", "custom-3"]), "custom-2");
+  assert.equal(nextSlotKey([]), "custom-1");
+});
+
+test("version summaries expose unknown, invalid and missing programs", () => {
+  const puzzles = new Set(["a", "b", "c"]);
+  const rows = new Map([
+    ["a", {program: '[["+",0,0,1]]'}],
+    ["b", {program: "not json"}],
+    ["z", {program: '[["+",0,0,1]]'}],
+  ]);
+  const summary = summarizeVersion(puzzles, rows);
+  assert.deepEqual({...summary},
+    {total: 1, valid: 1, invalid: 1, unknown: 1, missing: 1, puzzles: 3, imported: true});
+  assert.equal(summarizeVersion(new Set(), rows).valid, 2);
+  assert.equal(summarizeVersion(puzzles, undefined).imported, false);
+  assert.equal(summarizeVersion(puzzles, undefined).missing, 3);
+});
+
+test("every simulator script parses as JavaScript", () => {
+  const blocks = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
+  assert.ok(blocks.length >= 3);
+  for (const [, attributes, source] of blocks) {
+    if (/type="application\/json"/.test(attributes)) continue;
+    assert.doesNotThrow(() => new vm.Script(source));
+  }
 });

@@ -27,6 +27,7 @@ def verify(puzzles,submission):
             elif op=='-':z=x-y
             elif op=='*':z=x*y
             elif op=='/':
+                if not y:raise ValueError(f'{pid}:{i}: division by zero')
                 z,rem=divmod(x,y)
                 if rem:raise ValueError(f'{pid}:{i}: nonexact division')
             else:raise ValueError(f'{pid}:{i}: invalid operator')

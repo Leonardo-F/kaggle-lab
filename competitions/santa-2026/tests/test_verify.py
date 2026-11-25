@@ -47,6 +47,24 @@ class VerifyTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, error):
                     verify(self.puzzles, self.answer)
 
+
+    def test_target_hit_then_overwritten_still_counts(self):
+        self.write_answer(("p", '[["-",0,1,0],["+",0,1,2]]'))
+        report = verify(self.puzzles, self.answer)
+        self.assertEqual((report["validated"], report["score"]), (1, 2))
+
+    def test_boundary_and_zero_results(self):
+        self.write_answer(("p", '[["-",0,1,2]]'))
+        self.assertEqual(verify(self.puzzles, self.answer)["score"], 1)
+        for program, error in [
+            ('[["-",0,0,1]]', "result out of range"),
+            ('[["/",0,1,1]]', "nonexact division"),
+        ]:
+            with self.subTest(error=error):
+                self.write_answer(("p", program))
+                with self.assertRaisesRegex(ValueError, error):
+                    verify(self.puzzles, self.answer)
+
     def test_requires_exact_unique_ids(self):
         for rows in [(), (("q", "[]"),), (("p", "[]"), ("p", "[]"))]:
             with self.subTest(rows=rows):

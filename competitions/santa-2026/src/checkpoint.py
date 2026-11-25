@@ -1,10 +1,14 @@
-"""Crash-safe, resumable execution of the V7 and V8 independent solvers.
+"""Crash-safe, resumable execution of the single functional Santa solver.
 
 Each solved puzzle is replayed and committed in its own durable SQLite
-transaction. A checkpoint is bound to the exact input file, solver sources,
-Python implementation, version and search parameters, so a resumed run can only
-continue the same experiment. No submission is exported until every input ID
-has been collected and the complete CSV passes the independent verifier.
+transaction.  A checkpoint is bound to the exact input file, the CLI,
+checkpoint and verifier sources, every file in ``algorithms/``, the Python
+implementation and the solver parameters, so a resumed run can only continue
+the same experiment.  No submission is exported until every input ID has been
+collected and the complete CSV passes the independent verifier.
+
+Checkpoints written by the legacy V1-V8 layout (schema 1) are rejected: resume
+them with the original Git commit, or start a new SQLite file.
 """
 import csv
 import fcntl
@@ -14,62 +18,34 @@ import os
 import platform
 import sqlite3
 import time
+from contextlib import closing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+from algorithms.solver import DEFAULT_CONFIG, STAGES
 from verify import verify
 
 SRC = Path(__file__).resolve().parent
+SCHEMA = 2
+LAYOUT = "functional"
+
+ALGORITHM_SOURCES = tuple(sorted(
+    path.relative_to(SRC).as_posix()
+    for path in (SRC / "algorithms").rglob("*.py")
+    if "__pycache__" not in path.parts
+))
+BOUND_SOURCES = ("checkpoint.py", "graph_solver.py", "verify.py") + ALGORITHM_SOURCES
 
 CONFIGS = {
-    "v7": {
-        "stages": ("v6", "portfolio", "path_union", "polished", "retained", "v7"),
-        "baseline": "v6",
-        "final": "v7",
-        "sources": (
-            "checkpoint.py", "verify.py", "algorithms/__init__.py",
-            "algorithms/common.py", "algorithms/v3.py", "algorithms/v4.py",
-            "algorithms/v5.py", "algorithms/v6.py", "algorithms/v7.py",
-        ),
-        "parameters": ("portfolio", "path_rounds", "schedule", "retain_v6_graphs"),
-    },
     "v8": {
-        "stages": ("v7", "list_schedule", "v8", "v81", "v82",
-                   "v8group_strict", "v8group_neutral", "v8final"),
+        "stages": STAGES,
         "baseline": "v7",
         "final": "v8final",
-        "sources": (
-            "checkpoint.py", "verify.py", "algorithms/__init__.py",
-            "algorithms/common.py", "algorithms/v3.py", "algorithms/v4.py",
-            "algorithms/v5.py", "algorithms/v6.py", "algorithms/v7.py",
-            "algorithms/v8.py", "algorithms/v8_rewrite.py",
-            "algorithms/v8_three.py", "algorithms/v8_group.py",
-            "algorithms/v8_register.py",
-        ),
-        "parameters": ("rewrite_sweeps", "three_sweeps", "three_budget",
-                       "neutral", "group_strict_rounds", "group_neutral_rounds",
-                       "group_beam", "schedule_tries"),
+        "parameters": tuple(DEFAULT_CONFIG),
     },
 }
 
-DEFAULTS = {
-    "v7": {
-        "portfolio": 3,
-        "path_rounds": 400,
-        "schedule": True,
-        "retain_v6_graphs": False,
-    },
-    "v8": {
-        "rewrite_sweeps": 2,
-        "three_sweeps": 2,
-        "three_budget": 10,
-        "neutral": True,
-        "group_strict_rounds": 6,
-        "group_neutral_rounds": 8,
-        "group_beam": 10,
-        "schedule_tries": 32,
-    },
-}
+DEFAULTS = {"v8": dict(DEFAULT_CONFIG)}
 
 
 def sha(path):
@@ -85,16 +61,10 @@ def record_digest(pid, program, metrics, meta):
 
 
 def solve_job(job):
-    """Worker entry point. Imports the versioned algorithm inside the process."""
-    version, row, parameters = job
-    if version == "v7":
-        from algorithms import v7
-        return v7.optimize((row, parameters["portfolio"], parameters["path_rounds"],
-                            parameters["schedule"], parameters["retain_v6_graphs"]))
-    if version == "v8":
-        from algorithms import v8
-        return v8.optimize(row)
-    raise ValueError(f"checkpointing is only available for v7 and v8, not {version}")
+    """Worker entry point: the same public solver used by the CLI."""
+    row, parameters = job
+    from algorithms.solver import solve
+    return solve(row, parameters)
 
 
 def validate_record(version, row, program, metrics):
@@ -133,25 +103,42 @@ def read_rows(puzzles):
 def fingerprint(version, puzzles, rows, parameters):
     config = CONFIGS[version]
     return dict(
-        schema=1,
+        schema=SCHEMA,
+        layout=LAYOUT,
         version=version,
         input_sha256=sha(puzzles),
         count=len(rows),
         python=platform.python_version(),
         implementation=platform.python_implementation(),
-        sources={name: sha(SRC / name) for name in config["sources"]},
+        sources={name: sha(SRC / name) for name in BOUND_SOURCES},
         parameters={key: parameters[key] for key in config["parameters"]},
     )
 
 
-def run_checkpoint(puzzles, output, checkpoint, version, jobs=4, resume=False,
+def _is_legacy_metadata(payload):
+    try:
+        stored = json.loads(payload)
+    except (TypeError, ValueError):
+        return False
+    return not (isinstance(stored, dict)
+                and stored.get("schema") == SCHEMA
+                and stored.get("layout") == LAYOUT)
+
+
+def run_checkpoint(puzzles, output, checkpoint, version="v8", jobs=4, resume=False,
                    stop_after=None, parameters=None):
-    """Solve ``puzzles`` with ``version``, persisting each result to ``checkpoint``."""
+    """Solve ``puzzles`` with the functional solver, persisting every result."""
     if version not in CONFIGS:
-        raise ValueError(f"checkpointing is only available for v7 and v8, not {version}")
+        raise ValueError(f"the functional solver only supports v8, not {version}")
     config = CONFIGS[version]
     stages = config["stages"]
-    parameters = dict(DEFAULTS[version] if parameters is None else parameters)
+    resolved = dict(DEFAULTS[version])
+    if parameters is not None:
+        unknown = set(parameters) - set(config["parameters"])
+        if unknown:
+            raise ValueError(f"unknown parameters: {sorted(unknown)}")
+        resolved.update(parameters)
+    parameters = resolved
     missing = [key for key in config["parameters"] if key not in parameters]
     if missing:
         raise ValueError(f"missing parameters: {missing}")
@@ -168,7 +155,7 @@ def run_checkpoint(puzzles, output, checkpoint, version, jobs=4, resume=False,
         exists = checkpoint.exists()
         if exists != resume:
             raise ValueError("existing checkpoint requires --resume; resume requires existing checkpoint")
-        with sqlite3.connect(checkpoint) as db:
+        with closing(sqlite3.connect(checkpoint)) as db:
             db.execute("PRAGMA journal_mode=DELETE")
             db.execute("PRAGMA synchronous=FULL")
             if not exists:
@@ -179,7 +166,14 @@ def run_checkpoint(puzzles, output, checkpoint, version, jobs=4, resume=False,
                     db.execute("INSERT INTO meta VALUES (1,?)", (metadata,))
             else:
                 stored = db.execute("SELECT payload FROM meta WHERE id=1").fetchone()
-                if stored is None or stored[0] != metadata:
+                if stored is None:
+                    raise ValueError("checkpoint has no provenance metadata")
+                if _is_legacy_metadata(stored[0]):
+                    raise ValueError(
+                        "checkpoint uses the legacy versioned layout; resume it with the original "
+                        "Git commit (9337a35) or create a new SQLite file"
+                    )
+                if stored[0] != metadata:
                     raise ValueError("checkpoint provenance mismatch: input, source, Python or parameters changed")
             programs, metrics = {}, {}
             for pid, raw, mraw, digest in db.execute("SELECT pid,program,metrics,digest FROM results"):
@@ -196,7 +190,7 @@ def run_checkpoint(puzzles, output, checkpoint, version, jobs=4, resume=False,
             print(f"checkpoint: {resumed}/{len(rows)}; scheduled {len(todo)}; jobs={jobs}", flush=True)
             totals = {stage: sum(record[stage] for record in metrics.values()) for stage in stages}
             with ProcessPoolExecutor(max_workers=jobs) as executor:
-                futures = {executor.submit(solve_job, (version, row, parameters)): row["id"] for row in todo}
+                futures = {executor.submit(solve_job, (row, parameters)): row["id"] for row in todo}
                 for future in as_completed(futures):
                     pid, program, record_metrics = future.result()
                     if pid != futures[future] or pid in programs:

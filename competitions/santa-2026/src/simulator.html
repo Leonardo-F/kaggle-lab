@@ -37,6 +37,14 @@
     .import-pane summary { color: var(--accent); }
     .import-pane details { padding: 4px 0; }
     #replay-files { margin-top: 8px; }
+    .custom-files, .custom-file { display: grid; gap: 8px; }
+    .custom-file { padding: 8px; border: 1px dashed #bfcfc5; border-radius: 8px; background: #f7faf8; }
+    .custom-file label { font-size: .8rem; }
+    .custom-file .remove-version { justify-self: start; padding: 3px 9px; font-size: .74rem; }
+    .add-version { margin-top: 2px; padding-top: 9px; border-top: 1px dashed var(--line); gap: 6px; }
+    .add-version-row { display: flex; align-items: center; gap: 6px; }
+    .add-version-row input { min-width: 0; }
+    .add-version-row button { flex: none; }
     #replay-comparison { list-style: none; padding: 0; margin: 0; font-size: .78rem; }
     #replay-comparison li { padding: 5px 6px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 4px; }
     #replay-comparison li[aria-current] { background: var(--accent-light); }
@@ -136,7 +144,7 @@
       <div>
         <p class="brand">SANTA 2026 / THE ELF CALCULATOR</p>
         <h1>精灵计算器模拟器</h1>
-        <p>导入各版本输出对比同题指令，或用网页求解器探索自定义题。</p>
+        <p>当前 Python 求解器只有一套 V8 等价实现；V1–V8 槽位用于回放历史 CSV。自定义题由网页内置 JavaScript 求解。</p>
       </div>
       <a class="repo-link" href="https://github.com/Leonardo-F/kaggle-lab/tree/main/competitions/santa-2026">GitHub 求解器 ↗</a>
     </div>
@@ -146,11 +154,20 @@
     <section class="panel input-panel" aria-labelledby="import-title">
       <h2 id="import-title">Python 版本回放</h2>
       <div class="import-pane">
-        <p class="hint">离线读取 Python 生成的 CSV。版本文件请放入对应槽位。</p>
+        <p class="hint">离线读取 Python 生成的 CSV。V1–V8 为历史版本槽位；当前命令行求解器是单一 V8 等价版本，网页内置 JavaScript 求解器与它并非同一实现。</p>
         <label>官方题目 CSV <input id="replay-puzzles" type="file" accept=".csv,text/csv"></label>
         <details open>
           <summary>导入各版程序</summary>
           <div id="replay-files" data-versions="v1,v2,v3,v4,v5,v6,v7,v8"></div>
+          <div id="replay-custom-files" class="custom-files" aria-live="polite"></div>
+          <form id="replay-add-version" class="add-version" novalidate>
+            <label for="replay-new-label">自定义结果标签（1–40 字符）</label>
+            <div class="add-version-row">
+              <input id="replay-new-label" maxlength="40" autocomplete="off" placeholder="例如 V8-draft">
+              <button type="submit">添加结果版本</button>
+            </div>
+            <p class="hint" id="replay-add-status" role="status">自定义标签仅当前页面会话有效，不上传、不保存；默认 V1–V8 槽位不可移除。</p>
+          </form>
         </details>
         <label>题号 <select id="replay-id" disabled><option value="">先导入题目</option></select></label>
         <label>回放版本 <select id="replay-version"></select></label>
@@ -163,7 +180,7 @@
     </section>
     <section class="panel input-panel" aria-labelledby="input-title">
       <div class="topline">
-        <h2 id="input-title">自定义题 · JavaScript 求解</h2>
+        <h2 id="input-title">自定义题 · JavaScript 求解（非 Python V8）</h2>
         <button class="example" id="example" type="button">载入示例</button>
       </div>
       <form id="puzzle-form">
@@ -176,7 +193,7 @@
         <label for="limit">数值上限
           <input id="limit" inputmode="numeric" value="30" required aria-describedby="input-hint">
         </label>
-        <p class="hint" id="input-hint">输入正整数，多个值用逗号、空格或换行分隔。上限最高为 10¹⁸。</p>
+        <p class="hint" id="input-hint">输入正整数，多个值用逗号、空格或换行分隔。上限最高为 10¹⁸。网页求解器是独立的教学实现，步数可能与 Python V8 不同。</p>
         <div class="buttons"><button class="primary" id="solve-button" type="submit">求解并回放</button><button id="cancel" type="button" hidden>停止</button></div>
         <p id="status" class="status" role="status" aria-live="polite"></p>
       </form>
@@ -860,6 +877,41 @@ function importedProgram(text) {
   return program;
 }
 
+const SLOT_LABEL_MAX = 40;
+
+function normalizeSlotLabel(raw, existingLabels) {
+  const label = String(raw ?? "").trim();
+  if (!label) throw new Error("请输入结果版本标签。");
+  if ([...label].length > SLOT_LABEL_MAX) throw new Error(`标签最多 ${SLOT_LABEL_MAX} 个字符。`);
+  if (/[\u0000-\u001f\u007f,]/.test(label)) throw new Error("标签不能包含逗号或控制字符。");
+  const folded = label.toLocaleLowerCase();
+  if (existingLabels.some(item => String(item).trim().toLocaleLowerCase() === folded)) {
+    throw new Error(`标签“${label}”与已有版本重复。`);
+  }
+  return label;
+}
+
+function nextSlotKey(keys) {
+  let index = 1;
+  while (keys.includes(`custom-${index}`)) index++;
+  return `custom-${index}`;
+}
+
+function summarizeVersion(puzzleIds, rows) {
+  const summary = {total: 0, valid: 0, invalid: 0, unknown: 0, missing: puzzleIds.size,
+    puzzles: puzzleIds.size, imported: Boolean(rows)};
+  if (!rows) return summary;
+  const known = new Set();
+  for (const [id, row] of rows) {
+    if (puzzleIds.size && !puzzleIds.has(id)) { summary.unknown++; continue; }
+    known.add(id);
+    try { summary.total += importedProgram(row.program).length; summary.valid++; }
+    catch { summary.invalid++; }
+  }
+  summary.missing = puzzleIds.size ? puzzleIds.size - known.size : 0;
+  return summary;
+}
+
 function graphStats(puzzle, rows) {
   const initial = new Set(puzzle.starting.map(String));
   const produced = new Set();
@@ -1156,16 +1208,26 @@ self.onmessage = ({data}) => {
     }
   });
   el("print").addEventListener("click", () => window.print());
-  const versions = el("replay-files").dataset.versions.split(",");
+  const defaultVersions = el("replay-files").dataset.versions.split(",");
+  const versions = [...defaultVersions];
   const submissions = new Map();
-  const totals = new Map();
+  const customSlots = new Map();
   let importedPuzzles = new Map();
 
+  function labelOf(key) {
+    return customSlots.get(key)?.label || key.toUpperCase();
+  }
+
   function renderTotals() {
-    const items = versions.filter(key => totals.has(key)).map(key => {
-      const entry = totals.get(key);
-      const invalid = entry.invalid ? ` · ${entry.invalid} 条程序无法解析` : "";
-      return `${key.toUpperCase()} ${entry.total.toLocaleString()} 步 / ${entry.count} 题${invalid}`;
+    const puzzleIds = new Set(importedPuzzles.keys());
+    const items = versions.filter(key => submissions.has(key)).map(key => {
+      const summary = summarizeVersion(puzzleIds, submissions.get(key));
+      const details = [`${labelOf(key)} ${summary.total.toLocaleString()} 步 / ${summary.valid} 题`];
+      if (summary.puzzles) details.push(`覆盖 ${summary.valid}/${summary.puzzles}`);
+      if (summary.unknown) details.push(`${summary.unknown} 条未知题号`);
+      if (summary.invalid) details.push(`${summary.invalid} 条程序无法解析`);
+      if (summary.missing) details.push(`${summary.missing} 题未提供程序`);
+      return details.join(" · ");
     });
     el("replay-totals").textContent = items.length ? `已导入文件：${items.join("；")}` : "";
   }
@@ -1177,7 +1239,7 @@ self.onmessage = ({data}) => {
       if (!data?.rows) return null;
       const stats = graphStats(puzzle, data.rows);
       const item = node("div", "");
-      item.append(node("strong", key.toUpperCase()),
+      item.append(node("strong", labelOf(key)),
         node("span", `${stats.steps} 步 · 图 ${stats.nodes} · 共享 ${stats.shared} · 重算 ${stats.steps - stats.nodes}`));
       return item;
     }).filter(Boolean);
@@ -1220,7 +1282,7 @@ self.onmessage = ({data}) => {
         summary = `${count} 步 · 合法${comparison}`;
       }
       const item = node("li", "");
-      item.append(node("strong", key.toUpperCase()), node("span", summary));
+      item.append(node("strong", labelOf(key)), node("span", summary));
       if (key === version) item.setAttribute("aria-current", "true");
       if (data?.error) item.title = data.error;
       return item;
@@ -1236,7 +1298,7 @@ self.onmessage = ({data}) => {
       return;
     }
     showResult(puzzle, result.program, result.rows, 0);
-    status(`${id} · ${version.toUpperCase()} · 导入程序回放校验通过`);
+    status(`${id} · ${labelOf(version)} · 导入程序回放校验通过`);
   }
 
   function fileInput(input, onLoad, onClear, onError) {
@@ -1276,27 +1338,75 @@ self.onmessage = ({data}) => {
     finishWithError("题目文件无法读取。");
   });
 
-  for (const version of versions) {
+  function loadPrograms(key, text, select) {
+    const rows = readCSV(text, ["id", "program"]);
+    submissions.set(key, rows);
+    select.value = key;
+  }
+
+  function programInput(key, caption) {
     const select = el("replay-version");
-    select.add(new Option(version.toUpperCase(), version));
-    const label = node("label", `${version.toUpperCase()} 程序 CSV`);
+    const label = node("label", `${caption} 程序 CSV`);
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv,text/csv";
-    input.id = `replay-${version}`;
+    input.id = `replay-${key}`;
     label.append(input);
-    el("replay-files").append(label);
-    fileInput(input, text => {
-      const rows = readCSV(text, ["id", "program"]);
-      submissions.set(version, rows);
-      let total = 0, count = 0, invalid = 0;
-      for (const row of rows.values()) {
-        try { total += importedProgram(row.program).length; count++; } catch { invalid++; }
-      }
-      totals.set(version, {total, count, invalid});
-      select.value = version;
-    }, () => { submissions.delete(version); totals.delete(version); });
+    fileInput(input, text => loadPrograms(key, text, select), () => submissions.delete(key));
+    return label;
   }
+
+  for (const version of defaultVersions) {
+    el("replay-version").add(new Option(labelOf(version), version));
+    el("replay-files").append(programInput(version, labelOf(version)));
+  }
+
+  function removeCustomVersion(key) {
+    if (!customSlots.has(key)) return;
+    const label = labelOf(key);
+    customSlots.delete(key);
+    submissions.delete(key);
+    const index = versions.indexOf(key);
+    if (index >= 0) versions.splice(index, 1);
+    el("replay-custom-files").querySelector(`[data-slot="${key}"]`)?.remove();
+    const select = el("replay-version");
+    for (const option of [...select.options]) if (option.value === key) option.remove();
+    if (select.value === key) select.value = versions.at(-1) ?? "";
+    el("replay-add-status").textContent = `已移除 ${label}；其程序与比较结果已清除。`;
+    showImported();
+  }
+
+  function addCustomVersion(rawLabel) {
+    const label = normalizeSlotLabel(rawLabel, versions.map(labelOf));
+    const key = nextSlotKey(versions);
+    customSlots.set(key, {label});
+    versions.push(key);
+    el("replay-version").add(new Option(label, key));
+    const wrapper = document.createElement("div");
+    wrapper.className = "custom-file";
+    wrapper.dataset.slot = key;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "remove-version";
+    remove.textContent = "移除";
+    remove.setAttribute("aria-label", `移除自定义版本 ${label}`);
+    remove.addEventListener("click", () => removeCustomVersion(key));
+    wrapper.append(programInput(key, `${label}（自定义，仅本次会话）`), remove);
+    el("replay-custom-files").append(wrapper);
+    el("replay-add-status").textContent = `已添加 ${label}；导入 CSV 后可参与比较。`;
+    showImported();
+    return key;
+  }
+
+  el("replay-add-version").addEventListener("submit", event => {
+    event.preventDefault();
+    try {
+      addCustomVersion(el("replay-new-label").value);
+      el("replay-new-label").value = "";
+    } catch (error) {
+      el("replay-add-status").textContent = error.message;
+    }
+  });
   el("replay-id").addEventListener("change", showImported);
   el("replay-version").addEventListener("change", showImported);
   el("reset-step").addEventListener("click", () => { stopPlayback(); selectStep(0); });

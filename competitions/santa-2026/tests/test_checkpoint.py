@@ -5,11 +5,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import closing
 import fcntl
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
-import graph_solver
+import checkpoint as checkpoint_engine
 
 
 class CheckpointTest(unittest.TestCase):
@@ -27,7 +28,7 @@ class CheckpointTest(unittest.TestCase):
         self.output = self.root / "answer.csv"
         self.checkpoint = self.root / "run.sqlite"
 
-    def run_solver(self, *extra, version="v7"):
+    def run_solver(self, *extra, version="v8"):
         return subprocess.run(
             [sys.executable, str(SRC / "graph_solver.py"), str(self.puzzles),
              "--version", version, "--output", str(self.output),
@@ -40,7 +41,7 @@ class CheckpointTest(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         self.assertIn("PARTIAL: 1/3", first.stdout)
         self.assertFalse(self.output.exists())
-        with sqlite3.connect(self.checkpoint) as db:
+        with closing(sqlite3.connect(self.checkpoint)) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM results").fetchone()[0], 1)
 
         second = self.run_solver("--jobs", "2", "--resume")
@@ -48,15 +49,21 @@ class CheckpointTest(unittest.TestCase):
         report = json.loads((self.root / "answer.csv.validation.json").read_text())
         self.assertEqual(report["resumed_at_start"], 1)
         self.assertEqual(report["validated"], 3)
-        self.assertEqual(report["score"], report["v7"])
-        self.assertEqual(report["fingerprint"]["version"], "v7")
-        self.assertEqual(report["fingerprint"]["parameters"]["path_rounds"], 400)
+        self.assertEqual(report["score"], report["v8final"])
+        self.assertEqual(report["fingerprint"]["version"], "v8")
+        self.assertEqual(report["fingerprint"]["schema"], 2)
+        self.assertEqual(report["fingerprint"]["layout"], "functional")
+        self.assertEqual(report["fingerprint"]["parameters"]["rewrite_sweeps"], 2)
+        self.assertIn("algorithms/solver.py", report["fingerprint"]["sources"])
+        self.assertIn("algorithms/construct.py", report["fingerprint"]["sources"])
 
     def test_resume_rejects_changed_parameters(self):
         self.assertEqual(self.run_solver("--jobs", "1", "--stop-after", "1").returncode, 0)
-        result = self.run_solver("--jobs", "1", "--resume", "--path-rounds", "401")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("provenance mismatch", result.stderr)
+        with self.assertRaisesRegex(ValueError, "provenance mismatch"):
+            checkpoint_engine.run_checkpoint(
+                self.puzzles, self.output, self.checkpoint, "v8",
+                jobs=1, resume=True, parameters={"rewrite_sweeps": 3},
+            )
 
     def test_resume_requires_matching_checkpoint_state(self):
         self.assertNotEqual(self.run_solver("--jobs", "1", "--resume").returncode, 0)
@@ -64,14 +71,10 @@ class CheckpointTest(unittest.TestCase):
         self.assertNotEqual(self.run_solver("--jobs", "1").returncode, 0)
 
     def test_checkpoint_rejects_other_versions(self):
-        result = subprocess.run(
-            [sys.executable, str(SRC / "graph_solver.py"), str(self.puzzles),
-             "--version", "v6", "--output", str(self.output),
-             "--checkpoint", str(self.checkpoint), "--jobs", "1"],
-            capture_output=True, text=True,
-        )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("only available for v7 and v8", result.stderr)
+        with self.assertRaisesRegex(ValueError, "only supports v8"):
+            checkpoint_engine.run_checkpoint(
+                self.puzzles, self.output, self.checkpoint, "v6", jobs=1,
+            )
 
     def test_concurrent_writer_is_rejected(self):
         lock_path = Path(str(self.checkpoint) + ".lock")
@@ -82,9 +85,8 @@ class CheckpointTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("locked by another running experiment", result.stderr)
 
-
     def test_v8_checkpoint_reports_every_stage(self):
-        result = self.run_solver("--jobs", "1", version="v8")
+        result = self.run_solver("--jobs", "1")
         self.assertEqual(result.returncode, 0, result.stderr)
         report = json.loads((self.root / "answer.csv.validation.json").read_text())
         stages = ["v7", "list_schedule", "v8", "v81", "v82",
@@ -94,7 +96,38 @@ class CheckpointTest(unittest.TestCase):
         self.assertEqual(costs, sorted(costs, reverse=True))
         self.assertEqual(report["improved"] + report["unchanged"] + report["worse"], 3)
         self.assertEqual(report["fingerprint"]["version"], "v8")
-        self.assertEqual(report["fingerprint"]["parameters"]["rewrite_sweeps"], 2)
+
+    def test_record_tampering_is_rejected(self):
+        self.assertEqual(self.run_solver("--jobs", "1", "--stop-after", "1").returncode, 0)
+        with closing(sqlite3.connect(self.checkpoint)) as db:
+            db.execute("UPDATE results SET program='[]' WHERE pid=(SELECT pid FROM results LIMIT 1)")
+            db.commit()
+        result = self.run_solver("--jobs", "1", "--resume")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("checkpoint integrity error", result.stderr)
+
+    def test_legacy_layout_is_rejected(self):
+        self.assertEqual(self.run_solver("--jobs", "1", "--stop-after", "0").returncode, 0)
+        with closing(sqlite3.connect(self.checkpoint)) as db:
+            db.execute("UPDATE meta SET payload=? WHERE id=1",
+                       (json.dumps({"schema": 1, "version": "v8"}),))
+            db.commit()
+        result = self.run_solver("--jobs", "1", "--resume")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("legacy versioned layout", result.stderr)
+
+    def test_changed_source_fingerprint_is_rejected(self):
+        self.assertEqual(self.run_solver("--jobs", "1", "--stop-after", "0").returncode, 0)
+        with closing(sqlite3.connect(self.checkpoint)) as db:
+            payload = json.loads(db.execute("SELECT payload FROM meta WHERE id=1").fetchone()[0])
+            payload["sources"]["algorithms/solver.py"] = "0" * 64
+            db.execute("UPDATE meta SET payload=? WHERE id=1",
+                       (json.dumps(payload, sort_keys=True, separators=(",", ":")),))
+            db.commit()
+        result = self.run_solver("--jobs", "1", "--resume")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("provenance mismatch", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
