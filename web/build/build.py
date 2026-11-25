@@ -50,7 +50,7 @@ def main():
         content = build()
         if args.check:
             if not args.output.exists() or args.output.read_text(encoding='utf-8') != content:
-                raise ValueError('The bundle is out of date. Run python web/simulation/build.py.')
+                raise ValueError('The bundle is out of date. Run python web/build/build.py.')
         else:
             args.output.write_text(content, encoding='utf-8')
             print(args.output)

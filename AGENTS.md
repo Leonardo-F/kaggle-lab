@@ -22,13 +22,13 @@
 
 ## 模拟器与求解器同步
 
-- `web/simulators.html` 是统一离线入口，从各赛题原始 HTML 生成。修改原始模拟器或相关数据后，按 `web/simulation/README.md` 重建并检查统一文件，不要只手工修改生成产物。
-- 装箱模拟器先执行 `python competitions/squares-in-squares/simulator/build_standalone.py`，再执行 `python web/simulation/build.py`；修改 Santa 原始 HTML 后也要重新生成统一文件。
-- Santa 网页使用内置 JavaScript 求解自定义题，并支持导入 Python 独立算法生成的 CSV。修改 `competitions/santa-2026/src/` 下的求解入口、验证器或算法模块后，核对网页回放和版本列表，再更新 `web/simulation/santa-review.json`。
+- `web/simulators.html` 是统一离线入口，从各赛题原始 HTML 生成。修改原始模拟器或相关数据后，按 `web/build/README.md` 重建并检查统一文件，不要只手工修改生成产物。
+- 装箱模拟器先执行 `python competitions/squares-in-squares/simulator/build_standalone.py`，再执行 `python web/build/build.py`；修改 Santa 原始 HTML 后也要重新生成统一文件。
+- Santa 网页使用内置 JavaScript 求解自定义题，并支持导入 Python 独立算法生成的 CSV。修改 `competitions/santa-2026/src/` 下的求解入口、验证器或算法模块后，核对网页回放和版本列表，再更新 `web/build/santa-review.json`。
 - 尽可能保持单文件离线可用、原有交互和导出功能。若增加浏览器 Python 运行环境，必须说明依赖、体积、离线支持和与命令行解法的差异，并实际验证；不得声称浏览器原生直接运行 Python。
 
 ## 验证和交付
 
-- 根据改动运行相关测试；结果涉及得分、合法性或导出时，额外验证对应结果和边界情况。涉及模拟器时执行 `python -m unittest discover -s web/simulation -p 'test_*.py' -v`，并在条件允许时检查本地离线打开、切换、计算与导出。
+- 根据改动运行相关测试；结果涉及得分、合法性或导出时，额外验证对应结果和边界情况。涉及模拟器时执行 `python -m unittest discover -s web/tests -p 'test_*.py' -v`，并在条件允许时检查本地离线打开、切换、计算与导出。
 - 报告实际运行过的验证、使用的数据及其范围；明确说明未运行的检查、失败项和限制。没有证据时不要宣称功能、结果或官方提交已验证。
 - 在适用且获得授权的情况下及时将结果同步到远程 GitHub，推送前检查远程分支是否发生变化，避免覆盖他人的提交。遇到权限或审批限制时，保留可检查的本地提交并如实说明。
