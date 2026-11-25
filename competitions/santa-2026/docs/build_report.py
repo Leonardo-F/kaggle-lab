@@ -43,6 +43,7 @@ TEMPLATE = HERE / "report_template.html"
 SIMULATOR = SANTA / "src" / "simulator.html"
 REPORTS = HERE / "reports"
 LATEST = SANTA / "submissions" / "latest.json"
+REFACTOR_REPORT = REPORTS / "v8-refactor.json"
 OUTPUT = SANTA / "Santa-2026-Interactive-Report.html"
 GITHUB_BLOB = "https://github.com/Leonardo-F/kaggle-lab/blob/main/"
 
@@ -54,12 +55,13 @@ INSERTS = (
     ("41-依赖替换与引用计数v2v3", "compare"),
     ("71-同一批-1000-题的本地成绩", "scores"),
     ("101-候选池中的精确图选择模型", "research"),
+    ("94-重构验收状态", "refactor"),
 )
 REQUIRED_IDS = (
     "lab", "live-graph", "walk-slider", "walk-play", "walk-prev", "walk-next",
     "walk-reset", "step-readout", "op-line", "coverage", "visible-regs",
     "instruction-code", "compare", "scores", "chart-detail", "score-data",
-    "sim-source", "sim-gate", "sim-frame",
+    "sim-source", "sim-gate", "sim-frame", "refactor-status",
 )
 MATH_FENCE = re.compile(r"^\s*```\s*math\s*$", re.IGNORECASE)
 
@@ -172,6 +174,119 @@ def score_bars(data: dict) -> str:
             % (index, row["version"].upper(), f"{row['score']:,}")
         )
     return "\n".join(items)
+
+
+# ---------------------------------------------------------------------------
+# Optional V8 refactor reproduction report
+# ---------------------------------------------------------------------------
+
+REFACTOR_KIND = "santa-v8-refactor"
+GITHUB_REPORTS = GITHUB_BLOB + "competitions/santa-2026/docs/reports/"
+
+
+def load_refactor_status(path, latest, archived):
+    """Validate the optional refactor report without re-running the solver."""
+    if not path.exists():
+        return {"state": "absent", "reasons": [], "data": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"state": "invalid", "reasons": [f"无法读取或解析 {path.name}: {exc}"], "data": {}}
+    if not isinstance(data, dict):
+        return {"state": "invalid", "reasons": ["报告必须是 JSON 对象"], "data": {}}
+    reasons = []
+    if data.get("kind") != REFACTOR_KIND:
+        reasons.append(f"kind 必须为 {REFACTOR_KIND!r}")
+    if not isinstance(data.get("baseline_commit"), str) or not data["baseline_commit"].strip():
+        reasons.append("缺少 baseline_commit")
+    checks = (
+        ("score", latest.get("score"), "当前最佳成绩"),
+        ("validated", latest.get("validated"), "当前验证题数"),
+        ("puzzles", archived.get("puzzles"), "归档 V8 题数"),
+    )
+    for field, expected, label in checks:
+        value = data.get(field)
+        if not isinstance(value, int) or isinstance(value, bool):
+            reasons.append(f"{field} 必须为整数")
+        elif expected is not None and value != expected:
+            reasons.append(f"{field}={value} 与{label} {expected} 不一致")
+    if data.get("submission_sha256") != latest.get("submission_sha256"):
+        reasons.append("submission_sha256 与 latest.json 不一致")
+    for flag in ("per_puzzle_programs_match", "stage_metrics_match", "score_matches_archived_v8"):
+        if data.get(flag) is not True:
+            reasons.append(f"{flag} 必须为 true")
+    tests = data.get("tests")
+    if not isinstance(tests, dict):
+        reasons.append("缺少 tests 结果")
+    else:
+        passed, failed = tests.get("passed"), tests.get("failed")
+        if not isinstance(passed, int) or isinstance(passed, bool) or passed < 1:
+            reasons.append("tests.passed 必须为正整数")
+        if not isinstance(failed, int) or isinstance(failed, bool) or failed != 0:
+            reasons.append("tests.failed 必须为 0")
+    unverified = data.get("unverified")
+    if unverified is not None:
+        if not isinstance(unverified, list):
+            reasons.append("unverified 必须为列表")
+        elif unverified:
+            reasons.append("报告仍有未验证项: " + "; ".join(str(item) for item in unverified))
+    commit = data.get("refactor_commit")
+    if commit is not None and not isinstance(commit, str):
+        reasons.append("refactor_commit 必须为字符串或 null")
+    return {"state": "valid" if not reasons else "invalid", "reasons": reasons, "data": data}
+
+
+def _refactor_link(name):
+    return f'<a href="{GITHUB_REPORTS}{name}">{name}</a>'
+
+
+def render_refactor_panel(status):
+    if status["state"] == "absent":
+        return (
+            '<h3>功能化重构复现报告（可选）</h3>'
+            '<p class="sub">尚未生成 <code>docs/reports/v8-refactor.json</code>。</p>'
+            "<p>本页继续使用原始 V8 全量实验报告 "
+            f"{_refactor_link('v8.json')} 与 <code>submissions/latest.json</code>，"
+            "不会因为缺少该文件而失败，也不新增版本曲线或 CSV 回放槽位。"
+            "重构复现报告生成并通过校验后，这里会自动展示其一致性结果。</p>"
+        )
+    if status["state"] == "invalid":
+        items = "".join(f"<li>{html.escape(str(reason))}</li>" for reason in status["reasons"])
+        return (
+            "<h3>功能化重构复现报告：校验未通过</h3>"
+            '<div class="refactor-bad" role="alert"><strong>未通过报告一致性校验。</strong>'
+            " 不把该报告展示为等价重构成功，也不更新最佳成绩或回放槽位。</div>"
+            f"<ul>{items}</ul>"
+            '<p class="small">原始 V8 记录仍来自 '
+            f"{_refactor_link('v8.json')} 与 <code>submissions/latest.json</code>。</p>"
+        )
+    data = status["data"]
+    tests = data["tests"]
+    rows = [
+        ("全量指令数", f"{data['score']:,}", "与 submissions/latest.json 一致"),
+        ("独立验证", f"{data['validated']:,} / {data['puzzles']:,}", "全部题目通过独立回放"),
+        ("逐题程序一致", "是", "重构前后程序逐题相同"),
+        ("八阶段指标一致", "是", "阶段指标与原始 V8 相同"),
+        ("测试", f"{tests['passed']} 通过 / 0 失败", "重构后测试记录"),
+    ]
+    if isinstance(data.get("refactor_commit"), str) and data["refactor_commit"].strip():
+        rows.append(("重构提交", f"<code>{html.escape(data['refactor_commit'])}</code>", "报告声明"))
+    rows.append(("基线提交", f"<code>{html.escape(data['baseline_commit'])}</code>", "报告声明"))
+    table = "".join(
+        f'<tr><th scope="row">{html.escape(label)}</th><td>{value}</td>'
+        f'<td class="small">{html.escape(note)}</td></tr>'
+        for label, value, note in rows
+    )
+    return (
+        "<h3>功能化重构复现报告</h3>"
+        '<p class="sub">报告通过本页一致性校验；这是 V8 的等价代码重构，不是新的算法版本。</p>'
+        f'<div class="refactor-ok" role="status"><strong>等价重构复现：{data["score"]:,} 步 · '
+        f'{data["validated"]:,} / {data["puzzles"]:,} 题通过</strong></div>'
+        f'<div class="table-wrap"><table>{table}</table></div>'
+        '<p class="small">本页只核对报告字段与 <code>latest.json</code> / '
+        f"{_refactor_link('v8.json')} 是否一致，未重新执行求解；"
+        "原始证据仍以 v8.json 为准。报告文件：<code>docs/reports/v8-refactor.json</code>。</p>"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +483,7 @@ def rewrite_links(article: str, docs_dir: Path, warnings: list[str] | None = Non
     source = {
         SIMULATOR.resolve(): "#simulator",
         OUTPUT.resolve(): "#top",
+        REFACTOR_REPORT.resolve(): "#refactor-status",
     }
 
     def replace(match: re.Match[str]) -> str:
@@ -426,9 +542,11 @@ def render_report(
     reports_dir: Path = REPORTS,
     latest_path: Path = LATEST,
     docs_dir: Path | None = None,
+    refactor_path: Path = REFACTOR_REPORT,
     warnings: list[str] | None = None,
 ) -> str:
     data = load_report_data(reports_dir, latest_path)
+    refactor = load_refactor_status(refactor_path, data["latest"], data["latest_report"])
     docs_dir = docs_dir or source.parent
     markdown_text = source.read_text(encoding="utf-8")
     check_markdown_numbers(markdown_text, data)
@@ -460,6 +578,7 @@ def render_report(
         "V1_SCORE": f"V1 {v1['score']:,} 步",
         "BEST_DELTA": f"较 V1 少 {delta:.2f}%",
         "SCORE_BARS": score_bars(data),
+        "REFACTOR_BODY": render_refactor_panel(refactor),
         "SCORE_DATA": _escape_script_json(score_payload(data)),
         "SIM_SOURCE": _escape_script_json(simulator_path.read_text(encoding="utf-8")),
     }

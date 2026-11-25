@@ -52,3 +52,32 @@ python competitions/santa-2026/docs/build_report.py --check
 ```
 
 构建依赖固定为 `Markdown==3.10.2` 与 `latex2mathml==3.81.1`；两者只在构建时使用，生成的报告不依赖网络、CDN 或客户端渲染器。输出路径固定为 `competitions/santa-2026/Santa-2026-Interactive-Report.html`，`--output` 可写到临时路径。
+
+### 可选的 V8 重构复现报告
+
+`competitions/santa-2026/docs/reports/v8-refactor.json` 是可选数据源，不是构建依赖：
+
+- **文件缺失**：互动报告在第 9.4 节显示「尚未生成」，继续使用原始 `v8.json` 与 `submissions/latest.json`，构建和 `--check` 正常通过。
+- **文件存在且校验通过**：展示重构复现的成绩、验证题数、逐题程序/八阶段一致性、测试结果与提交信息。
+- **文件存在但无效或校验失败**：显示「校验未通过」及具体原因，不标记为等价重构成功，不更新最佳成绩或回放槽位。
+
+只有同时满足以下条件才算通过：`kind` 为 `santa-v8-refactor`；`score`、`validated`、`puzzles`、`submission_sha256` 与 `submissions/latest.json` 和原始 `v8.json` 一致；`per_puzzle_programs_match`、`stage_metrics_match`、`score_matches_archived_v8` 均为 `true`；`tests.failed` 为 0 且 `tests.passed` 为正；`unverified` 为空。示例结构：
+
+```json
+{
+  "kind": "santa-v8-refactor",
+  "baseline_commit": "9337a3549bea09257cbf36ae1f8da2cbd452942b",
+  "refactor_commit": "<commit or null>",
+  "puzzles": 1000,
+  "score": 194444,
+  "validated": 1000,
+  "submission_sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+  "per_puzzle_programs_match": true,
+  "stage_metrics_match": true,
+  "score_matches_archived_v8": true,
+  "tests": {"passed": 38, "failed": 0},
+  "unverified": []
+}
+```
+
+该报告只用于展示等价重构的复现证据，不新增历史成绩曲线节点，不强制新增 CSV 回放槽位，不覆盖 `v8.json`，也不修改最佳成绩指针。校验只核对报告字段与现有机器可读记录是否自洽，不重新执行求解。测试使用临时 mock 报告，不把模拟数据提交为正式实验记录。

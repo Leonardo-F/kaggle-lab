@@ -2,7 +2,7 @@
 
 > 交互学习文档 · V8 Final / 功能化架构重构目标版
 >
-> **阅读状态说明：** V8 Final 的功能化等价重构已完成并通过 1,000 题全量验收；本文的源码布局、源码链接和命令对应重构后的 main。重构前的版本化基线为 [commit `9337a354`](https://github.com/Leonardo-F/kaggle-lab/tree/9337a3549bea09257cbf36ae1f8da2cbd452942b/competitions/santa-2026)；历史 V1–V8 实现与原始文档仍可从该提交和独立 worktree 复现。验收记录见[重构报告](reports/v8-refactor.json)。
+> **阅读状态说明：** V8 Final 的功能化等价重构已完成并通过 1,000 题全量验收；本文的源码布局、源码链接和命令对应重构后的 main。重构前的版本化基线为 [commit `9337a354`](https://github.com/Leonardo-F/kaggle-lab/tree/9337a3549bea09257cbf36ae1f8da2cbd452942b/competitions/santa-2026)；历史 V1–V8 实现与原始文档仍可从该提交和独立 worktree 复现。[重构复现报告](reports/v8-refactor.json)是可选记录：文件存在时互动报告会校验并展示其一致性结果，缺失时使用原始 V8 全量记录，不阻塞 Web 构建。
 
 **核心问题：** 给定初值与目标集合，用有限寄存器和尽可能少的四则运算覆盖全部目标。我们的办法是先构造合法程序，再通过跨目标共享、全局路径选择、子图重写和寄存器调度压缩真实指令数。V1 到 V8 的本地全量成绩从 **250,642** 降至 **194,444**（减少 56,198 步，约 22.42%）。这不是 Kaggle 榜单成绩，也不是全局最优证明。
 

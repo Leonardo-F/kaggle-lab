@@ -152,6 +152,97 @@ class ReportContentTests(unittest.TestCase):
         self.assertIn('不是 Kaggle 榜单成绩', self.html)
 
 
+class OptionalRefactorReportTests(unittest.TestCase):
+    """The V8 refactor reproduction report is optional and never changes scores."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.latest = json.loads(LATEST.read_text(encoding='utf-8'))
+        cls.archived = json.loads((REPORTS / 'v8.json').read_text(encoding='utf-8'))
+
+    def valid_payload(self):
+        return {
+            'kind': 'santa-v8-refactor',
+            'baseline_commit': '9337a3549bea09257cbf36ae1f8da2cbd452942b',
+            'refactor_commit': '0ec0ec0',
+            'puzzles': self.archived['puzzles'],
+            'score': self.latest['score'],
+            'validated': self.latest['validated'],
+            'submission_sha256': self.latest['submission_sha256'],
+            'per_puzzle_programs_match': True,
+            'stage_metrics_match': True,
+            'score_matches_archived_v8': True,
+            'tests': {'passed': 24, 'failed': 0},
+            'unverified': [],
+        }
+
+    def render_with(self, payload=None, raw=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'v8-refactor.json'
+            if raw is not None:
+                path.write_text(raw, encoding='utf-8')
+            elif payload is not None:
+                path.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+            content, _ = render(refactor_path=path)
+        return content
+
+    def test_missing_report_builds_and_shows_pending_state(self):
+        content = self.render_with()
+        self.assertIn('尚未生成', content)
+        self.assertIn('id="refactor-status"', content)
+        self.assertNotIn('class="refactor-ok"', content)
+        self.assertNotIn('class="refactor-bad"', content)
+
+    def test_valid_report_is_displayed_without_new_score_nodes(self):
+        content = self.render_with(payload=self.valid_payload())
+        self.assertIn('报告通过本页一致性校验', content)
+        self.assertIn(f"等价重构复现：{self.latest['score']:,} 步", content)
+        self.assertNotIn('class="refactor-bad"', content)
+        scores = json.loads(re.search(
+            r'<script type="application/json" id="score-data">(.*?)</script>', content, re.S).group(1))
+        self.assertEqual([row['version'] for row in scores],
+                         [f'V{index}' for index in range(1, 9)])
+        self.assertEqual(scores[-1]['score'], self.latest['score'])
+        self.assertNotIn('V8 Refactored', content.split('id="score-data"')[1])
+
+    def test_failed_consistency_is_not_shown_as_success(self):
+        payload = self.valid_payload()
+        payload['per_puzzle_programs_match'] = False
+        content = self.render_with(payload=payload)
+        self.assertIn('校验未通过', content)
+        self.assertIn('per_puzzle_programs_match', content)
+        self.assertNotIn('class="refactor-ok"', content)
+        self.assertNotIn('报告通过本页一致性校验', content)
+
+    def test_score_mismatch_is_rejected(self):
+        payload = self.valid_payload()
+        payload['score'] = self.latest['score'] + 1
+        content = self.render_with(payload=payload)
+        self.assertIn('校验未通过', content)
+        self.assertIn('与当前最佳成绩', content)
+
+    def test_unverified_items_and_failed_tests_are_rejected(self):
+        payload = self.valid_payload()
+        payload['unverified'] = ['尚未完成全量复跑']
+        self.assertIn('未验证项', self.render_with(payload=payload))
+        payload = self.valid_payload()
+        payload['tests'] = {'passed': 24, 'failed': 1}
+        content = self.render_with(payload=payload)
+        self.assertIn('tests.failed 必须为 0', content)
+
+    def test_malformed_json_is_reported_as_failure(self):
+        content = self.render_with(raw='{not json')
+        self.assertIn('校验未通过', content)
+        self.assertIn('无法读取或解析', content)
+
+    def test_build_does_not_touch_latest_or_archived_reports(self):
+        latest_before = LATEST.read_bytes()
+        archived_before = (REPORTS / 'v8.json').read_bytes()
+        self.render_with(payload=self.valid_payload())
+        self.assertEqual(LATEST.read_bytes(), latest_before)
+        self.assertEqual((REPORTS / 'v8.json').read_bytes(), archived_before)
+
+
 class ReportValidationTests(unittest.TestCase):
     def test_missing_historical_number_is_rejected(self):
         text = SOURCE.read_text(encoding='utf-8').replace('194,444', '194,445')

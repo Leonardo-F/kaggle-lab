@@ -73,7 +73,7 @@ python src/graph_solver.py /absolute/path/puzzles.csv --version "$version" \
 python src/verify.py /absolute/path/puzzles.csv "experiments/${version}-rerun.csv"
 ```
 
-等价重构的输入哈希、逐题/阶段一致性、测试与命令记录见[重构报告](docs/reports/v8-refactor.json)。本次只做等价重构，没有混入 V9 算法改动。
+等价重构的全量复现报告是可选的 `docs/reports/v8-refactor.json`：存在且通过一致性校验时，互动报告会展示其逐题/阶段结果；缺失时继续使用原始 V8 记录，不阻塞构建。本次只做等价重构，没有混入 V9 算法改动。
 
 ## 测试
 
