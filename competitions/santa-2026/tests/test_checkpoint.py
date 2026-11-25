@@ -27,10 +27,10 @@ class CheckpointTest(unittest.TestCase):
         self.output = self.root / "answer.csv"
         self.checkpoint = self.root / "run.sqlite"
 
-    def run_solver(self, *extra):
+    def run_solver(self, *extra, version="v7"):
         return subprocess.run(
             [sys.executable, str(SRC / "graph_solver.py"), str(self.puzzles),
-             "--version", "v7", "--output", str(self.output),
+             "--version", version, "--output", str(self.output),
              "--checkpoint", str(self.checkpoint), *extra],
             capture_output=True, text=True,
         )
@@ -82,6 +82,19 @@ class CheckpointTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("locked by another running experiment", result.stderr)
 
+
+    def test_v8_checkpoint_reports_every_stage(self):
+        result = self.run_solver("--jobs", "1", version="v8")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads((self.root / "answer.csv.validation.json").read_text())
+        stages = ["v7", "list_schedule", "v8", "v81", "v82",
+                  "v8group_strict", "v8group_neutral", "v8final"]
+        costs = [report[stage] for stage in stages]
+        self.assertEqual(report["score"], report["v8final"])
+        self.assertEqual(costs, sorted(costs, reverse=True))
+        self.assertEqual(report["improved"] + report["unchanged"] + report["worse"], 3)
+        self.assertEqual(report["fingerprint"]["version"], "v8")
+        self.assertEqual(report["fingerprint"]["parameters"]["rewrite_sweeps"], 2)
 
 if __name__ == "__main__":
     unittest.main()
