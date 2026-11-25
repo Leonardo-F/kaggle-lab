@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kaggle Lab · 赛题互动页</title>
+<style>
+:root { font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: #17233d; background: #f2f5fa; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { position: sticky; top: 0; z-index: 2; background: #142344; color: #fff; padding: 12px 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+h1 { font-size: 18px; margin: 0 10px 0 0; white-space: nowrap; }
+h1 span { color: #a9bad8; font-weight: 500; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button, .link { cursor: pointer; border: 1px solid #a3b7da; border-radius: 8px; background: transparent; color: #fff; padding: 8px 12px; font-size: 14px; text-decoration: none; line-height: 1.2; }
+button[aria-selected="true"] { background: #fff; color: #142344; }
+.link { margin-left: auto; color: #d8e2f3; }
+main { padding: 12px; }
+.notice { margin: 0 auto 10px; max-width: 1500px; line-height: 1.5; font-size: 13px; color: #435571; }
+.notice a { color: #174f8b; }
+iframe { display: block; border: 1px solid #ced8e7; border-radius: 10px; width: 100%; height: calc(100vh - 160px); min-height: 620px; background: #fff; }
+iframe[hidden] { display: none; }
+@media (max-width: 720px) {
+  header { padding: 10px 12px; }
+  h1 { width: 100%; }
+  .link { margin-left: 0; }
+  main { padding: 8px; }
+  iframe { height: 78vh; min-height: 600px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kaggle Lab <span>· 赛题互动页</span></h1>
+  <nav aria-label="选择赛题">
+    <button type="button" data-page="squares" aria-selected="true">正方形装箱</button>
+    <button type="button" data-page="santa" aria-selected="false">Santa 2026</button>
+    <a class="link" href="simulation/index.html">统一模拟器 ↗</a>
+    <a class="link" href="https://github.com/Leonardo-F/kaggle-lab">GitHub ↗</a>
+  </nav>
+</header>
+<main>
+  <p class="notice">只汇总已完成网页的两个赛题：正方形装箱与 Santa 2026。正方形装箱页包含已认证布局和模拟器；Santa 页是算法互动报告并内嵌 V1–V8 程序回放。Google 量子电路暂无网页报告，使用赛题 README 中的命令行入口。页面直接引用各自原始 HTML，不复制内容。</p>
+  <iframe id="squares" title="正方形装箱模拟器" src="competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html" allow="clipboard-write"></iframe>
+  <iframe id="santa" title="Santa 2026 算法互动报告" data-src="competitions/santa-2026/Santa-2026-Interactive-Report.html" allow="clipboard-write" hidden></iframe>
+</main>
+<script>
+const pages = [...document.querySelectorAll("[data-page]")];
+const frames = {squares: document.getElementById("squares"), santa: document.getElementById("santa")};
+function select(name, updateHash = true) {
+  if (!frames[name]) return;
+  for (const [key, frame] of Object.entries(frames)) {
+    const active = key === name;
+    frame.hidden = !active;
+    document.querySelector(`[data-page="${key}"]`).setAttribute("aria-selected", String(active));
+    if (active && !frame.hasAttribute("src")) frame.src = frame.dataset.src;
+  }
+  if (updateHash) {
+    try { history.replaceState(null, "", "#" + name); } catch { location.hash = name; }
+  }
+}
+for (const button of pages) {
+  button.addEventListener("click", () => select(button.dataset.page));
+}
+window.addEventListener("hashchange", () => select(location.hash === "#santa" ? "santa" : "squares", false));
+select(location.hash === "#santa" ? "santa" : "squares", false);
+</script>
+</body>
+</html>
