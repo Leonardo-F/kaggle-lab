@@ -145,6 +145,21 @@ class ReviewDecouplingTests(unittest.TestCase):
             self.assertNotEqual(updated['solver']['source_sha256']['algorithms/common.py'], original)
             self.assertEqual(review['solver']['source_sha256']['algorithms/common.py'], original)
 
+    def test_explicit_refresh_migrates_legacy_review_and_keeps_slots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src, simulator, _ = make_santa(tmp)
+            review_path = Path(tmp) / 'review.json'
+            review_path.write_text(json.dumps({
+                'independent_replay': {'versions': HISTORICAL, 'source_sha256': {'stale.py': '0' * 64}},
+            }), encoding='utf-8')
+            build_mod.refresh(review_path=review_path, santa_src=src, simulator_path=simulator)
+            refreshed = json.loads(review_path.read_text(encoding='utf-8'))
+            self.assertEqual(refreshed['schema_version'], 2)
+            self.assertEqual(refreshed['independent_replay']['versions'], HISTORICAL)
+            self.assertEqual(refreshed['solver']['current_version'], 'v8')
+            self.assertNotIn('stale.py', refreshed['solver']['source_sha256'])
+            build_mod.validate_review(refreshed, *build_mod.review_state(src, simulator)[:3], simulator)
+
     def test_normal_build_does_not_rewrite_the_review_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             src, simulator, square = make_santa(tmp)
