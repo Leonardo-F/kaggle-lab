@@ -27,22 +27,40 @@ from .common import arithmetic
 SIGNED_64_MAX = 2 ** 63 - 1
 TIMEOUT_SECONDS = 45
 OPERATORS = frozenset('+-*/')
-_BINARY_PATHS = None
+_BINARY_CACHE = None  # (manifest signature, kernel -> path)
+
+
+def _manifest_signature():
+    """Cheap identity of the current native build manifest for cache invalidation."""
+    from .native import build as native_build
+    path = native_build.BUILD_DIR / "manifest.json"
+    try:
+        stat = path.stat()
+        return (str(native_build.BUILD_DIR), stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        return (str(native_build.BUILD_DIR), None, None)
 
 
 def binary_paths():
-    """Kernel name -> absolute binary path, built lazily and cached per process."""
-    global _BINARY_PATHS
-    if _BINARY_PATHS is None:
+    """Kernel name -> absolute binary path, built lazily and cached per process.
+
+    The cache is keyed by the manifest file signature, so a rebuild (for
+    example after switching ``SANTA_CXX`` or using ``--force``) is noticed even
+    in a long-lived process; a stale binary path can never stay bound to a new
+    checkpoint fingerprint.
+    """
+    global _BINARY_CACHE
+    signature = _manifest_signature()
+    if _BINARY_CACHE is None or _BINARY_CACHE[0] != signature:
         from .native.build import binaries
-        _BINARY_PATHS = binaries()
-    return _BINARY_PATHS
+        _BINARY_CACHE = (_manifest_signature(), binaries())
+    return _BINARY_CACHE[1]
 
 
 def reset_binaries():
     """Forget the cached build (tests and long-lived research shells)."""
-    global _BINARY_PATHS
-    _BINARY_PATHS = None
+    global _BINARY_CACHE
+    _BINARY_CACHE = None
 
 
 def puzzle_numbers(row):

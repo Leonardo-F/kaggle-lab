@@ -5,18 +5,28 @@ are compiled before a solve starts into ``competitions/santa-2026/experiments/
 native-build/`` (git-ignored).  The bundled research archive contains prebuilt
 ELF binaries; those are never used as a release dependency.
 
-The build records the compiler identity, flags, source hashes and binary
-hashes in ``manifest.json``.  The manifest is what the checkpoint fingerprint
-binds, so a resumed run can only reuse the exact same native pipeline.  Bump
-``MANIFEST_SCHEMA`` whenever this module's build contract changes.
+The build records the compiler identity (resolved path, ``--version`` line,
+family), flags, whether the libstdc++ compatibility header was needed, source
+hashes and binary hashes in ``manifest.json``.  The manifest is what the
+checkpoint fingerprint binds, so a resumed run can only reuse the exact same
+native pipeline.  Bump ``MANIFEST_SCHEMA`` whenever this module's build
+contract changes.
+
+An explicitly requested compiler (``SANTA_CXX`` or the ``explicit`` argument)
+always wins: it has priority over a cached manifest, it is resolved through the
+PATH/absolute-path/symlink rules below, and it is never silently replaced by
+the cached compiler or by auto-detection.  When it is missing or unusable the
+build fails loudly.  Without an explicit compiler the previous behaviour is
+kept: a valid manifest is reused, otherwise the usual GCC-before-clang
+candidate list is probed.
 
 GCC/libstdc++ on Linux is the reference toolchain (the frozen full run used
-``g++ -O3 -std=c++17``).  A local compiler without libstdc++, such as Apple
-Clang, is supported through the small ``compat/bits/stdc++.h`` forwarding
-header; ``native/build.py`` adds it only when a compiler probe shows the real
-aggregate header is missing.  Compiler-dependent candidate ordering was checked
-against the frozen per-puzzle records; see ``docs/progress.md`` for the exact
-platforms and results.
+``g++ -O3 -std=c++17``).  A compiler without libstdc++, such as Apple Clang,
+is supported through the small ``compat/bits/stdc++.h`` forwarding header;
+this module adds it only when a compiler probe shows the real aggregate header
+is missing.  Compiler-dependent candidate ordering was checked against the
+frozen per-puzzle records; see ``docs/progress.md`` for the exact platforms
+and results.
 """
 
 import argparse
@@ -42,8 +52,9 @@ BUILD_DIR = Path(
 COMPAT_DIR = NATIVE_DIR / "compat"
 KERNELS = ("constructor_wide", "constructor_mitm")
 FLAGS = ("-O3", "-std=c++17")
-MANIFEST_SCHEMA = 1
+MANIFEST_SCHEMA = 2
 COMPILE_TIMEOUT = 180
+SANTA_CXX_ENV = "SANTA_CXX"
 COMPILER_CANDIDATES = (
     "g++-15", "g++-14", "g++-13", "g++-12", "g++-11", "g++-10", "g++", "c++",
 )
@@ -63,14 +74,24 @@ def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def _is_metadata_junk(path):
+    """macOS AppleDouble/sidecar files that must never enter a source fingerprint."""
+    return any(part.startswith("._") or part == ".DS_Store" or part == "__pycache__"
+               for part in path.parts)
+
+
 def source_files():
     """Stable relative-path -> absolute-path map of build inputs."""
     files = {Path("build.py"): Path(__file__).resolve()}
     for kernel in KERNELS:
         files[Path(kernel + ".cpp")] = NATIVE_DIR / (kernel + ".cpp")
     for shim in sorted(COMPAT_DIR.rglob("*")):
-        if shim.is_file():
-            files[shim.relative_to(NATIVE_DIR)] = shim
+        if not shim.is_file():
+            continue
+        relative = shim.relative_to(NATIVE_DIR)
+        if _is_metadata_junk(relative):
+            continue
+        files[relative] = shim
     return {path.as_posix(): absolute for path, absolute in sorted(files.items())}
 
 
@@ -78,10 +99,17 @@ def _run(command, **kwargs):
     return subprocess.run(command, capture_output=True, text=True, **kwargs)
 
 
+def _normalize(path):
+    """Absolute real path used as the compiler identity (symlinks resolved)."""
+    return str(Path(path).resolve())
+
+
 def _compiler_version(compiler):
-    result = _run([compiler, "--version"])
+    result = _run([str(compiler), "--version"])
     if result.returncode != 0:
-        raise RuntimeError(f"cannot query compiler {compiler}: {result.stderr.strip()}")
+        stderr = (result.stderr or "").strip().splitlines()
+        detail = stderr[0] if stderr else f"exit {result.returncode}"
+        raise RuntimeError(f"cannot query compiler {compiler}: {detail}")
     first = (result.stdout.splitlines() or [""])[0]
     lower = first.lower()
     if "gcc" in lower or "g++" in lower or "free software foundation" in lower:
@@ -90,7 +118,7 @@ def _compiler_version(compiler):
         family = "clang"
     else:
         family = "unknown"
-    return {"path": str(compiler), "version": first, "family": family}
+    return {"path": _normalize(compiler), "version": first, "family": family}
 
 
 def _probe(compiler, include_compat):
@@ -107,23 +135,76 @@ def _probe(compiler, include_compat):
         return result.returncode == 0, result.stderr
 
 
-def choose_compiler(explicit=None):
-    """Return ``(compiler_path, version_info, compat_include)``.
+def _probe_compat(compiler):
+    """Return ``(usable, compat_include, stderr)`` for one concrete compiler path."""
+    ok, stderr = _probe(compiler, include_compat=False)
+    if ok:
+        return True, False, ""
+    ok, shim_stderr = _probe(compiler, include_compat=True)
+    if ok:
+        return True, True, ""
+    return False, False, (stderr or shim_stderr)
 
-    ``SANTA_CXX``/``explicit`` wins, then GCC names before the generic ``g++``
-    and ``c++`` aliases (which are Apple Clang on macOS).  The first candidate
-    that compiles the probe is used; libstdc++'s aggregate header is preferred
-    and the compatibility shim is a documented fallback.
+
+def _resolve_candidate(candidate):
+    """Resolve a compiler name/absolute path; return its real path or ``None``."""
+    resolved = shutil.which(candidate)
+    if resolved is None:
+        expanded = Path(candidate).expanduser()
+        if expanded.is_file():
+            resolved = str(expanded)
+        else:
+            return None
+    return _normalize(resolved)
+
+
+def _requested_compiler(explicit=None):
+    value = explicit if explicit is not None else os.environ.get(SANTA_CXX_ENV)
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _explicit_compiler_info(requested):
+    """Resolve and identify the explicitly requested compiler; fail loudly."""
+    resolved = _resolve_candidate(requested)
+    if resolved is None:
+        raise RuntimeError(
+            f"explicit compiler from {SANTA_CXX_ENV} {requested!r} was not found "
+            "or is not executable; refusing to fall back to auto-detection"
+        )
+    try:
+        return _compiler_version(resolved)
+    except (OSError, RuntimeError) as exc:
+        raise RuntimeError(
+            f"explicit compiler from {SANTA_CXX_ENV} {requested!r} is not usable: {exc}"
+        ) from exc
+
+
+def choose_compiler(explicit=None):
+    """Return ``(version_info, compat_include)`` for the selected compiler.
+
+    An explicit compiler (``SANTA_CXX``/``explicit``) is mandatory: it is
+    resolved and probed on its own and any failure raises.  Otherwise the
+    historical candidate order is probed and the first working compiler wins.
     """
-    requested = explicit or os.environ.get("SANTA_CXX")
-    candidates = []
-    if requested:
-        candidates.append(requested)
-    else:
-        candidates.extend(COMPILER_CANDIDATES)
+    requested = _requested_compiler(explicit)
+    if requested is not None:
+        info = _explicit_compiler_info(requested)
+        usable, compat, stderr = _probe_compat(info["path"])
+        if not usable:
+            detail = (stderr or "").strip().splitlines()[:1]
+            raise RuntimeError(
+                f"explicit compiler from {SANTA_CXX_ENV} {requested!r} "
+                f"({info['version']}) cannot compile the C++17 probe: {detail}"
+            )
+        info = dict(info, source=SANTA_CXX_ENV)
+        return info, compat
+
     failures = []
-    for candidate in candidates:
-        resolved = shutil.which(candidate) or (candidate if Path(candidate).exists() else None)
+    for candidate in COMPILER_CANDIDATES:
+        resolved = _resolve_candidate(candidate)
         if resolved is None:
             failures.append(f"{candidate}: not found")
             continue
@@ -132,13 +213,10 @@ def choose_compiler(explicit=None):
         except (OSError, RuntimeError) as exc:
             failures.append(f"{candidate}: {exc}")
             continue
-        ok, stderr = _probe(resolved, include_compat=False)
-        if ok:
-            return version, False
-        ok, shim_stderr = _probe(resolved, include_compat=True)
-        if ok:
-            return version, True
-        failures.append(f"{candidate}: probe failed: {(stderr or shim_stderr).strip().splitlines()[:1]}")
+        usable, compat, stderr = _probe_compat(resolved)
+        if usable:
+            return dict(version, source="auto"), compat
+        failures.append(f"{candidate}: probe failed: {(stderr or '').strip().splitlines()[:1]}")
     detail = "; ".join(failures) or "no compiler candidates"
     raise RuntimeError(
         "no working C++17 compiler with __int128 support was found; "
@@ -155,7 +233,13 @@ def _expected_manifest():
     }
 
 
-def _manifest_matches(manifest):
+def _manifest_matches(manifest, expected_compiler=None):
+    """True only when the cached manifest describes the current build inputs.
+
+    ``expected_compiler`` is the identity of the explicitly requested compiler
+    (or ``None``).  When it is given, the cached compiler must be the exact
+    same resolved binary/version/family; otherwise a rebuild is forced.
+    """
     if not isinstance(manifest, dict) or manifest.get("schema") != MANIFEST_SCHEMA:
         return False
     expected = _expected_manifest()
@@ -163,19 +247,32 @@ def _manifest_matches(manifest):
         return False
     if manifest.get("sources") != expected["sources"]:
         return False
+    if not isinstance(manifest.get("compat_include"), bool):
+        return False
     compiler = manifest.get("compiler") or {}
-    if not compiler.get("path") or not compiler.get("version"):
+    path, version = compiler.get("path"), compiler.get("version")
+    family = compiler.get("family")
+    if not path or not version:
         return False
-    if not Path(compiler["path"]).exists():
-        return False
-    try:
-        if _compiler_version(compiler["path"])["version"] != compiler["version"]:
+    if expected_compiler is not None:
+        if (_normalize(path) != expected_compiler["path"]
+                or version != expected_compiler["version"]
+                or family != expected_compiler["family"]):
             return False
-    except (OSError, RuntimeError):
-        return False
+    else:
+        if not Path(path).exists():
+            return False
+        try:
+            current = _compiler_version(path)
+        except (OSError, RuntimeError):
+            return False
+        if current["version"] != version or current["family"] != family:
+            return False
     for kernel in KERNELS:
         info = (manifest.get("binaries") or {}).get(kernel) or {}
         binary = Path(info.get("path", ""))
+        if binary != BUILD_DIR / kernel:
+            return False
         if not binary.is_file() or sha256(binary) != info.get("sha256"):
             return False
     return True
@@ -198,30 +295,41 @@ def _smoke(binary):
         raise RuntimeError(f"native smoke test produced no protocol header for {binary.name}")
 
 
-def _build_locked(manifest):
-    sources = source_files()
-    info = dict(_expected_manifest())
-    if manifest and manifest.get("compiler") and Path(manifest["compiler"].get("path", "")).exists():
+def _select_compiler(manifest, explicit_info):
+    """Pick the compiler for a rebuild, honouring an explicit request first."""
+    requested = _requested_compiler()
+    if requested is not None:
+        info = explicit_info or _explicit_compiler_info(requested)
+        usable, compat, stderr = _probe_compat(info["path"])
+        if not usable:
+            detail = (stderr or "").strip().splitlines()[:1]
+            raise RuntimeError(
+                f"explicit compiler from {SANTA_CXX_ENV} {requested!r} "
+                f"({info['version']}) cannot compile the C++17 probe: {detail}"
+            )
+        return dict(info, source=SANTA_CXX_ENV), compat
+    cached = (manifest or {}).get("compiler") or {}
+    if cached.get("path") and Path(cached["path"]).exists():
         try:
-            compiler = {"path": manifest["compiler"]["path"],
-                        "version": manifest["compiler"]["version"],
-                        "family": manifest["compiler"]["family"]}
-            version = _compiler_version(compiler["path"])
-            if version["version"] != compiler["version"]:
-                raise RuntimeError("compiler version changed")
-            ok, _ = _probe(compiler["path"], include_compat=bool(manifest.get("compat_include")))
-            if not ok:
-                raise RuntimeError("compiler probe failed")
-            compat = bool(manifest.get("compat_include"))
+            info = _compiler_version(cached["path"])
+            if info["version"] != cached.get("version") or info["family"] != cached.get("family"):
+                raise RuntimeError("cached compiler version changed")
+            usable, compat, _ = _probe_compat(info["path"])
+            if usable:
+                return dict(info, source=cached.get("source", "auto")), compat
         except (OSError, RuntimeError):
-            compiler, compat = choose_compiler()
-    else:
-        compiler, compat = choose_compiler()
+            pass
+    return choose_compiler()
+
+
+def _build_locked(manifest, explicit_info=None):
+    info = dict(_expected_manifest())
+    compiler, compat = _select_compiler(manifest, explicit_info)
     info.update(compiler=compiler, compat_include=compat)
     binaries = {}
     commands = []
     for kernel in KERNELS:
-        source = sources[kernel + ".cpp"]
+        source = NATIVE_DIR / (kernel + ".cpp")
         temporary = BUILD_DIR / (kernel + ".tmp")
         final = BUILD_DIR / kernel
         command = [compiler["path"], *FLAGS]
@@ -239,7 +347,8 @@ def _build_locked(manifest):
         _smoke(final)
         binaries[kernel] = {"path": str(final), "sha256": sha256(final)}
         commands.append(command)
-    info.update(binaries=binaries, commands=commands, built_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    info.update(binaries=binaries, commands=commands,
+                built_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     temporary = BUILD_DIR / "manifest.json.tmp"
     temporary.write_text(json.dumps(info, indent=2, sort_keys=True) + "\n")
     os.replace(temporary, BUILD_DIR / "manifest.json")
@@ -250,6 +359,8 @@ def ensure_built(force=False):
     """Build the kernels when missing or stale and return the manifest data."""
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     manifest_path = BUILD_DIR / "manifest.json"
+    requested = _requested_compiler()
+    explicit_info = _explicit_compiler_info(requested) if requested is not None else None
     handle = _lock()
     try:
         manifest = None
@@ -258,9 +369,9 @@ def ensure_built(force=False):
                 manifest = json.loads(manifest_path.read_text())
             except (OSError, ValueError):
                 manifest = None
-            if _manifest_matches(manifest):
+            if _manifest_matches(manifest, explicit_info):
                 return manifest
-        return _build_locked(manifest)
+        return _build_locked(manifest, explicit_info)
     finally:
         if fcntl is not None:
             fcntl.flock(handle, fcntl.LOCK_UN)
@@ -276,9 +387,12 @@ def built_info():
             "run: python competitions/santa-2026/src/algorithms/native/build.py"
         )
     manifest = json.loads(path.read_text())
-    if not _manifest_matches(manifest):
+    requested = _requested_compiler()
+    explicit_info = _explicit_compiler_info(requested) if requested is not None else None
+    if not _manifest_matches(manifest, explicit_info):
         raise RuntimeError(
-            "native constructor sources or binaries are stale; run the native build again"
+            "native constructor sources, binaries or requested compiler changed; "
+            "run the native build again"
         )
     return manifest
 

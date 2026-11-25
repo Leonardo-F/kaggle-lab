@@ -7,6 +7,7 @@ __pycache__/
 !.env.example
 .pytest_cache/
 .DS_Store
+._*
 # Local Kaggle credentials
 kaggle.json
 # Generated large submissions and experimental intermediate results
