@@ -241,6 +241,7 @@ python3 src/verify.py data/puzzles.csv experiments/gcc-v9.csv
 | 远程 `main`（合入后） | `8858a6a09e4ba37498f831e4350a8787d1e08c2c`（merge `feat/santa-v9`） |
 | V9 合入内容 | `c404706`、`d3f4cae`、`96ac38e`、`584652b`、`b0f63bd`、`105cc83` 六个提交 |
 | GitHub Actions（main 合并提交） | [run 45673883392](https://github.com/Leonardo-F/kaggle-lab/actions/runs/45673883392)，**completed / success**，含 `Build Santa native C++17 constructors` 步骤，全部 16 个步骤 success（使用 `gh run view --json jobs` 核实） |
+| GitHub Actions（最终验收合并 `0d23ea1`） | [run 45710069227](https://github.com/Leonardo-F/kaggle-lab/actions/runs/45710069227)，**completed / success**，全部步骤 success |
 | 本轮验收分支 | `fix/santa-v9-final-acceptance`（从 `8858a6a` 创建，本地提交，未推送） |
 
 ## 8.2 D1–D14 当前状态

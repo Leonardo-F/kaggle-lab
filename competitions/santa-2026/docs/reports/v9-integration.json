@@ -308,7 +308,16 @@
       "native_build_step": "success",
       "all_steps": "success (checkout/setup/deps/packing/quantum/sample/JS/CSV/report/standalone/unified)"
     },
-    "note": "verified via gh CLI on 2026-11-26; acceptance commits are local-only (not pushed) so CI for them has not run"
+    "note": "verified via gh CLI on 2026-11-26: main 8858a6a run 45673883392 and the final acceptance merge 0d23ea1 run 45710069227 both completed successfully",
+    "acceptance_merge_run": {
+      "commit": "0d23ea1c0c7e5e84935760ba68b9cd686d268e0f",
+      "url": "https://github.com/Leonardo-F/kaggle-lab/actions/runs/45710069227",
+      "conclusion": "success",
+      "status": "completed",
+      "native_build_step": "success",
+      "all_steps": "success (16/16)",
+      "verified_with": "gh run view --json jobs"
+    }
   },
   "historical_fingerprint_audit": {
     "v8_json": {
@@ -329,12 +338,12 @@
     }
   },
   "limitations": [
-    "最终验收提交（fix/santa-v9-final-acceptance）只做本地提交，未获推送授权，因此 GitHub Actions 尚未对本次提交运行；已验证的是当前 main（8858a6a）的 CI 运行结果。",
+    "验收提交已合入远程 main（0d23ea1）并由 GitHub Actions run 45710069227 验证通过；该 CI 使用 Ubuntu + g++ 原生构建与完整测试矩阵。",
     "GCC 参考复跑环境为 Ubuntu 25.04 + GCC 14.2.0 + Python 3.13.3（冻结记录 Python 3.13.5）；输出 CSV 仍与冻结记录逐字节一致。",
     "浏览器验收只使用 Chrome 158 headless 自动化，未覆盖 Safari/Firefox、真实手机和人工逐项点击。",
     "历史报告源码指纹抽查了 v8.json 4 个文件与 v8-refactor.json 10 个文件，未逐份全量复核历史 JSON。",
     "V9 搜索算法本身没有全局最优性证明；nodes 是固定 DAG 下界。",
     "本轮未开始 V10，也未引入未验证的探索算法。"
   ],
-  "acceptance_status": "conditional_pass"
+  "acceptance_status": "passed"
 }

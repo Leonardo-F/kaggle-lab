@@ -138,4 +138,4 @@ V8 的正式管线由 `v8_rewrite`（双运算改写与图编译）、`v8_three`
 
 **最终测试计数（实际执行）：** 本机 macOS：Santa Python **120 tests OK**（含 7 个验收报告一致性测试、15 个原生构建缓存测试）、Santa Node 7/7、Web Python 17、装箱 Python 27 + Node 15、量子 Python 13；报告与统一入口 `--check` 均 exit 0；`git diff --check` 通过。Linux GCC 14.2.0 环境：Santa Python 同一套 **120 tests OK**（test_verify 5、test_merge 11、test_checkpoint 11、test_solver 27、test_native_build 15、test_report 44、test_acceptance_report 7）；原生构建在两种编译器下均成功。浏览器：上一轮验收中离线自动化矩阵为模拟器 23/23、报告/统一入口/互动页 26/26；本轮重建后用 Chrome 158 headless 冒烟复核通过（报告页含 V9、175,604、参考工具链复现说明与 9 条成绩条，无页面错误；统一入口可离线加载）。本轮完整 Playwright 矩阵在重建后复核时遇到 headless 会话挂起，已终止并如实记录。
 
-**限制：** 本轮验收提交为本地提交、尚未推送，因此没有对应 CI 运行（已验证 main 的 CI）；GCC 环境为 Ubuntu 25.04/GCC 14.2.0/Python 3.13.3（冻结记录 Python 3.13.5）；浏览器仅 Chrome 158 headless；历史指纹为抽查；V9 无全局最优性证明；未开始 V10。
+**合入与 CI：** 本轮验收已合入远程 `main`（merge `0d23ea1`），GitHub Actions [run 45710069227](https://github.com/Leonardo-F/kaggle-lab/actions/runs/45710069227) 全部步骤 success。**限制：**GCC 环境为 Ubuntu 25.04/GCC 14.2.0/Python 3.13.3（冻结记录 Python 3.13.5）；浏览器仅 Chrome 158 headless；历史指纹为抽查；V9 无全局最优性证明；未开始 V10。
