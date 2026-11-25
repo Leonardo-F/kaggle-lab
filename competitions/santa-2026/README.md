@@ -4,7 +4,7 @@
 
 ## 互动算法报告
 
-下载 [Santa-2026-Interactive-Report.html](Santa-2026-Interactive-Report.html) 后用浏览器离线打开。报告展示 V1–V5 的历史成绩与寄存器逐步演示。V6–V8 的分析见[算法演进](docs/algorithm-evolution.md)，实际程序回放用下面的离线模拟器。
+下载 [Santa-2026-Interactive-Report.html](Santa-2026-Interactive-Report.html) 后用浏览器离线打开。报告展示 V1–V8 的算法演进、全量成绩、V6–V8 管线与寄存器逐步演示，并内嵌 V1–V8 程序回放模拟器。更详细的数学推导见[算法演进](docs/algorithm-evolution.md)。
 
 ## 离线模拟器
 
