@@ -225,7 +225,7 @@
     "squares_python": 27,
     "squares_node": 15,
     "quantum_python": 13,
-    "quantum_skipped": 1,
+    "quantum_skipped": 0,
     "native_build": "ok",
     "report_check": "ok",
     "web_bundle_check": "ok",

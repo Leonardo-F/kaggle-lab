@@ -110,7 +110,7 @@ V8 的正式管线由 `v8_rewrite`（双运算改写与图编译）、`v8_three`
 - 统一 Web：`python3 -m unittest discover -s web/tests -p 'test_*.py'` → **17 tests OK**；`python web/build/build.py --check` → exit 0。
 - 报告构建：`python3 docs/build_report.py` → 重建 `Santa-2026-Interactive-Report.html`；`python3 docs/build_report.py --check` → exit 0（up to date）。
 - 原生构建：`python3 src/algorithms/native/build.py` → 两个内核构建成功并写入 manifest；重复 `ensure_built(force=True)` 二进制 SHA 稳定。
-- 其他赛题（共享 Web 构建后回归）：装箱 Python **27 tests OK**、装箱 Node **15/15 pass**、量子 Python **13 tests OK（1 skipped）**（本机用 `/tmp` 临时依赖目录安装 requirements，未改动仓库）。
+- 其他赛题（共享 Web 构建后回归）：装箱 Python **27 tests OK**、装箱 Node **15/15 pass**、量子 Python **13 tests OK（无 skip）**（本机用 `/tmp` 临时依赖目录安装 requirements，未改动仓库）。
 - 浏览器真实验收（Google Chrome 158.0.8127.88 headless，macOS 27.0.1 arm64）：模拟器页 **23/23** 项通过（V1–V9 槽位、三步教学解、BigInt、V7/V8/V9/混合 CSV 回放、自定义槽位、非法 CSV 反馈）；互动报告/统一入口/互动页 **26/26** 项通过（V9 成绩与独立曲线、混合单列、MathML、V9 章锚点、V8 重构面板、内嵌模拟器回放、390px 窄屏、`#santa`/`#squares`）。三份单文件在 `file://` 下打开且拦截全部 http(s) 请求；互动页用本地 HTTP 检查相对路径。未在 Safari/Firefox 或真实手机设备上验证。
 - 归档 CSV 独立复核：V9 `175,604`、V8 `194,444`、V8+V9 混合 `174,884`，三者均 1,000/1,000 合法；`git diff --check` 通过。
 - 提交链：`c404706`（V8 报告校验收尾）、`d3f4cae`（V9 功能化合入，即 [v9.json](reports/v9.json) 的 `solver_commit`），后续提交记录复现证据与文档/Web 重建。分步提交中的中间态不单独视为可发布构建，最终分支以完整测试与 `--check` 为准。
