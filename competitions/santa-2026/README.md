@@ -50,22 +50,6 @@ python dag_lns.py data/puzzles.csv --reference submissions/elf-calculator-score-
 python solve.py data/puzzles.csv --check optimized.csv
 ```
 
-## 值图改写器
-
-`legacy/graph_polisher.py` 把一份合法程序产出的所有值当作可用操作数，逐目标寻找更短的重新推导（单指令、双指令、锚点、隐藏锚点），循环到不动点后重新分配寄存器。每一步都用 `solve.replay` 校验，只保留更短的程序。
-
-```bash
-python legacy/graph_polisher.py data/puzzles.csv --reference submissions/elf-calculator-score-270450.csv \
-    --one-sided --no-two-step --output a.csv --jobs 8
-python legacy/graph_polisher.py data/puzzles.csv --reference a.csv --one-sided --output b.csv --jobs 8
-python legacy/graph_polisher.py data/puzzles.csv --reference b.csv --output c.csv --jobs 8
-python legacy/graph_polisher.py data/puzzles.csv --reference c.csv --one-sided --output d.csv --jobs 8
-python legacy/graph_polisher.py data/puzzles.csv --reference d.csv --output e.csv --jobs 8
-python legacy/graph_polisher.py data/puzzles.csv --merge \
-    submissions/elf-calculator-score-270450.csv a.csv b.csv c.csv d.csv e.csv --output merged.csv
-python legacy/graph_polisher.py data/puzzles.csv --check merged.csv
-```
-
-对正式集 1,000 题迭代打磨、再做锚点变体搜索（`--variant`、`--scaled`）并逐题取最短合并，得到 **270,450 → 269,369**（少 1,081 步，281 题变短、最长程序 525 步），`--check` 独立回放全部通过。完整命令见[进展文档](docs/progress.md)。详细测量、与公开前沿（128,513）的分档差距和结构检验见[对比分析](docs/frontier-analysis.md)。
+早期值图改写实验将正式集总指令数从 **270,450** 降到 **269,369**。算法和实验结果见[对比分析](docs/frontier-analysis.md)，脚本见[历史实验代码](https://github.com/Leonardo-F/kaggle-lab/blob/378f74bda50672bc298a636a9a0032c92fd3bcf5/competitions/santa-2026/legacy/graph_polisher.py)。
 
 [解题思路和验证范围](docs/progress.md) · [公开前沿对比与搜索实验](docs/frontier-analysis.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)
