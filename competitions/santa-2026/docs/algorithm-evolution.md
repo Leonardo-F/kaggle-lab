@@ -27,8 +27,8 @@ flowchart LR
 本次复跑 250,642 步。本次输出与交接 CSV 逐字节一致。候选进制和搜索深度有限，贪心选择可能错过整题更短的路径。交接包日志显示 873 题由自适应候选胜出。
 
 ```bash
-python graph_solver.py data/puzzles.csv --version v1 --output submissions/v1-score-250642.csv --jobs 4
-python verify.py data/puzzles.csv submissions/v1-score-250642.csv
+python src/graph_solver.py data/puzzles.csv --version v1 --output submissions/v1-score-250642.csv --jobs 4
+python src/verify.py data/puzzles.csv submissions/v1-score-250642.csv
 ```
 
 ## V2 · 扩展搜索与 DAG 压缩
@@ -45,8 +45,8 @@ flowchart LR
 本次复跑 236,449 步。本次输出与交接 CSV 逐字节一致。较前版 829 题缩短，171 题持平，0 题变长。替换受发现顺序约束。交接包的同次运行中，V1 候选 250,642 步，扩大搜索后 239,693 步，DAG 压缩后 236,449 步。
 
 ```bash
-python graph_solver.py data/puzzles.csv --version v2 --output submissions/v2-score-236449.csv --jobs 4
-python verify.py data/puzzles.csv submissions/v2-score-236449.csv
+python src/graph_solver.py data/puzzles.csv --version v2 --output submissions/v2-score-236449.csv --jobs 4
+python src/verify.py data/puzzles.csv submissions/v2-score-236449.csv
 ```
 
 ## V3 · 双向补数查询与多图融合
@@ -63,8 +63,8 @@ flowchart LR
 本次复跑 227,799 步。本次输出与交接 CSV 逐字节一致。较前版 734 题缩短，266 题持平，0 题变长。只检索有限候选池。交接包固定其余参数的 24 题消融中，补数查询将 6,941 步降至 6,537 步，22 题改善、2 题变长。全量补数候选择优 228,527 步，融合后 227,799 步。
 
 ```bash
-python graph_solver.py data/puzzles.csv --version v3 --output submissions/v3-score-227799.csv --jobs 4
-python verify.py data/puzzles.csv submissions/v3-score-227799.csv
+python src/graph_solver.py data/puzzles.csv --version v3 --output submissions/v3-score-227799.csv --jobs 4
+python src/verify.py data/puzzles.csv submissions/v3-score-227799.csv
 ```
 
 ## V4 · 双乘数联合匹配
@@ -81,8 +81,8 @@ flowchart LR
 本次复跑 219,462 步。本次输出与交接 CSV 逐字节一致。较前版 723 题缩短，277 题持平，0 题变长。只检查有限的邻近因子、递归深度和候选宽度。交接包 24 题对照中，V3 为 6,473 步，候选择优为 6,310 步，融合为 6,290 步。全量 723 题变短。
 
 ```bash
-python graph_solver.py data/puzzles.csv --version v4 --output submissions/v4-score-219462.csv --jobs 4
-python verify.py data/puzzles.csv submissions/v4-score-219462.csv
+python src/graph_solver.py data/puzzles.csv --version v4 --output submissions/v4-score-219462.csv --jobs 4
+python src/verify.py data/puzzles.csv submissions/v4-score-219462.csv
 ```
 
 ## V5 · 乘积池与模余数索引
@@ -99,6 +99,6 @@ flowchart LR
 本次复跑 216,404 步。本次输出与交接 CSV 逐字节一致。较前版 416 题缩短，584 题持平，0 题变长。每桶候选和搜索深度有限。交接包全量记录为 V4 候选 219,462 步、V5 候选择优 217,279 步、融合后 216,404 步。仅构造器的 8 题消融为 1,855 → 1,863 → 1,863 → 1,850 步，依次加入扩大值池、双乘积匹配和模余数。
 
 ```bash
-python graph_solver.py data/puzzles.csv --version v5 --output submissions/v5-score-216404.csv --jobs 6
-python verify.py data/puzzles.csv submissions/v5-score-216404.csv
+python src/graph_solver.py data/puzzles.csv --version v5 --output submissions/v5-score-216404.csv --jobs 6
+python src/verify.py data/puzzles.csv submissions/v5-score-216404.csv
 ```

@@ -24,7 +24,7 @@
 
 - `simulation/index.html` 是统一离线入口，从各赛题原始 HTML 生成。修改原始模拟器或相关数据后，按 `simulation/README.md` 重建并检查统一文件，不要只手工修改生成产物。
 - 装箱模拟器先执行 `python competitions/squares-in-squares/simulator/build_standalone.py`，再执行 `python simulation/build.py`；修改 Santa 原始 HTML 后也要重新生成统一文件。
-- Santa 网页求解器目前是独立的 JavaScript 实现，并非直接执行 `competitions/santa-2026/solve.py`。Python 求解器变更时须检查网页算法与规则、按需修改并验证后，才更新 `simulation/santa-review.json` 中的哈希；哈希一致不能证明两个实现完全相同。
+- Santa 网页使用内置 JavaScript 求解自定义题，并支持导入 Python 独立算法生成的 CSV。修改 `competitions/santa-2026/src/` 下的求解入口、验证器或算法模块后，核对网页回放和版本列表，再更新 `simulation/santa-review.json`。
 - 尽可能保持单文件离线可用、原有交互和导出功能。若增加浏览器 Python 运行环境，必须说明依赖、体积、离线支持和与命令行解法的差异，并实际验证；不得声称浏览器原生直接运行 Python。
 
 ## 验证和交付

@@ -4,52 +4,19 @@
 
 ## 离线模拟器
 
-下载 [simulator.html](simulator.html)，用浏览器打开。输入初始值、目标值和数值上限后，即可逐步查看指令、计算结果和寄存器状态。结果等于目标值时会标红。可复制 JSON 指令或打印结果。
+下载 [simulator.html](src/simulator.html)，用浏览器打开。输入初始值、目标值和数值上限后，即可逐步查看指令、计算结果和寄存器状态。结果等于目标值时会标红。可复制 JSON 指令或打印结果。
 
 ## 独立求解
 
-使用 Python 3.11+。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。统一入口默认运行 V5，可用 `--version` 选择任一已集成版本。
+使用 Python 3.11+。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。在赛题目录运行以下命令。统一入口默认运行 V5，可用 `--version` 选择任一已集成版本。
 
 ```bash
-python graph_solver.py data/puzzles.csv --version v5 --output submissions/v5-score-216404.csv --jobs 4
-python verify.py data/puzzles.csv submissions/v5-score-216404.csv
+python src/graph_solver.py data/puzzles.csv --version v5 --output submissions/v5-score-216404.csv --jobs 4
+python src/verify.py data/puzzles.csv submissions/v5-score-216404.csv
 ```
 
 V5 本地全量 **216,404 步**，1,000 题全部通过独立回放。官方题目和独立求解的完整 CSV 保存在本地，仓库提供[成绩索引](submissions/latest.json)、[复跑报告](experiments/reports/)和[算法演进](docs/algorithm-evolution.md)。
 
 在离线模拟器的 **Python 版本回放** 区导入官方题目 CSV，再将实际输出放入对应版本的槽位。选同一题号即可比较合法性和指令数，切换版本查看寄存器、命中目标或复制 JSON 指令。自定义题由页面内置的 JavaScript 求解器处理。
 
-## 历史参考程序实验
-
-使用 Python 3.11+，仅需标准库。接受竞赛规则后从 Kaggle 下载 `puzzles.csv`、`sample_submission.csv` 到本目录的 `data/`。`data/` 不入库；生成的提交存档在 `submissions/`，本地产物 `submission.csv` 被忽略。
-
-```bash
-python solve.py data/puzzles.csv --reference data/sample_submission.csv --output submission.csv --jobs 8
-python solve.py data/puzzles.csv --check submission.csv
-```
-
-`--jobs` 控制并行进程数，默认 1。
-
-对已有提交继续压缩时，将旧提交指定为参考。
-
-```bash
-python solve.py data/puzzles.csv --reference submission.csv --refine --output submission-refined.csv --jobs 8
-```
-
-`--refine` 跳过旧的构造策略，使用混合进制、小题精确搜索和算术链重写压缩参考程序。`--reference` 可选。给定参考 CSV 时，程序逐题选用更短的合法结果，指令数不会超过参考程序。练习时，将输入替换为 `data/practice_puzzles.csv` 并省略 `--reference`。
-
-历史参考程序实验的最佳 CSV 为 **263,575** 步，正式数据 1,000 题全部通过本地回放。较上一版 269,369 步减少 5,794 步，其中 453 题更短。[完整 CSV](submissions/elf-calculator-score-263575.csv)
-
-## 共享值图搜索
-
-`dag_lns.py` 从已有合法程序提取有向无环值图，加入可复用的两步中间值，再成组替换依赖。它以全部目标共用的依赖节点数作为搜索成本，最后尝试三种寄存器分配顺序并回放。逐题保留最短的合法结果。[完整复现命令](docs/progress.md#共享值图大邻域搜索2026-11-24)
-
-```bash
-python dag_lns.py data/puzzles.csv --reference submissions/elf-calculator-score-269369.csv \
-    --rounds 1000 --seed 20261124 --jobs 8 --output optimized.csv
-python solve.py data/puzzles.csv --check optimized.csv
-```
-
-早期值图改写实验将正式集总指令数从 **270,450** 降到 **269,369**。算法和实验结果见[对比分析](docs/frontier-analysis.md)，脚本见[历史实验代码](https://github.com/Leonardo-F/kaggle-lab/blob/378f74bda50672bc298a636a9a0032c92fd3bcf5/competitions/santa-2026/legacy/graph_polisher.py)。
-
-[解题思路和验证范围](docs/progress.md) · [公开前沿对比与搜索实验](docs/frontier-analysis.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)
+[历史实验与验证记录](docs/progress.md) · [公开前沿对比与搜索实验](docs/frontier-analysis.md) · [Kaggle 题面](https://www.kaggle.com/competitions/santa-2026/overview) · [数据格式](https://www.kaggle.com/competitions/santa-2026/data)

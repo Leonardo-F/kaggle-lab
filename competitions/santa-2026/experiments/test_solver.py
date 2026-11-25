@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-SANTA = Path(__file__).resolve().parents[1]
+SRC = Path(__file__).resolve().parents[1] / "src"
 
 
 class SolverTest(unittest.TestCase):
@@ -19,12 +19,12 @@ class SolverTest(unittest.TestCase):
                 'test,[3],"[9,27,81]",100,48\n'
             )
             output = root / "answer.csv"
-            versions = sorted(p.stem for p in (SANTA / "algorithms").glob("v[1-5].py"))
+            versions = sorted(p.stem for p in (SRC / "algorithms").glob("v[1-5].py"))
             for version in [*versions, None]:
                 with self.subTest(version=version):
                     args = ["--version", version] if version else []
                     result = subprocess.run(
-                        [sys.executable, str(SANTA / "graph_solver.py"), str(puzzles),
+                        [sys.executable, str(SRC / "graph_solver.py"), str(puzzles),
                          "--jobs", "1", "--output", str(output), *args],
                         cwd=root, capture_output=True, text=True,
                     )
@@ -36,7 +36,7 @@ class SolverTest(unittest.TestCase):
 
     def test_rejects_reference_option(self):
         result = subprocess.run(
-            [sys.executable, str(SANTA / "graph_solver.py"), "puzzles.csv",
+            [sys.executable, str(SRC / "graph_solver.py"), "puzzles.csv",
              "--output", "answer.csv", "--reference", "history.csv"],
             capture_output=True, text=True,
         )

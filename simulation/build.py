@@ -9,8 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HERE = Path(__file__).resolve().parent
 SQUARE = ROOT / 'competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html'
-SANTA = ROOT / 'competitions/santa-2026/simulator.html'
-PYTHON_SOLVER = ROOT / 'competitions/santa-2026/solve.py'
+SANTA = ROOT / 'competitions/santa-2026/src/simulator.html'
 REVIEW = HERE / 'santa-review.json'
 OUTPUT = HERE / 'index.html'
 
@@ -21,8 +20,6 @@ def digest(path):
 
 def build():
     review = json.loads(REVIEW.read_text(encoding='utf-8'))
-    if review['python_sha256'] != digest(PYTHON_SOLVER):
-        raise ValueError('Santa Python solver changed: review browser solver compatibility and update simulation/santa-review.json before rebuilding.')
     review_independent_replay(review["independent_replay"])
     payload = {name: base64.b64encode(path.read_bytes()).decode('ascii')
                for name, path in [('square', SQUARE), ('santa', SANTA)]}

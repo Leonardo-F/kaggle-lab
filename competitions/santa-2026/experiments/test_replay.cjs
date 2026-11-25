@@ -4,7 +4,7 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-const html = fs.readFileSync(path.join(__dirname, "../simulator.html"), "utf8");
+const html = fs.readFileSync(path.join(__dirname, "../src/simulator.html"), "utf8");
 const scripts = [...html.matchAll(/<script id="(?:solver|replay)-source">([\s\S]*?)<\/script>/g)];
 const context = vm.createContext({ TextEncoder });
 for (const [, source] of scripts) vm.runInContext(source, context);

@@ -23,7 +23,7 @@ class BundleTests(unittest.TestCase):
             self.assertIn('srcdoc', content)
             embedded = json.loads(re.search(r'const documents = (.*);', content).group(1))
             for key, name in [('square', 'competitions/squares-in-squares/simulator/SquarePackingStudio-standalone.html'),
-                              ('santa', 'competitions/santa-2026/simulator.html')]:
+                              ('santa', 'competitions/santa-2026/src/simulator.html')]:
                 self.assertEqual(base64.b64decode(embedded[key]), (ROOT / name).read_bytes())
 
     def test_checked_in_bundle_is_up_to_date(self):
