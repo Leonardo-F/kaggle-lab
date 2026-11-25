@@ -463,9 +463,9 @@ L_k=\{v:\ v\text{ 已发射且 }\mathrm{next}(v)>k\}.
 ### 7.6 复现
 
 ```bash
-# 直接求解，默认参数与交接包一致
+# 直接求解，默认参数与交接包一致；求解器不覆盖已存在文件
 python src/graph_solver.py data/puzzles.csv --version v7 \
-  --output submissions/elf-calculator-independent-v7-score-198388.csv --jobs 8
+  --output experiments/v7-rerun.csv --jobs 8
 
 # 可中断的检查点运行；中断后用同一命令加 --resume
 python src/graph_solver.py data/puzzles.csv --version v7 \
@@ -473,6 +473,8 @@ python src/graph_solver.py data/puzzles.csv --version v7 \
 python src/graph_solver.py data/puzzles.csv --version v7 \
   --output experiments/v7.csv --checkpoint experiments/v7.sqlite --resume --jobs 8
 
+python src/verify.py data/puzzles.csv experiments/v7-rerun.csv
+# 也可直接复核归档 CSV
 python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v7-score-198388.csv
 ```
 
@@ -604,9 +606,9 @@ V8 Final 比 V7 少 3,944 步（1.988%）；775 题改善、225 题持平、0 �
 ### 8.10 复现
 
 ```bash
-# 直接求解
+# 直接求解；求解器不覆盖已存在文件
 python src/graph_solver.py data/puzzles.csv --version v8 \
-  --output submissions/elf-calculator-independent-v8-score-194444.csv --jobs 8
+  --output experiments/v8-rerun.csv --jobs 8
 
 # 检查点运行：中断后加 --resume 继续同一实验
 python src/graph_solver.py data/puzzles.csv --version v8 \
@@ -614,6 +616,8 @@ python src/graph_solver.py data/puzzles.csv --version v8 \
 python src/graph_solver.py data/puzzles.csv --version v8 \
   --output experiments/v8.csv --checkpoint experiments/v8.sqlite --resume --jobs 8
 
+python src/verify.py data/puzzles.csv experiments/v8-rerun.csv
+# 也可直接复核归档 CSV
 python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v8-score-194444.csv
 ```
 

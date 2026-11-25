@@ -17,7 +17,10 @@
 使用 Python 3.11+。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。在赛题目录运行以下命令。统一入口默认运行 V8 Final，可用 `--version` 选择 V1–V8 中的任一版本。
 
 ```bash
-python src/graph_solver.py data/puzzles.csv --version v8 --output submissions/elf-calculator-independent-v8-score-194444.csv --jobs 8
+# 复跑写到 experiments/（求解器不覆盖已存在文件）
+python src/graph_solver.py data/puzzles.csv --version v8 --output experiments/v8-rerun.csv --jobs 8
+python src/verify.py data/puzzles.csv experiments/v8-rerun.csv
+# 直接复核归档的 Kaggle 提交 CSV
 python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v8-score-194444.csv
 ```
 
