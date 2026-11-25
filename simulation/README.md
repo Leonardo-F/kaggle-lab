@@ -25,6 +25,6 @@ python -m unittest discover -s simulation -p 'test_*.py' -v
 变更统一入口、验证器或算法模块后，核对离线 CSV 回放与版本列表。通过检查后同步 `santa-review.json` 的 `independent_replay` 版本列表和文件 SHA-256，再重建统一 HTML。文件路径以 Santa 的 `src/` 为基准。
 
 ```bash
-node --test competitions/santa-2026/experiments/test_replay.cjs
-python -m unittest discover -s competitions/santa-2026/experiments -v
+node --test competitions/santa-2026/tests/test_replay.cjs
+python -m unittest discover -s competitions/santa-2026/tests -v
 ```

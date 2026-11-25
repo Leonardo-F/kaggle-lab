@@ -5,5 +5,5 @@
   "submission_sha256": "89111f50cdfcf9ae5fbdf745c1967a06004331f6605b539f4720835bf3716ea6",
   "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
   "local_filename": "v5-score-216404.csv",
-  "report": "../experiments/reports/v5.json"
+  "report": "../docs/reports/v5.json"
 }
