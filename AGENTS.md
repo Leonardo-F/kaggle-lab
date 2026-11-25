@@ -31,15 +31,18 @@
 
 - `web/simulators.html` 是统一离线入口，从各赛题原始 HTML 生成。修改原始模拟器或相关数据后，按 `web/build/README.md` 重建并检查统一文件，不要只手工修改生成产物。
 - 装箱模拟器先执行 `python competitions/squares-in-squares/simulator/build_standalone.py`，再执行 `python web/build/build.py`；修改 Santa 原始 HTML 后也要重新生成统一文件。
-- Santa 网页使用内置 JavaScript 求解自定义题，并支持导入 Python 独立算法生成的 CSV。修改 `competitions/santa-2026/src/` 下的求解入口、验证器或算法模块后，核对网页回放和版本列表，再更新 `web/build/santa-review.json`。
-- `web/build/santa-review.json` 分开记录当前求解器（`solver.current_version`、全部源码 SHA-256）与历史 CSV 回放槽位（`independent_replay.versions`）。回放槽位不得由 Python 文件名推断；只有相关测试通过并人工核对回放后，才可执行 `python web/build/build.py --refresh-santa-review`，普通构建不得隐式刷新。
+- Santa 网页使用内置 JavaScript 求解自定义题，并支持导入求解器独立生成的 CSV。修改 `competitions/santa-2026/src/` 下的求解入口、验证器、算法模块或原生 C++ 构造源码后，核对网页回放和版本列表，再更新 `web/build/santa-review.json`。
+- `web/build/santa-review.json` 分开记录当前求解器（`solver.current_version`、全部生产源码 SHA-256，包含 `algorithms/**` 的 `.py`、`.cpp`、头文件与 `native/build.py`）与历史 CSV 回放槽位（`independent_replay.versions`）。版本号只允许从 `algorithms/solver.py` 的 `SOLVER_VERSION` 静态读取；回放槽位不得由文件名推断；只有相关测试通过并人工核对回放后，才可执行 `python web/build/build.py --refresh-santa-review`，普通构建不得隐式刷新，也不要求先编译原生内核。
 - Santa 互动报告以 `competitions/santa-2026/docs/algorithm-evolution.md` 为唯一正文来源，由 `docs/build_report.py` 生成，不要手改生成产物；修改正文、图表或模拟器后重建并运行 `--check`。页面自定义结果槽位只在当前会话有效，不持久化、不上传。
 - 尽可能保持单文件离线可用、原有交互和导出功能。若增加浏览器 Python 运行环境，必须说明依赖、体积、离线支持和与命令行解法的差异，并实际验证；不得声称浏览器原生直接运行 Python。
 
 ## Santa 2026 求解器
 
-- main 只保留一套按功能组织的 Santa 求解器；V1–V8 历史实现通过 Git 提交和独立 worktree 复现，不再以 `v1.py`–`v8*.py` 作为运行依赖。
-- 算法变更必须从官方题目独立求解，并用 `src/verify.py` 与测试验证；等价重构必须逐题比较程序及阶段指标，不能只比较总分。
+- main 只保留一套按功能组织的 Santa 求解器（当前 V9：Python 管线 + 两个冻结 C++17 构造内核）；V1–V9 历史实现通过 Git 提交和独立 worktree 复现，不再以 `v1.py`–`v9*.py` 作为运行依赖。
+- 算法变更必须从官方题目独立求解，并用 `src/verify.py` 与测试验证；等价重构必须逐题比较程序及阶段指标，不能只比较总分。冻结 V9 的路线顺序、随机种子、候选顺序、平局策略与调度参数不得在没有全量证据时改动。
+- 原生构造必须先执行 `python competitions/santa-2026/src/algorithms/native/build.py`，二进制输出到被忽略的 `experiments/native-build/`；不提交编译产物，也不使用研究归档中的预编译二进制作为发布依赖。构建记录编译器、flags、源码与二进制 SHA-256。
+- 检查点（schema 3）绑定输入、全部生产 Python、C++ 源与构建脚本、实际二进制哈希、编译器/平台与参数；旧布局检查点只能回到产生它的提交复现，不得放宽指纹校验。
+- 独立求解版本与 V8+V9 混合归档分开记录：`submissions/latest.json` 只指向最佳已验证的独立版本；混合归档由独立的 `src/merge_submissions.py` 后处理生成并单独验证，不作为求解输入，也不进入正式版本曲线。
 - 历史报告、提交 CSV、互动报告与离线回放是研究证据，不得随源码重组删除。官方题目数据、SQLite 检查点和临时结果不提交到 Git。
 - 修改 `src/` 求解入口、验证器或算法模块后，同步检查模拟器回放、`web/build/santa-review.json` 与统一入口的构建状态。
 

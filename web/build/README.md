@@ -22,19 +22,19 @@ python -m unittest discover -s web/tests -p 'test_*.py' -v
 
 在 Santa 页导入官方题目 CSV 与相应槽位的版本程序 CSV。导入文件时会显示该 CSV 的总指令数、覆盖题数、未知题号、无法解析的程序和未提供程序的题数；选同一题号可比较各版本的实际步数、合法性和计算图规模（唯一中间值、共享值、重算步），查看逐步寄存器状态，并复制当前程序 JSON。文件读取与 BigInt 回放在本地完成。
 
-V1–V8 是已归档结果的历史回放槽位，与当前 Python 模块无关。页面还可以添加**会话内**自定义结果标签（1–40 字符，不能与已有标签重复），导入自己的 CSV 参与同题比较；自定义槽位可移除，数据不保存、不上传。默认 V1–V8 槽位不能删除。内嵌的 JavaScript 自定义题求解器是教学实现，不是当前 Python V8。
+V1–V9 是已归档结果的回放槽位：V1–V8 为历史版本，V9 为当前独立求解器。页面还可以添加**会话内**自定义结果标签（1–40 字符，不能与已有标签重复），导入自己的 CSV 参与同题比较（例如 V8+V9 混合归档，它不是算法版本）；自定义槽位可移除，数据不保存、不上传。默认 V1–V9 槽位不能删除。内嵌的 JavaScript 自定义题求解器是教学实现，不是当前 Python/C++ V9。
 
 `santa-review.json` 是人工审核记录，分两部分：
 
-- `solver.current_version` 与 `solver.source_sha256`：当前 CLI 发布标识，以及 `graph_solver.py`、`checkpoint.py`、`verify.py` 和 `algorithms/` 下全部 `.py` 文件的真实 SHA-256。`build.py` 用 AST 读取版本常量，不执行求解器。
-- `independent_replay.versions`：历史 CSV 回放槽位，必须与模拟器 `data-versions` 完全一致；不根据 Python 文件名推断。
+- `solver.current_version` 与 `solver.source_sha256`：当前 CLI 发布标识，以及 `graph_solver.py`、`checkpoint.py`、`verify.py` 和 `algorithms/` 下全部生产源码（`.py`、两个 `.cpp`、兼容头与 `native/build.py`）的真实 SHA-256。版本号只从 `algorithms/solver.py` 的 `SOLVER_VERSION` 静态读取，不执行求解器，也不要求先编译原生内核。
+- `independent_replay.versions`：历史 CSV 回放槽位（当前 V1–V9），必须与模拟器 `data-versions` 完全一致；不根据文件名推断。
 
 修改 Santa 求解入口、验证器或算法模块后，先重放/核对受影响的历史 CSV，运行测试，再显式刷新审核：
 
 ```bash
 node --test competitions/santa-2026/tests/test_replay.cjs
 python -m unittest discover -s competitions/santa-2026/tests -v
-python web/build/build.py --refresh-santa-review   # 只更新源码指纹，保留历史槽位
+python web/build/build.py --refresh-santa-review   # 只更新源码指纹，保留回放槽位
 python web/build/build.py
 python web/build/build.py --check
 ```
@@ -57,11 +57,11 @@ python competitions/santa-2026/docs/build_report.py --check
 
 `competitions/santa-2026/docs/reports/v8-refactor.json` 是可选数据源，不是构建依赖：
 
-- **文件缺失**：互动报告在第 9.4 节显示「尚未生成」，继续使用原始 `v8.json` 与 `submissions/latest.json`，构建和 `--check` 正常通过。
+- **文件缺失**：互动报告在「10.4 重构验收状态」显示「尚未生成」，继续使用固定的原始 `v8.json` 与 `submissions/latest.json`，构建和 `--check` 正常通过。
 - **文件存在且校验通过**：展示重构复现的成绩、验证题数、逐题程序/八阶段一致性、测试结果与提交信息。
 - **文件存在但无效或校验失败**：显示「校验未通过」及具体原因，不标记为等价重构成功，不更新最佳成绩或回放槽位。
 
-只有同时满足以下条件才算通过：`kind` 为 `santa-v8-refactor`；`score`、`validated`、`puzzles`、`submission_sha256` 与 `submissions/latest.json` 和原始 `v8.json` 一致；`per_puzzle_programs_match`、`stage_metrics_match`、`score_matches_archived_v8` 均为 `true`；`tests.failed` 为 0 且 `tests.passed` 为正；`unverified` 为空。示例结构：
+当前校验把该报告固定对照原始 `v8.json`（不依赖当前 `latest.json` 指向的版本）：顶层与嵌套 commit 一致；题数/验证数/分数/最长步数/输入输出哈希与原始 V8 一致；`baseline_run` 与 `refactored_run` 的八阶段 `v7,list_schedule,v8,v81,v82,v8group_strict,v8group_neutral,v8final` 逐键一致且末阶段等于分数；逐题程序差异为 0；题数覆盖与改善/持平/退化计数自洽；checkpoint 记录数与完整性、分组测试 45+7+15=67 与 `passed`/`failed` 一致；哈希格式、整数类型（拒绝 bool）、练习题与正式题数据集隔离、`limitations` 保留。任何矛盾都显示「校验未通过」而不是成功。示例结构（历史字段）：
 
 ```json
 {

@@ -1,17 +1,21 @@
 {
   "schema_version": 2,
   "solver": {
-    "current_version": "v8",
+    "current_version": "v9",
     "source_sha256": {
       "algorithms/__init__.py": "c1ce4af331e4611dc1637ae3f6a3d46cc30bc457a11b98048b3f5559719658c4",
-      "algorithms/common.py": "ec9ef4acc4441769273df811dc462f09464aca2ad330dd996e2e1c4d98dfe4a6",
-      "algorithms/construct.py": "f6d06dc7fcc03501353775eb6c8255e075cfc8d34840ed4e1d692f31f63e5450",
-      "algorithms/graph.py": "b6b236cb79c27b3e5ed39c6e94074a81b128d1c21eaf3e689c4d84e3393936cb",
-      "algorithms/rewrite.py": "ada119e9353d5f310870680d31933657c4d551b5863bd71980cb2688b05457f2",
-      "algorithms/schedule.py": "3d4798c78688aa2ac6b3c7534bd841ed4d3588f44b95c048d3e4c46c83aad7be",
-      "algorithms/solver.py": "97a4c4cdbd9211534e150830c481d0bbed373b8676986d8bedd61cbc8f0a73a9",
-      "checkpoint.py": "07fac04d2f3124f4a031e0753e91ef42f7983a288ed49e8aaa0a550e50432779",
-      "graph_solver.py": "4b2a00db379ecec8b9a7c3c93f8c6330eda83aca7aa65f749551c91465884e4f",
+      "algorithms/common.py": "7009d0558aafe3fe814e5e7674050dcad7a8b67bcdd9619f1e316c844e24175a",
+      "algorithms/construct.py": "86daf29fd0576026fe852653cf490d5b9008263a8fee2b602805a1f5d81fa648",
+      "algorithms/graph.py": "0580d2523178a35ff95acb7127cc80dbcea90671f7fb7eaeb586b312503f9d73",
+      "algorithms/native/build.py": "b027d10d9703d072290b2c53ca708633ad92ce477b1858e9dd37cb382317bd16",
+      "algorithms/native/compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+      "algorithms/native/constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+      "algorithms/native/constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
+      "algorithms/rewrite.py": "bbe61b6423ce19bf49525450676a4307462b8cded2a300cf3adf48ca4fa5cade",
+      "algorithms/schedule.py": "9798c6df7915a30f8989d94ce55bbd697aed2f1ea64773797d46670d44f31dc1",
+      "algorithms/solver.py": "78ffc0c41ba5759ce809d786164472139aa0cf75baab68a204e46b5f6b900673",
+      "checkpoint.py": "7741c228ea49256a895b83588dcc5b331e0b676ef5386fe0ef98dea99b6a713b",
+      "graph_solver.py": "a62d885327d5cb94bf2f7917dd4e827204c70efea96c371ea78797437c5e8137",
       "verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4"
     }
   },
@@ -24,7 +28,8 @@
       "v5",
       "v6",
       "v7",
-      "v8"
+      "v8",
+      "v9"
     ]
   }
 }
