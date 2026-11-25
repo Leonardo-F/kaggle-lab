@@ -7,10 +7,11 @@
       "v4",
       "v5",
       "v6",
-      "v7"
+      "v7",
+      "v8"
     ],
     "source_sha256": {
-      "graph_solver.py": "579107533323d84c9a16188d2337a31a2b2fb9e58ef66032199183669e341794",
+      "graph_solver.py": "07437cd0cd567183932fe8337c9d77e86ddbaa084fcf76cf7f53078e1d3493c0",
       "verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
       "algorithms/__init__.py": "ffc13e8ebba9d9402e0ea886e31ef545713478e1717b685a3fdf1f85d596a4fc",
       "algorithms/common.py": "736fab8908b641d1f0373dbc18ba8d186034892a38fe454628b048860854b6e6",
@@ -20,7 +21,12 @@
       "algorithms/v4.py": "6a2d417b9cb87b2a6d58655404da170eb2e634d9b9d0e41a3aeaaf1e130db203",
       "algorithms/v5.py": "b7b83d47c95ed8ad320171676a7532c4e732437ecc5f64251044ec50b4625145",
       "algorithms/v6.py": "98c7d98f1b9f388c082a831fff3f3370c3cb6838722db6a8589184af1b0c0cd1",
-      "algorithms/v7.py": "b14e0f16108edb548a13efe30b149e88441296891338e5e4ee765373028f26c9"
+      "algorithms/v7.py": "b14e0f16108edb548a13efe30b149e88441296891338e5e4ee765373028f26c9",
+      "algorithms/v8.py": "09174ceba7ea6167bbd2abf0cbdd863794b632e619eb67c5a437ffd349e5cdfe",
+      "algorithms/v8_group.py": "b46717e70beeee2a26af7014c25b88a4c64e9285e33cc9279cc11c07b201aa8a",
+      "algorithms/v8_register.py": "73a2cff119d13dfde2db3f0824db183e2761988ce93f498eb377874becc02e92",
+      "algorithms/v8_rewrite.py": "76f8b8c514e2c2453df1b3e3a2bc5189876e7bd90d4e1dbf36656d9461ab737e",
+      "algorithms/v8_three.py": "022e92b35c6cd7dbad1ce72051746096786d0b51fce67fdbff848678735a54ea"
     }
   }
 }

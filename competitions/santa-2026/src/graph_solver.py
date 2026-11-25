@@ -15,7 +15,7 @@ import time
 import checkpoint as checkpoint_engine
 from verify import verify
 
-DEFAULT_VERSION = "v7"
+DEFAULT_VERSION = "v8"
 
 
 def solve_job(job):
