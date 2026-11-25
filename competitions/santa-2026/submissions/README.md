@@ -1,15 +1,29 @@
 # Santa 2026 提交 CSV
 
-本目录只保留当前两个独立版本的完整 CSV，均已入库（每份约 3 MB）。文件只含题号和我们自产的指令程序，不含官方题目数据。
+本目录保留独立求解版本与一份独立后处理混合归档，均可入库（独立 CSV 每份约 3 MB）。文件只含题号和我们自产的指令程序，不含官方题目数据。
 
-| 文件 | 版本 | 本地验证步数 |
+| 文件 | 类型 | 本地验证步数 |
 | --- | --- | ---: |
-| `elf-calculator-independent-v8-score-194444.csv` | V8 Final | 194,444 |
-| `elf-calculator-independent-v7-score-198388.csv` | V7 | 198,388 |
+| `elf-calculator-independent-v9-score-175604.csv` | **当前独立 V9** | 175,604 |
+| `elf-calculator-independent-v8-score-194444.csv` | 独立 V8 Final（历史） | 194,444 |
+| `elf-calculator-independent-v7-score-198388.csv` | 独立 V7（历史） | 198,388 |
+| `elf-calculator-merged-v8-v9-score-174884.csv` | V8+V9 混合归档（非算法版本） | 174,884 |
 
-命名规则：`elf-calculator-independent-<版本>-score-<本地验证步数>.csv`。分数写在文件名里，不同结果不会重名，也不会覆盖旧文件；旧版本按同一规则并存，方便逐题对照。
+命名规则：`elf-calculator-independent-<版本>-score-<本地验证步数>.csv`；混合归档为 `elf-calculator-merged-v8-v9-score-<步数>.csv`。分数写在文件名里，不同结果不会重名，也不会覆盖旧文件；旧版本按同一规则并存，方便逐题对照。
 
-`latest.json` 指向当前最佳版本，`../docs/reports/` 保存每次全量复跑的认证报告（题数、最长程序、来源哈希和命令）。
+`latest.json` 是**当前最佳已验证独立发布指针**，现在指向 V9（175,604 步、1,000/1,000 题通过独立验证、输出 SHA-256 `05e7b630…`）。它不指向混合归档：174,884 是两份独立结果逐题取短后的后处理结果，不是独立算法版本，也不进入正式版本曲线。
+
+混合归档必须由独立后处理工具从两份独立 CSV 重新生成并独立验证，不能作为求解输入：
+
+```bash
+python src/merge_submissions.py data/puzzles.csv \
+  submissions/elf-calculator-independent-v8-score-194444.csv \
+  submissions/elf-calculator-independent-v9-score-175604.csv \
+  -o /tmp/v8-v9-merged.csv --expect-score 174884
+python src/verify.py data/puzzles.csv /tmp/v8-v9-merged.csv
+```
+
+`../docs/reports/` 保存每次全量复跑的认证报告（题数、最长程序、来源哈希、阶段分数和命令）；V9 的报告是 `../docs/reports/v9.json`，混合归档是 `../docs/reports/v8-v9-merged.json`，原始研究交接证据在 `../docs/reports/v9-stage2-ablation.json`。
 
 ## 历史版本
 

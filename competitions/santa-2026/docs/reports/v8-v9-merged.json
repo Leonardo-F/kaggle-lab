@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "version": "v8+v9",
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 174884,
+  "max_steps": 392,
+  "submission_sha256": "fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "method": "归档后处理工具 src/merge_submissions.py：先用 src/verify.py 独立验证两份输入，再按题号对齐、解析 JSON 程序并按 len(program) 取较短者；平局取 V9。该工具不参与独立求解，不是算法版本，也不进入正式版本曲线。",
+  "sources": {
+    "v8": {
+      "path": "submissions/elf-calculator-independent-v8-score-194444.csv",
+      "sha256": "6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa448aca1279fd",
+      "score": 194444
+    },
+    "v9": {
+      "path": "submissions/elf-calculator-independent-v9-score-175604.csv",
+      "sha256": "05e7b630f9b9a26889a74e09dbc1317ece799e5d28d948ce28c02b99b0660cb8",
+      "score": 175604
+    }
+  },
+  "selection": {
+    "puzzles": 1000,
+    "from_v8": 137,
+    "from_v9": 863,
+    "ties_to_v9": 30,
+    "v8_strictly_shorter": 137,
+    "v9_strictly_shorter": 833,
+    "saved_vs_v9": 720,
+    "saved_vs_v8": 19560
+  },
+  "verification": {
+    "verifier": "src/verify.py",
+    "validated": 1000,
+    "score": 174884,
+    "max_steps": 392
+  },
+  "reference_comparison": {
+    "reference_path": "handoff submission_v8_v9_merged.csv",
+    "reference_sha256": "bde4b4c4bf9bf7b5adceb50c516f9b407134c87753d5cdcbd2d8f2df73eec556",
+    "programs_identical": 999,
+    "program_differences": [
+      "scored_0775"
+    ],
+    "note": "与用户上传的参考混合文件相比 999/1000 程序相同；scored_0775 等长（181 步）程序因 V9 独立答案的平局差异而不同，总分与 max_steps 不变。参考文件不是求解输入。"
+  },
+  "limitations": [
+    "混合结果是两份独立结果的逐题后处理归档，不代表独立算法版本。",
+    "混合结果依赖 V9 独立答案；若 V9 重新求解且等长平局变化，混合 CSV 哈希会变化但分数不变。"
+  ],
+  "note": "V8+V9 混合归档：174,884 步（较独立 V9 少 720 步），不计入正式独立版本曲线。"
+}

@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "kind": "release",
+  "version": "v9",
+  "solver_commit": "d3f4cae70282e6a091670e6aa4c5a2743e5c21e5",
+  "report_date": "2026-11-26",
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 175604,
+  "max_steps": 415,
+  "submission_sha256": "05e7b630f9b9a26889a74e09dbc1317ece799e5d28d948ce28c02b99b0660cb8",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "jobs": 6,
+  "elapsed_seconds": 443.85,
+  "stages": {
+    "v9_stage1": 182205,
+    "v9final": 175604
+  },
+  "improved": 394,
+  "unchanged": 606,
+  "worse": 0,
+  "python": "3.13.2",
+  "platform": "Darwin-27.0.0-arm64",
+  "command": "python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 --checkpoint <local>/v9-fresh.sqlite --output <local>/v9-fresh.csv",
+  "parameters": {
+    "stage1_routes": [
+      [
+        "constructor_wide_polish",
+        6,
+        3
+      ],
+      [
+        "constructor_wide_polish",
+        6,
+        4
+      ],
+      [
+        "constructor_mitm_polish",
+        6,
+        3
+      ],
+      [
+        "constructor_mitm_polish",
+        6,
+        4
+      ]
+    ],
+    "compile_tries": 8,
+    "compile_seed": 919,
+    "polish_rounds": 2,
+    "schedule_seed": 202609,
+    "schedule_tries": 32,
+    "schedule_top": 12,
+    "schedule_modes": 6
+  },
+  "source_hashes": {
+    "checkpoint.py": "7741c228ea49256a895b83588dcc5b331e0b676ef5386fe0ef98dea99b6a713b",
+    "graph_solver.py": "a62d885327d5cb94bf2f7917dd4e827204c70efea96c371ea78797437c5e8137",
+    "verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4",
+    "algorithms/__init__.py": "c1ce4af331e4611dc1637ae3f6a3d46cc30bc457a11b98048b3f5559719658c4",
+    "algorithms/common.py": "7009d0558aafe3fe814e5e7674050dcad7a8b67bcdd9619f1e316c844e24175a",
+    "algorithms/construct.py": "86daf29fd0576026fe852653cf490d5b9008263a8fee2b602805a1f5d81fa648",
+    "algorithms/graph.py": "0580d2523178a35ff95acb7127cc80dbcea90671f7fb7eaeb586b312503f9d73",
+    "algorithms/native/build.py": "b027d10d9703d072290b2c53ca708633ad92ce477b1858e9dd37cb382317bd16",
+    "algorithms/native/compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+    "algorithms/native/constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+    "algorithms/native/constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
+    "algorithms/rewrite.py": "bbe61b6423ce19bf49525450676a4307462b8cded2a300cf3adf48ca4fa5cade",
+    "algorithms/schedule.py": "9798c6df7915a30f8989d94ce55bbd697aed2f1ea64773797d46670d44f31dc1",
+    "algorithms/solver.py": "78ffc0c41ba5759ce809d786164472139aa0cf75baab68a204e46b5f6b900673"
+  },
+  "native": {
+    "compiler": {
+      "family": "clang",
+      "path": "/usr/bin/g++",
+      "version": "Apple clang version 21.0.0 (clang-2100.3.34.2)"
+    },
+    "flags": [
+      "-O3",
+      "-std=c++17"
+    ],
+    "compat_include": true,
+    "binaries": {
+      "constructor_mitm": "051dc002b08c7730e7b3b4dbc2523cb1644f5927829a82924036f0fe615500ac",
+      "constructor_wide": "14069a872576bfcb2cacc72ec4c3b9ae0a42f83bbd970c537e0178cd85fa5d12"
+    },
+    "sources": {
+      "build.py": "b027d10d9703d072290b2c53ca708633ad92ce477b1858e9dd37cb382317bd16",
+      "compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+      "constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+      "constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3"
+    }
+  },
+  "comparison": {
+    "vs_stage1": {
+      "improved": 394,
+      "unchanged": 606,
+      "worse": 0
+    },
+    "vs_v8": {
+      "improved": 833,
+      "unchanged": 30,
+      "worse": 137,
+      "v8_score": 194444,
+      "saved": 18840
+    },
+    "bit_width_buckets": {
+      "0": {
+        "puzzles": 17,
+        "v8": 76,
+        "v9_stage1": 78,
+        "v9_stage2": 78,
+        "saved_stage2": 0,
+        "improved": 0
+      },
+      "10": {
+        "puzzles": 123,
+        "v8": 7580,
+        "v9_stage1": 7610,
+        "v9_stage2": 7610,
+        "saved_stage2": 0,
+        "improved": 0
+      },
+      "20": {
+        "puzzles": 224,
+        "v8": 28393,
+        "v9_stage1": 25996,
+        "v9_stage2": 25996,
+        "saved_stage2": 0,
+        "improved": 0
+      },
+      "30": {
+        "puzzles": 251,
+        "v8": 49607,
+        "v9_stage1": 44429,
+        "v9_stage2": 43753,
+        "saved_stage2": 676,
+        "improved": 89
+      },
+      "40": {
+        "puzzles": 228,
+        "v8": 56337,
+        "v9_stage1": 52115,
+        "v9_stage2": 49992,
+        "saved_stage2": 2123,
+        "improved": 159
+      },
+      "50": {
+        "puzzles": 141,
+        "v8": 45847,
+        "v9_stage1": 45630,
+        "v9_stage2": 42579,
+        "saved_stage2": 3051,
+        "improved": 130
+      },
+      "60": {
+        "puzzles": 16,
+        "v8": 6604,
+        "v9_stage1": 6347,
+        "v9_stage2": 5596,
+        "saved_stage2": 751,
+        "improved": 16
+      }
+    },
+    "bit_width_bucket_definition": "median target bit length // 10 * 10",
+    "frozen_record": {
+      "puzzles": 1000,
+      "score": 175604,
+      "stage1": 182205,
+      "max_steps": 415,
+      "programs_identical": 999,
+      "program_differences": [
+        "scored_0775"
+      ],
+      "same_stage_route_node_attempt_metrics": true,
+      "metric_differences": {},
+      "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+      "submission_bytes_identical": false,
+      "note": "逐题程序 999/1000 相同；scored_0775 的程序等长（181 步）但寄存器选择不同。用冻结研究源码在本机重新编译并运行，得到与移植版完全相同的程序，说明该差异来自本机 Apple Clang 21 与冻结记录的 Linux GCC 工具链在等分候选平局时的顺序差异，不是移植逻辑差异；总分、两阶段总分、逐题分数/节点/调度尝试数、逐题选择性差异桶全部一致。"
+    }
+  },
+  "handoff": {
+    "archive_sha256": "b1d338d27d3998dc1785ad79217c6ecfbc3254bb51cb1e9993fcff7374cca758",
+    "submission_sha256": "5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63",
+    "full_report_sha256": "048e7bbbc48389cd1c631969e7863cd74baa2e9d8892fa1a9461ba0483ec66e6",
+    "comparison_csv_sha256": "2206148700a11bd067ec0a23abd0684e2fd6ca1fff9285aaf75a00ee2732b3e0",
+    "run_log_sha256": "e08282867e7419a5ba3107d12f844948f93bc0efed1b6180f8f3eee38aff1f88",
+    "checkpoint_sha256": "7215aa8f49b64743429434241ca7e85a3124de190ff3e2b0776549e08386c781"
+  },
+  "checkpoint": {
+    "schema": 3,
+    "layout": "v9-functional",
+    "results": 1000,
+    "integrity_check": "ok",
+    "resumed_at_start": 0,
+    "sqlite_sha256": "0ba91a96963e56d8973170291f27ed8d89709f9af1a4e36c84635c225b4b7ed4"
+  },
+  "practice_run": {
+    "dataset": "practice",
+    "puzzles": 200,
+    "validated": 200,
+    "score": 36045,
+    "max_steps": 413,
+    "v9_stage1": 37742,
+    "saved_vs_stage1": 1697,
+    "improved": 86,
+    "unchanged": 114,
+    "worse": 0,
+    "elapsed_seconds": 131.15,
+    "submission_sha256": "64a67f68de1a8d67b33b498006c797867fef0e2d215d54ee909bfc30d0a0f112",
+    "puzzles_sha256": "a87e4e0ad263f31af1a9e51459117212b03404339c5940be3aa6afd1596ff6d9",
+    "note": "独立练习题数据集，不能与正式 1,000 题混算。V8 重构报告记录的练习成绩为 40,207 步，V9 练习成绩 36,045 步。"
+  },
+  "validation": {
+    "full_scale": true,
+    "verifier": "src/verify.py",
+    "puzzles": 1000,
+    "validated": 1000,
+    "report": "docs/reports/v9-stage2-ablation.json (原始 handoff 研究记录)"
+  },
+  "tests": {
+    "santa_python": 98,
+    "santa_node": 7,
+    "web_python": 17,
+    "squares_python": 27,
+    "squares_node": 15,
+    "quantum_python": 13,
+    "quantum_skipped": 1,
+    "native_build": "ok",
+    "report_check": "ok",
+    "web_bundle_check": "ok",
+    "git_diff_check": "ok"
+  },
+  "limitations": [
+    "V9 相对 V8 的 9.69% 是本地独立验证指令数，不是 Kaggle 榜单成绩；未做 Kaggle 提交。",
+    "NATIVE 构造器在等长候选上依赖容器迭代顺序；本机 Apple Clang 21 + compat 头构建与冻结 Linux GCC 记录有 1/1000 逐题程序平局差异，分数不变。",
+    "冻结 V9 配置没有全局最优性证明；Stage 2 调度在固定 Stage 1 DAG 上搜索，报告中的节点数是该 DAG 的下界，不是理论可达的全局指令下界。",
+    "本研究未采用 LNS、锚点或大整数构造等探索路线；它们不包含在冻结管线中。",
+    "练习 200 题是独立数据集，不能并入正式分数。",
+    "跨平台逐字节等价未经证明；GCC/libstdc++ 是文档推荐工具链，本机没有可用的 GCC（Homebrew 下载在本网络失败）。",
+    "Python 3.13.2 与冻结研究的 3.13.5 不同；Python 层候选选择未发现差异。"
+  ],
+  "note": "从官方 1,000 题和全新 SQLite 检查点独立求解；solve 只读取题目行，不读取历史 CSV、研究检查点程序或答案。V8+V9 混合 174,884 是独立后处理归档，不计入本曲线。",
+  "commit_chain": {
+    "v8_report_validation": "c404706",
+    "v9_integration": "d3f4cae",
+    "note": "本报告随复现证据提交加入；完整 SHA 以 Git 历史为准。"
+  },
+  "browser_acceptance": {
+    "browser": "Google Chrome 158.0.8127.88 (headless, real Chrome channel)",
+    "os": "macOS 27.0.1 (26A434), arm64",
+    "mode": "file:// 离线打开；所有 http(s) 请求被拦截；互动页通过本地 HTTP 服务检查相对路径",
+    "simulator_page": "23/23 通过：V1–V9 槽位、JS 三步教学解、BigInt、V7/V8/V9/混合 CSV 回放、自定义槽位增删与非法 CSV 反馈",
+    "report_bundle_portal": "26/26 通过：V9 成绩与独立曲线、混合单列、MathML/内嵌图、V9 章锚点、V8 重构面板、内嵌模拟器回放、统一入口切换、390px 窄屏与互动页 #santa/#squares",
+    "not_verified": "未在 Safari/Firefox 与真实手机设备上测试；未使用浏览器 Python 运行时（页面仍为内置 JS 教学求解器）"
+  }
+}
