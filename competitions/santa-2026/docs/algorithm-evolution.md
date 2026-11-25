@@ -558,9 +558,9 @@ Stage 2 只做一件事：在 Stage 1 程序语义不变的前提下重排同一
 
 ### 8.1 同一批 1,000 题的本地成绩
 
-![历史版本成绩（原 PNG 图只覆盖 V1–V5；本次未重绘）](diagrams/version-scores.png)
+![V1–V9 本地独立验证总指令数](diagrams/version-scores.png)
 
-> **图表口径：** 这张 PNG 由 `diagrams/version-scores.mmd`（xychart）生成，只覆盖 V1–V5。本环境没有离线 Mermaid 渲染器，因此本次只把 `.mmd` 源文本补到 V1–V9，**没有重绘 PNG**。V6–V9 的正式成绩以互动报告顶部的动态成绩条和本节表格为准，两者都直接来自 `docs/reports/v1.json`–`v9.json`。
+> **图表口径：** 这张 PNG 由 `diagrams/version-scores.mmd`（xychart）经 mermaid.ink 渲染，覆盖 V1–V9（`version-scores.png` 已同步重绘）。互动报告顶部的动态成绩条和本节表格直接来自 `docs/reports/v1.json`–`v9.json`，与图中数字一致；图中是本地独立验证的指令总数，不是 Kaggle 榜单成绩。
 
 | 版本 | 核心贡献 | 指令数 | 较前代少 | 改善 / 持平 / 退化 | 独立验证记录 |
 |---|---|---:|---:|---|---|
@@ -765,6 +765,8 @@ python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 \
 
 检查点 schema 3 绑定输入 SHA-256、全部生产 Python、两个 `.cpp`、兼容头、`native/build.py`、实际二进制哈希、编译器/平台/参数；恢复时重放已保存记录并校验摘要。`--stop-after N` 限制本次调度的未完成题目数量；只有完成全部输入才导出 CSV（正式数据为 1,000 题）。同一指纹下可调整 jobs。旧布局的 SQLite 会被明确拒绝，应使用原提交继续或新建检查点。
 
+**参考工具链复现（2026-11-26）：** 在 Linux + GCC 14.2.0 + Python 3.13.3 环境从官方 1,000 题独立求解，得到同样的 **175,604**、最长 415、1,000/1,000 合法，输出 CSV 与冻结研究记录逐字节一致（`5ab0b72c…`）；同一工具链下冻结研究实现与当前功能化移植实现逐题 1,000/1,000 一致（程序、阶段、节点、调度尝试、四条路线 0 差异），macOS 上唯一的 `scored_0775` 平局差异消失。详见 [v9-integration.json](reports/v9-integration.json)。
+
 仅验证结果（不运行求解器）：
 
 ```bash
@@ -811,7 +813,7 @@ python3 src/verify.py /absolute/path/puzzles.csv experiments/v8-rerun.csv
 
 1. 在浏览器离线打开 [simulator.html](../src/simulator.html)。
 2. 在自定义题区域输入练习 A 或 B，查看 JS 求解与寄存器变化；它是独立的教学实现，不是 Python + C++ 的 V9。
-3. 在 Python 版本回放区域导入题目 CSV 和各版本真实输出 CSV，选择相同题号并比较；默认槽位是 V1–V8 历史结果与 V9 当前独立版本。
+3. 在 Python 版本回放区域导入题目 CSV 和各版本真实输出 CSV，选择相同题号并比较；默认槽位是 V1–V9：V1–V8 为历史结果，V9 为当前独立版本；V8+V9 混合结果用自定义标签回放。
 4. 观察目标命中、寄存器覆盖、指令数及共享节点/重算，切换版本比较同一题的不同程序。可以使用 [V9 CSV](../submissions/elf-calculator-independent-v9-score-175604.csv)、[V8 CSV](../submissions/elf-calculator-independent-v8-score-194444.csv) 与 [V7 CSV](../submissions/elf-calculator-independent-v7-score-198388.csv)；V8+V9 混合 CSV 用页面自定义标签回放，它不是默认算法槽位。
 
 [互动算法报告](../Santa-2026-Interactive-Report.html) 保留历史学习视图与当前 V9 章节。报告 HTML 由 `docs/build_report.py` 统一重建，本文不宣称浏览器交互已逐项人工验证。

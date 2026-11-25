@@ -118,3 +118,24 @@ V8 的正式管线由 `v8_rewrite`（双运算改写与图编译）、`v8_three`
 **限制与未完成项：** 175,604 是本地独立验证的指令总数，不是 Kaggle 榜单成绩，未做 Kaggle 提交；全局最优未知，`nodes` 只是固定 DAG 下界；本机工具链有 1/1000 等长程序平局差异（分数不变）；冻结 V9 未使用 LNS/锚点/大整数构造；V10 未开始；仓库内互动报告 HTML 与统一入口由根代理重建并做浏览器验收，本文档不声称已重建或已人工逐项验证。
 
 **V8 重构任务书收尾：** 原 `docs/santa-v8-refactor-plan.md` 的收尾要点已并入本记录与[算法演进](algorithm-evolution.md)：V8 等价重构已完成并通过 1,000 题逐题/八阶段一致验收（报告 [v8-refactor.json](reports/v8-refactor.json)，固定对照 [v8.json](reports/v8.json)，代码重构提交 `0ec0ec0`，基线提交 `9337a354`、V8 功能化布局基线 `2875199`）；V9 直接从功能模块演进而非新增版本文件；全部算法从官方题目独立求解、历史答案仅用于回放与回归比较；未获明确同意不推送。该任务书在记录完成后从工作树移除，历史原文可从固定提交查看：[santa-v8-refactor-plan.md](https://github.com/Leonardo-F/kaggle-lab/blob/287519977aa85a19ef9e3074e6bfd2b9e578b5c3/competitions/santa-2026/docs/santa-v8-refactor-plan.md)。
+
+
+## 2026-11-26 · V9 最终验收（Linux + GCC 参考工具链）
+
+在 V9 合入远程 `main`（`8858a6a`）之后，从最新 main 建立本地分支 `fix/santa-v9-final-acceptance` 完成最终验收；本轮不修改冻结 V9 的搜索策略。
+
+**原生编译器缓存修复（P0-1）：** 发现并修复 `native/build.py` 的两处真实问题——`_manifest_matches()` 不比较显式 `SANTA_CXX`（缓存 Clang 构建可能静默满足 GCC 请求），以及 `_build_locked()` 在因其他原因重建时优先复用旧 manifest 编译器。修复后显式编译器经 PATH/绝对路径/symlink 解析后拥有最高优先级；manifest schema 2 比较 resolved 路径/版本/family/flags/compat/源码与二进制哈希；显式编译器缺失或不可用会明确报错且不回退；`construct.py` 的二进制缓存按 manifest 签名失效；AppleDouble `._*` 元数据排除出源码指纹。新增 `tests/test_native_build.py` 15 个回归测试，覆盖缓存复用、Clang↔GCC 切换、显式编译器不存在/不可用、源码变化、二进制篡改、`--force`、manifest 字段冲突、检查点因编译器变化拒绝恢复等场景（本机 macOS 与 Linux GCC 双环境实际通过）。
+
+**Linux + GCC 参考工具链全量复现（P0-2）：** Ubuntu 25.04 / Linux 6.14 aarch64（6 vCPU）/ `g++-14 (Ubuntu 14.2.0-19ubuntu2) 14.2.0` / glibc 2.41 / `libstdc++-14-dev` / Python 3.13.3；`SANTA_CXX=/usr/bin/g++-14`、`-O3 -std=c++17`、GCC 二进制 `constructor_wide 9682b6e6…`、`constructor_mitm 8379e5b3…`。全新 schema 3 检查点、6 进程、从官方 1,000 题独立求解：**175,604 步、最长 415、1,000/1,000 合法、Stage 1 182,205、Stage 2 节省 6,601（394/606/0）、耗时 443.96 秒**；检查点 1,000 条、`PRAGMA integrity_check=ok`。输出 CSV SHA-256 为 `5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63`，与冻结 V9 记录**逐字节一致**；7 个位宽桶与逐题指标 0 差异。历史归档 CSV 不被替换：仓库中的 V9 CSV 仍是 macOS 独立运行的 `05e7b630…`，两者都是合法独立的 175,604 结果。
+
+**同工具链全量等价性（P0-3）：** 在完全相同的 VM/Python/GCC/源码/flags/参数/种子下，用冻结研究实现（本地重建 GCC 二进制，耗时 429.97 秒）与当前功能化移植实现分别独立求解 1,000 题。逐题对照：最终程序 **0/1,000 差异**、Stage 1/Stage 2/DAG 节点/调度尝试/四条路线（含失败状态）全部 0 差异，两者与冻结记录互相一致，三份 CSV（冻结、参考实现、移植实现）逐字节相同；`scored_0775` 在 GCC 下三者也完全相同（181 步）。因此同工具链全量等价性验收通过，macOS 差异确认为工具链平局行为。
+
+**归档回放与混合重建（P1-1）：** 用官方题与 `src/verify.py` 完整回放 V8 1,000/1,000=194,444（535）、V9 1,000/1,000=175,604（415）、混合 1,000/1,000=174,884（392），哈希与报告一致；用 `src/merge_submissions.py` 重建混合到临时目录，137/863/30 平局、公式错误 0、与归档文件逐字节一致。
+
+**验收证据与 CI（P1-2/P0-4/P1-3）：** 新增 [v9-integration.json](reports/v9-integration.json) 工程验收报告（不进入 V1–V9 成绩曲线）与 `tests/test_acceptance_report.py` 一致性测试；已合入 main（`8858a6a`）的 GitHub Actions [run 45673883392](https://github.com/Leonardo-F/kaggle-lab/actions/runs/45673883392) 实际结果为 **success**，含 C++17 原生构建步骤，全部 16 个步骤通过。历史指纹抽查：`v8.json` 4/4、`v8-refactor.json` 10/10 与记录提交一致。
+
+**文档与生成物（P1-4/P2）：** 更新本文件、赛题 README、报告目录说明、AGENTS 规则；重建互动报告与统一 Web 入口并 `--check`；按流程刷新 `web/build/santa-review.json`；`version-scores.png` 已由更新后的 `version-scores.mmd` 重新渲染为 V1–V9（不再保留"PNG 只覆盖 V1–V5"的过期说明）；`.gitignore` 增加 `._*`。
+
+**最终测试计数（实际执行）：** 本机 macOS：Santa Python **120 tests OK**（含 7 个验收报告一致性测试、15 个原生构建缓存测试）、Santa Node 7/7、Web Python 17、装箱 Python 27 + Node 15、量子 Python 13；报告与统一入口 `--check` 均 exit 0；`git diff --check` 通过。Linux GCC 14.2.0 环境：Santa Python 同一套 **120 tests OK**（test_verify 5、test_merge 11、test_checkpoint 11、test_solver 27、test_native_build 15、test_report 44、test_acceptance_report 7）；原生构建在两种编译器下均成功。浏览器：上一轮验收中离线自动化矩阵为模拟器 23/23、报告/统一入口/互动页 26/26；本轮重建后用 Chrome 158 headless 冒烟复核通过（报告页含 V9、175,604、参考工具链复现说明与 9 条成绩条，无页面错误；统一入口可离线加载）。本轮完整 Playwright 矩阵在重建后复核时遇到 headless 会话挂起，已终止并如实记录。
+
+**限制：** 本轮验收提交为本地提交、尚未推送，因此没有对应 CI 运行（已验证 main 的 CI）；GCC 环境为 Ubuntu 25.04/GCC 14.2.0/Python 3.13.3（冻结记录 Python 3.13.5）；浏览器仅 Chrome 158 headless；历史指纹为抽查；V9 无全局最优性证明；未开始 V10。

@@ -299,7 +299,7 @@ class NativeProtocolTest(unittest.TestCase):
 
     def test_native_build_failure_is_explicit(self):
         with mock.patch.dict("os.environ", {"SANTA_CXX": "/bin/false"}):
-            with self.assertRaisesRegex(RuntimeError, "no working C\\+\\+17 compiler"):
+            with self.assertRaisesRegex(RuntimeError, "explicit compiler from SANTA_CXX"):
                 native_build.choose_compiler()
 
 

@@ -40,7 +40,7 @@
 
 - main 只保留一套按功能组织的 Santa 求解器（当前 V9：Python 管线 + 两个冻结 C++17 构造内核）；V1–V9 历史实现通过 Git 提交和独立 worktree 复现，不再以 `v1.py`–`v9*.py` 作为运行依赖。
 - 算法变更必须从官方题目独立求解，并用 `src/verify.py` 与测试验证；等价重构必须逐题比较程序及阶段指标，不能只比较总分。冻结 V9 的路线顺序、随机种子、候选顺序、平局策略与调度参数不得在没有全量证据时改动。
-- 原生构造必须先执行 `python competitions/santa-2026/src/algorithms/native/build.py`，二进制输出到被忽略的 `experiments/native-build/`；不提交编译产物，也不使用研究归档中的预编译二进制作为发布依赖。构建记录编译器、flags、源码与二进制 SHA-256。
+- 原生构造必须先执行 `python competitions/santa-2026/src/algorithms/native/build.py`，二进制输出到被忽略的 `experiments/native-build/`；不提交编译产物，也不使用研究归档中的预编译二进制作为发布依赖。构建记录编译器、flags、源码与二进制 SHA-256。`SANTA_CXX` 等显式工具链选择优先于缓存，切换编译器必须触发重新构建；不能用旧 manifest 的二进制冒充当前显式工具链。
 - 检查点（schema 3）绑定输入、全部生产 Python、C++ 源与构建脚本、实际二进制哈希、编译器/平台与参数；旧布局检查点只能回到产生它的提交复现，不得放宽指纹校验。
 - 独立求解版本与 V8+V9 混合归档分开记录：`submissions/latest.json` 只指向最佳已验证的独立版本；混合归档由独立的 `src/merge_submissions.py` 后处理生成并单独验证，不作为求解输入，也不进入正式版本曲线。
 - 历史报告、提交 CSV、互动报告与离线回放是研究证据，不得随源码重组删除。官方题目数据、SQLite 检查点和临时结果不提交到 Git。

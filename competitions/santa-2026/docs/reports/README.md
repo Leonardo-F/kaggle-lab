@@ -8,12 +8,12 @@
 |---|---|---|---|
 | 正式版本 release | [v1.json](v1.json) – [v9.json](v9.json)（9 份） | 每代算法在同一官方计分集上的独立求解结果：分数、验证题数、输入/输出哈希、参数、源码/二进制指纹与复跑记录 | 是。`load_report_data()` 读取全部 `vN.json` 生成正式成绩曲线，并用 [submissions/latest.json](../../submissions/latest.json) 指向的报告做交叉核对 |
 | 研究消融 ablation | [v3-handoff-ablation.json](v3-handoff-ablation.json)、[v5-handoff-ablation.json](v5-handoff-ablation.json)、[v9-stage2-ablation.json](v9-stage2-ablation.json)（3 份） | 小样本上的候选策略对照（V3 24 题、V5 8 题），以及 V9 Stage 2 冻结研究包的全量原始证据 | 否。只在 `algorithm-evolution.md` 以链接形式被引用 |
-| 工程验收 validation | [v8-refactor.json](v8-refactor.json)（1 份） | V8 功能化等价重构的全量验收记录：同一官方题的两次全量运行、逐题程序/八阶段指标对照、检查点与测试结果 | 是。作为可选面板读取，固定对照原始 [v8.json](v8.json)，不进入成绩曲线 |
+| 工程验收 validation | [v8-refactor.json](v8-refactor.json)（V8 重构）、[v9-integration.json](v9-integration.json)（V9 合入验收）（2 份） | V8 功能化等价重构与 V9 合入的工程验收记录：同环境双实现逐题对照、全量复现、归档校验、检查点、测试与 CI 结果 | 否（v9-integration 不进入成绩曲线；v8-refactor 作为可选面板读取并固定对照原始 [v8.json](v8.json)） |
 | 混合归档 merge | [v8-v9-merged.json](v8-v9-merged.json)（1 份） | 两份独立提交 CSV 的逐题取短后处理结果（174,884 步），记录来源、逐题选取计数、验证与哈希 | 否。只在 `algorithm-evolution.md` 与 [submissions/README.md](../../submissions/README.md) 中单列展示 |
 
 正式成绩曲线只包含 release；消融、验收与混合归档**不得**混入正式版本曲线：它们不是同一数据集/同一口径的独立算法发布，也不代表新的算法版本。
 
-14 份 JSON 体积合计约 40 KB，全部是研究证据。**保持现有路径，不做迁移**：数量少，分类信息由本 README 承担，避免无收益的路径变动带来的链接、构建常量和测试同步风险。
+15 份 JSON 体积合计约 50 KB，全部是研究证据。**保持现有路径，不做迁移**：数量少，分类信息由本 README 承担，避免无收益的路径变动带来的链接、构建常量和测试同步风险。
 
 ## 2. 每个文件的作用
 
@@ -61,7 +61,11 @@
 
 [v8-v9-merged.json](v8-v9-merged.json) 不是算法版本：它由独立的 [merge_submissions.py](../../src/merge_submissions.py) 对两份独立提交 CSV 做归档后处理——先用 [verify.py](../../src/verify.py) 完整验证两份输入，再按题号对齐、解析 JSON 程序并按 `len(program)` 取较短者，平局取 V9。结果是 1,000/1,000 合法、174,884 步、最长 392 步，V8 严格更短 137 题、V9 胜出 863 题（其中 30 题平局按规则取 V9），比独立 V9 再省 720 步。报告记录来源与输出 SHA-256、逐题选取计数和验证结果；该工具不参与求解，检查点源码清单也不包含它。
 
-### 2.5 V9 Stage 2 原始研究证据（ablation）
+### 2.5 V9 合入与参考工具链验收（validation）
+
+[v9-integration.json](v9-integration.json) 记录 V9 合入后的最终工程验收：在 Linux + GCC 14.2.0 参考工具链下从官方 1,000 题独立复现（175,604、最长 415、输出 CSV 与冻结研究包逐字节一致 `5ab0b72c…`），同一工具链下冻结研究源码与功能化移植实现逐题对照 1,000/1,000 一致，归档 CSV 回放与混合重建校验、schema 3 检查点与原生编译器缓存回归、真实 GitHub Actions 结果（main `8858a6a`）。它是工程验收证据，不是新的正式算法版本，也不进入 V1–V9 成绩曲线；正式成绩仍以 [v9.json](v9.json) 和 [submissions/latest.json](../../submissions/latest.json) 为准。
+
+### 2.6 V9 Stage 2 原始研究证据（ablation）
 
 [v9-stage2-ablation.json](v9-stage2-ablation.json) 保存冻结 V9 研究包的全量原始记录（Stage 1 182,205 → Stage 2 175,604、逐题桶、resume 8 行 + 992 行 797.97 s、Python 3.13.5/GCC 构建信息、交接 ZIP/报告/CSV/日志哈希），只作阶段研究和逐题证据对照；本仓库自己的复跑记录在 [v9.json](v9.json)。其耗时和研究包工具链不能与本地复跑直接比较。
 
