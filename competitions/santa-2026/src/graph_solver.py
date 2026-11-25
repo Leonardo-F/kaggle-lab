@@ -1,10 +1,14 @@
-"""Independent Santa 2026 solver: functional V8-equivalent pipeline.
+"""Independent Santa 2026 solver: the frozen V9 pipeline.
 
-The current release exposes exactly one solver.  Historical V1-V8 research
-implementations are preserved in Git; use a detached worktree of the baseline
-commit to reproduce them.  Add ``--checkpoint`` for a durable SQLite run that
-can be resumed with ``--resume``; a submission is exported only when every
-input puzzle has been solved and replayed by the independent verifier.
+The current release exposes exactly one solver (``v9``).  Historical V1-V8
+research implementations are preserved in Git; use a detached worktree of the
+revision printed by ``--version <historical>`` to reproduce them.  The frozen
+V9 sources build two C++17 constructor kernels before solving; the build is
+preflighted once here so worker processes only read the same binaries.
+
+Add ``--checkpoint`` for a durable SQLite run that can be resumed with
+``--resume``; a submission is exported only when every input puzzle has been
+solved and replayed by the independent verifier.
 """
 
 import argparse
@@ -15,10 +19,14 @@ from pathlib import Path
 import time
 
 import checkpoint as checkpoint_engine
+from algorithms.native import build as native_build
+from algorithms.solver import SOLVER_VERSION
 from verify import verify
 
-DEFAULT_VERSION = "v8"
+DEFAULT_VERSION = SOLVER_VERSION
 LEGACY_REVISION = "9337a3549bea09257cbf36ae1f8da2cbd452942b"
+HISTORICAL_REVISIONS = {**{f"v{i}": LEGACY_REVISION for i in range(1, 8)},
+                        "v8": "287519977aa85a19ef9e3074e6bfd2b9e578b5c3"}
 
 
 def solve_job(row):
@@ -27,15 +35,37 @@ def solve_job(row):
 
 
 def _reject_legacy_version(parser, version):
+    revision = HISTORICAL_REVISIONS.get(version)
+    if revision is None:
+        parser.error(
+            f"unknown solver version: {version!r}; the current solver is {DEFAULT_VERSION}. "
+            f"Historical V1-V7 live at Git commit {LEGACY_REVISION} and V8 at "
+            f"{HISTORICAL_REVISIONS['v8']}."
+        )
     parser.error(
-        f"--version {version} is not part of the current solver; only v8 is available. "
-        f"Historical V1-V8 implementations are preserved at Git commit {LEGACY_REVISION}. "
-        "Reproduce them from a detached worktree instead:\n"
-        f"  git worktree add --detach ../kaggle-lab-santa-history {LEGACY_REVISION}\n"
-        "  cd ../kaggle-lab-santa-history/competitions/santa-2026\n"
+        f"--version {version} is not part of the current solver; only {DEFAULT_VERSION} is available. "
+        f"Historical {version} is preserved at Git commit {revision}. "
+        "Reproduce it from a detached worktree instead:\n"
+        f"  git worktree add --detach ../kaggle-lab-santa-{version} {revision}\n"
+        "  cd ../kaggle-lab-santa-"
+        f"{version}/competitions/santa-2026\n"
         f"  python src/graph_solver.py <puzzles.csv> --version {version} "
         "--output <output.csv> --jobs 8"
     )
+
+
+def preflight(parser):
+    """Build (or verify) the frozen native constructors before any solving."""
+    try:
+        manifest = native_build.ensure_built()
+    except (RuntimeError, OSError) as exc:
+        parser.exit(2, f"error: native constructor build failed: {exc}\n")
+    compiler = manifest["compiler"]
+    print(f"native: {compiler['family']} {compiler['version']} · "
+          f"build={native_build.BUILD_DIR}", flush=True)
+    for kernel, info in manifest["binaries"].items():
+        print(f"native: {kernel} sha256={info['sha256']}", flush=True)
+    return manifest
 
 
 def main():
@@ -69,6 +99,8 @@ def main():
         rows = list(reader)
     if not rows or len({row["id"] for row in rows}) != len(rows):
         parser.error("expected nonempty input with unique puzzle IDs")
+
+    preflight(parser)
 
     if args.checkpoint is not None:
         try:

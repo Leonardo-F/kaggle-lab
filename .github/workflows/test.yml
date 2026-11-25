@@ -27,7 +27,11 @@ jobs:
           node --check competitions/squares-in-squares/simulator/packing-core.js
       - name: Test browser geometry and complete CSV
         run: node --test competitions/squares-in-squares/experiments/test_core.cjs
-      - name: Test Santa solver, checkpoint, verifier and report builder
+      - name: Build Santa native C++17 constructors
+        run: |
+          g++ --version
+          python competitions/santa-2026/src/algorithms/native/build.py
+      - name: Test Santa solver, native build, checkpoint, verifier and report builder
         run: python -m unittest discover -s competitions/santa-2026/tests -p 'test_*.py' -v
       - name: Test Santa CSV replay and custom slots
         run: node --test competitions/santa-2026/tests/test_replay.cjs

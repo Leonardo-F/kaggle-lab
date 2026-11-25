@@ -17,20 +17,26 @@ spec = importlib.util.spec_from_file_location('santa_bundle_build', BUILDER)
 build_mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(build_mod)
 
-HISTORICAL = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8']
+HISTORICAL = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6', 'v7', 'v8', 'v9']
 
 
-def make_santa(root, version='v8', versions=HISTORICAL, algorithms=('__init__.py', 'common.py', 'solver.py')):
-    """A minimal Santa tree: only two real algorithm files plus the CLI files."""
+def make_santa(root, version='v9', versions=HISTORICAL, algorithms=('__init__.py', 'common.py', 'solver.py')):
+    """A minimal Santa tree: two real algorithm modules, CLI files and native sources."""
     santa = Path(root) / 'santa'
     src = santa / 'src'
-    (src / 'algorithms').mkdir(parents=True)
-    (src / 'graph_solver.py').write_text(f'DEFAULT_VERSION = {version!r}\n', encoding='utf-8')
+    native = src / 'algorithms' / 'native'
+    (native / 'compat' / 'bits').mkdir(parents=True)
+    (src / 'graph_solver.py').write_text(
+        'from algorithms.solver import SOLVER_VERSION\nDEFAULT_VERSION = SOLVER_VERSION\n',
+        encoding='utf-8')
     (src / 'checkpoint.py').write_text('"""checkpoint"""\n', encoding='utf-8')
     (src / 'verify.py').write_text('"""verify"""\n', encoding='utf-8')
     for name in algorithms:
         source = (f'SOLVER_VERSION = {version!r}\n' if name == 'solver.py' else f'# {name}\n')
         (src / 'algorithms' / name).write_text(source, encoding='utf-8')
+    (native / 'build.py').write_text('# build\n', encoding='utf-8')
+    (native / 'constructor_wide.cpp').write_text('// wide\n', encoding='utf-8')
+    (native / 'compat' / 'bits' / 'stdc++.h').write_text('// shim\n', encoding='utf-8')
     simulator = src / 'simulator.html'
     simulator.write_text(
         '<div id="replay-files" data-versions="%s"><label>V1</label></div>' % ','.join(versions),
@@ -56,9 +62,11 @@ class ReviewDecouplingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             src, simulator, _ = make_santa(tmp)
             hashes, version, replay = build_mod.review_state(src, simulator)
-            self.assertEqual(version, 'v8')
+            self.assertEqual(version, 'v9')
             self.assertEqual(sorted(hashes), [
-                'algorithms/__init__.py', 'algorithms/common.py', 'algorithms/solver.py',
+                'algorithms/__init__.py', 'algorithms/common.py',
+                'algorithms/native/build.py', 'algorithms/native/compat/bits/stdc++.h',
+                'algorithms/native/constructor_wide.cpp', 'algorithms/solver.py',
                 'checkpoint.py', 'graph_solver.py', 'verify.py',
             ])
             self.assertEqual(replay, HISTORICAL)
@@ -91,15 +99,52 @@ class ReviewDecouplingTests(unittest.TestCase):
             src, simulator, _ = make_santa(tmp)
             hashes, version, replay = build_mod.review_state(src, simulator)
             review = reviewed(src, simulator, version='v7')
-            with self.assertRaisesRegex(build_mod.BuildError, "release is 'v8'"):
+            with self.assertRaisesRegex(build_mod.BuildError, "release is 'v9'"):
                 build_mod.validate_review(review, hashes, version, replay, simulator)
 
-    def test_disagreeing_release_constants_are_rejected(self):
+    def test_release_identifier_is_single_sourced(self):
         with tempfile.TemporaryDirectory() as tmp:
             src, simulator, _ = make_santa(tmp)
-            (src / 'algorithms' / 'solver.py').write_text('SOLVER_VERSION = "v9"\n', encoding='utf-8')
-            with self.assertRaisesRegex(build_mod.BuildError, 'release identifiers disagree'):
+            # The CLI imports the solver constant; it is not a second authority.
+            (src / 'graph_solver.py').write_text(
+                'from algorithms.solver import SOLVER_VERSION\nDEFAULT_VERSION = "v8"\n',
+                encoding='utf-8')
+            self.assertEqual(build_mod.solver_version(src), 'v9')
+            # Changing the imported CLI literal invalidates the review hash, not the version.
+            hashes, version, replay = build_mod.review_state(src, simulator)
+            review = reviewed(src, simulator)
+            _, changed, _ = build_mod.review_state(src, simulator)
+            self.assertEqual(version, 'v9')
+            with self.assertRaisesRegex(build_mod.BuildError, 'changed files: graph_solver.py'):
+                build_mod.validate_review(review, {**hashes, 'graph_solver.py': '0' * 64},
+                                          version, replay, simulator)
+
+    def test_missing_or_invalid_release_identifier_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src, simulator, _ = make_santa(tmp)
+            (src / 'algorithms' / 'solver.py').write_text('# no constant\n', encoding='utf-8')
+            with self.assertRaisesRegex(build_mod.BuildError, 'cannot find a solver release identifier'):
                 build_mod.solver_version(src)
+            (src / 'algorithms' / 'solver.py').write_text('SOLVER_VERSION = 9\n', encoding='utf-8')
+            with self.assertRaisesRegex(build_mod.BuildError, 'must be a string literal'):
+                build_mod.solver_version(src)
+            (src / 'algorithms' / 'solver.py').write_text('SOLVER_VERSION = "v 9"\n', encoding='utf-8')
+            with self.assertRaisesRegex(build_mod.BuildError, 'invalid solver release identifier'):
+                build_mod.solver_version(src)
+
+    def test_native_sources_are_reviewed_and_binaries_are_not_needed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src, simulator, square = make_santa(tmp)
+            (src / 'experiments' / 'native-build').mkdir(parents=True)
+            (src / 'experiments' / 'native-build' / 'constructor_wide').write_bytes(b'\x7fELF')
+            hashes, version, replay = build_mod.review_state(src, simulator)
+            self.assertNotIn('experiments/native-build/constructor_wide', hashes)
+            review = reviewed(src, simulator)
+            (src / 'algorithms' / 'native' / 'constructor_wide.cpp').write_text('// changed\n', encoding='utf-8')
+            changed, _, _ = build_mod.review_state(src, simulator)
+            with self.assertRaisesRegex(build_mod.BuildError,
+                                        'changed files: algorithms/native/constructor_wide.cpp'):
+                build_mod.validate_review(review, changed, version, replay, simulator)
 
     def test_replay_slots_are_not_derived_from_python_file_names(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -156,7 +201,7 @@ class ReviewDecouplingTests(unittest.TestCase):
             refreshed = json.loads(review_path.read_text(encoding='utf-8'))
             self.assertEqual(refreshed['schema_version'], 2)
             self.assertEqual(refreshed['independent_replay']['versions'], HISTORICAL)
-            self.assertEqual(refreshed['solver']['current_version'], 'v8')
+            self.assertEqual(refreshed['solver']['current_version'], 'v9')
             self.assertNotIn('stale.py', refreshed['solver']['source_sha256'])
             build_mod.validate_review(refreshed, *build_mod.review_state(src, simulator)[:3], simulator)
 

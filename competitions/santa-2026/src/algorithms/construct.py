@@ -1,477 +1,158 @@
-"""Adaptive expression construction strategies.
+"""Four-route native dictionary construction.
 
-Three construction policies remain distinguishable because they search
-different candidate spaces: the early legacy beam, the quotient-neighbour beam,
-and the product/residue-augmented beam.  The latter two are one parameterised
-implementation: with the product and residue switches off it executes exactly
-the historical V4 policy, and with them on it executes the historical V5
-policy.  Only the search space differs; candidate ordering and random-number
-consumption are unchanged.
+``construct`` launches one of the two frozen C++17 constructor kernels on one
+official puzzle row and strictly parses the value-DAG protocol it prints.  The
+kernels build a finite multi-expression dictionary from the puzzle's own
+starting values; they never read archived submissions, checkpoints or answers.
+
+Protocol (the frozen research contract):
+
+* argv: ``constructor <width> <mode>``
+* stdin: ``limit count_start count_target start... target...``
+* stdout: ``count`` followed by one ``value op left right`` line per node, in
+  dependency (post-order) order.  Values already present in the starting set
+  or materialised by the kernel's seed are emitted as nodes too, so the graph
+  is self-contained.
+
+Every line is checked for shape, arithmetic identity, range, duplicate
+producers, dependency order and final target coverage.  A malformed protocol
+must never be sanitised into a candidate.
 """
 
 import json
-import random
-from bisect import bisect_left
-from functools import lru_cache
+import subprocess
 
-from .common import compile_dag, ops
+from .common import arithmetic
 
-
-def adaptive_base(s, ts, L, seed=0, width=2, wide=False, bidir=False):
-    """Early adaptive beam (V3) without quotient neighbours or product pool."""
-    rng = random.Random(seed)
-    expr = {v: None for v in s}
-    anc = {v: frozenset() for v in s}
-
-    def add(v, e):
-        a, b = e[1:]
-        deps = anc[a] | anc[b] | {v}
-        if v not in anc or len(deps) < len(anc[v]):
-            # first create only: changing ancestors of existing expressions invalidates cache
-            if v not in anc:
-                expr[v] = e
-                anc[v] = deps
-
-    for _ in range(2):
-        old = list(expr)
-        for i, a in enumerate(old):
-            for b in old[:i + 1]:
-                for v, e in ops(a, b, L):
-                    add(v, e)
-    if len(s) == 1:
-        for v in range(2, min(L, 48) + 1):
-            add(v, ('+', v // 2, v - v // 2))
-        for v in (64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536):
-            if v <= L:
-                add(v, ('+', v // 2, v // 2))
-    l2 = list(expr)
-    l1 = [v for v in l2 if len(anc[v]) <= 1]
-
-    # broad cheap pool, one operation over L2 and L1
-    # Limit expansion to stratified low-cost values (deterministic budget).
-    def stratified(values, count):
-        buckets = {}
-        for v in values:
-            buckets.setdefault(v.bit_length(), []).append(v)
-        for vv in buckets.values():
-            vv.sort(key=lambda v: (len(anc[v]), rng.random()))
-        return [v for vv in buckets.values() for v in vv[:count]]
-
-    limited_l1 = stratified(l1, 8)
-    for a in stratified(l2, 18):
-        for b in limited_l1:
-            for v, e in ops(a, b, L):
-                add(v, e)
-    # supplement small dense dictionary with additions of L2 values
-    small = stratified([v for v in l2 if v < 4096], 12)
-    for i, a in enumerate(small):
-        for b in small[:i + 1]:
-            for v, e in ops(a, b, min(L, 65536)):
-                add(v, e)
-    # get a set of varied divisors: prioritize 1-3 step bases
-    maxbit = max(ts).bit_length()
-    bins = {}
-    for v in l2:
-        if v > 1 and v.bit_length() <= min(22, maxbit // 2 + 3):
-            bins.setdefault(v.bit_length(), []).append(v)
-    l2set = set(l2)
-    extra = {}
-    for v in expr:
-        if v > 1 and v not in l2set and len(anc[v]) <= 3 and v.bit_length() <= min(24, maxbit // 2 + 3):
-            extra.setdefault(v.bit_length(), []).append(v)
-    bases = []
-    for k, vs in extra.items():
-        vs.sort(key=lambda v: (len(anc[v]), rng.random()))
-        bases.extend(vs[:5 if wide else 3])
-    for k, vs in bins.items():
-        vs.sort(key=lambda v: (len(anc[v]), rng.random()))
-        bases.extend(vs[:10 if wide else 7])
-    # powers and other bases chosen by coverage; use L2 cheaply
-    bases = sorted(set(bases), reverse=True)
-    used = set()
-    probe = stratified(list(expr), 6) if bidir else []
-
-    # per target beam recursion, expressions are immutable (tuple trees), cost union
-    def leaf(v):
-        return (anc[v], ())
-
-    def build_fallback(v):
-        if v in expr:
-            return
-        if v <= 1:
-            raise ValueError("missing unit")
-        # Guaranteed recursive construction from 1; use existing inexpensive nodes.
-        b = 16 if v < 4096 else 256
-        if v <= b:
-            a = v // 2
-            c = v - a
-            build_fallback(a)
-            build_fallback(c)
-            add(v, ('+', a, c))
-            return
-        q, r = divmod(v, b)
-        build_fallback(b)
-        build_fallback(q)
-        p = q * b
-        add(p, ('*', q, b))
-        if r:
-            build_fallback(r)
-            add(v, ('+', p, r))
-
-    for t in ts:
-        @lru_cache(None)
-        def rec(v, depth):
-            if v in expr:
-                return leaf(v)
-            if depth <= 0 or v <= 1:
-                return None
-            cand = []
-            direct = None
-            direct_cost = 10 ** 9
-            if bidir:
-                # Reverse operation with a known operand; hash lookup of its complement.
-                for a in dict.fromkeys(probe + sorted(used)):
-                    for o, b, rev in (('+', v - a, False), ('-', a - v, False), ('-', v + a, True),
-                                      ('*', v // a if v % a == 0 else 0, False), ('/', v * a, True),
-                                      ('/', a // v if a % v == 0 else 0, False)):
-                        if b not in expr or not 0 < b <= L:
-                            continue
-                        ds = anc[a] | anc[b] | {v}
-                        c = len(ds - used)
-                        if c < direct_cost:
-                            direct = (ds, ((v, (o, b, a) if rev else (o, a, b)),))
-                            direct_cost = c
-                    if direct_cost == 1:
-                        return direct
-            for a in bases:
-                if a >= v:
-                    continue
-                q, r = divmod(v, a)
-                for qq, rr, sign in ((q, r, '+'), (q + 1, a - r, '-')):
-                    if qq >= v or a * qq > L:
-                        continue
-                    if rr and rr not in expr:
-                        continue
-                    # rank split by residual + base cost + estimated remaining magnitude
-                    c = len((anc[a] | (anc[rr] if rr else set())) - used) + (1 if not rr else 2)
-                    est = c + (len(anc[qq] - used) if qq in expr else max(2, (qq.bit_length() - 9) * .30))
-                    cand.append((est, a, qq, rr, sign))
-            cand.sort()
-            best = direct
-            bc = direct_cost
-            for _, a, q, r, sign in cand[:width]:
-                sub = rec(q, depth - 1)
-                if sub is None:
-                    continue
-                p = a * q
-                ds = sub[0] | anc[a] | {p}
-                es = sub[1] + ((p, ('*', a, q)),)
-                if r:
-                    ds = ds | anc[r] | {v}
-                    es = es + ((v, (sign, p, r)),)
-                cost = len(ds - used)
-                if cost < bc:
-                    best = (ds, es)
-                    bc = cost
-            return best
-
-        out = rec(t, 4)
-        if out is None:
-            build_fallback(t)
-            used |= anc[t]
-            continue
-        for v, e in out[1]:
-            if v not in expr:
-                expr[v] = e
-                anc[v] = anc[e[1]] | anc[e[2]] | {v}
-        used |= anc[t]
-    return compile_dag(s, ts, expr, anc, L)
+SIGNED_64_MAX = 2 ** 63 - 1
+TIMEOUT_SECONDS = 45
+OPERATORS = frozenset('+-*/')
+_BINARY_PATHS = None
 
 
-def adaptive_quotient(s, ts, L, seed=3, width=3, wide=True, bidir=True,
-                      products=True, modular=True, direct_products=True,
-                      factor_count=4):
-    """Quotient-neighbour beam, optionally augmented with products and residues.
-
-    ``products=False, modular=False, direct_products=False`` is the V4 policy;
-    the defaults are the V5 policy.  The flag checks are placed exactly where
-    the historical implementations diverge, so both variants consume the same
-    random numbers and return the same candidates as before.
-    """
-    rng = random.Random(seed)
-    expr = {v: None for v in s}
-    anc = {v: frozenset() for v in s}
-
-    def add(v, e):
-        a, b = e[1:]
-        deps = anc[a] | anc[b] | {v}
-        if v not in anc or len(deps) < len(anc[v]):
-            # first create only: changing ancestors of existing expressions invalidates cache
-            if v not in anc:
-                expr[v] = e
-                anc[v] = deps
-
-    for _ in range(2):
-        old = list(expr)
-        for i, a in enumerate(old):
-            for b in old[:i + 1]:
-                for v, e in ops(a, b, L):
-                    add(v, e)
-    if len(s) == 1:
-        for v in range(2, min(L, 48) + 1):
-            add(v, ('+', v // 2, v - v // 2))
-        for v in (64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536):
-            if v <= L:
-                add(v, ('+', v // 2, v // 2))
-    l2 = list(expr)
-    l1 = [v for v in l2 if len(anc[v]) <= 1]
-
-    # broad cheap pool, one operation over L2 and L1
-    # Limit expansion to stratified low-cost values (deterministic budget).
-    def stratified(values, count):
-        buckets = {}
-        for v in values:
-            buckets.setdefault(v.bit_length(), []).append(v)
-        for vv in buckets.values():
-            vv.sort(key=lambda v: (len(anc[v]), rng.random()))
-        return [v for vv in buckets.values() for v in vv[:count]]
-
-    limited_l1 = stratified(l1, 8)
-    for a in stratified(l2, 18):
-        for b in limited_l1:
-            for v, e in ops(a, b, L):
-                add(v, e)
-    # supplement small dense dictionary with additions of L2 values
-    small = stratified([v for v in l2 if v < 4096], 12)
-    for i, a in enumerate(small):
-        for b in small[:i + 1]:
-            for v, e in ops(a, b, min(L, 65536)):
-                add(v, e)
-    # Expand a stratified subset of cheap values into products and differences.
-    mid = stratified([v for v in l2 if len(anc[v]) <= 3], 4)
-    for i, a in enumerate(mid):
-        for b in mid[:i + 1]:
-            for v, e in ops(a, b, L):
-                add(v, e)
-    # get a set of varied divisors: prioritize 1-3 step bases
-    maxbit = max(ts).bit_length()
-    bins = {}
-    for v in l2:
-        if v > 1 and v.bit_length() <= min(22, maxbit // 2 + 3):
-            bins.setdefault(v.bit_length(), []).append(v)
-    l2set = set(l2)
-    extra = {}
-    for v in expr:
-        if v > 1 and v not in l2set and len(anc[v]) <= 3 and v.bit_length() <= min(24, maxbit // 2 + 3):
-            extra.setdefault(v.bit_length(), []).append(v)
-    bases = []
-    for k, vs in extra.items():
-        vs.sort(key=lambda v: (len(anc[v]), rng.random()))
-        bases.extend(vs[:5 if wide else 3])
-    for k, vs in bins.items():
-        vs.sort(key=lambda v: (len(anc[v]), rng.random()))
-        bases.extend(vs[:10 if wide else 7])
-    # powers and other bases chosen by coverage; use L2 cheaply
-    bases = sorted(set(bases), reverse=True)
-    # Products of cheap factors, derived exclusively from initial values.
-    product_values = set()
-    if products:
-        factors = stratified([v for v in expr if v > 1 and len(anc[v]) <= 3
-                              and v.bit_length() <= min(32, maxbit // 2 + 5)], factor_count)
-        for i, a in enumerate(factors):
-            for b in factors[:i + 1]:
-                v = a * b
-                if v <= L:
-                    add(v, ('*', a, b))
-                    product_values.add(v)
-    products_sorted = sorted(product_values, key=lambda v: (len(anc[v]), v))
-    residue_index = {}
-    if products_sorted:
-        mod_bases = stratified([a for a in bases if 6 <= a.bit_length() <= 22], 3)
-        max_target = max(ts)
-        for a in mod_bases:
-            table = {}
-            for r in products_sorted:
-                if r > max_target:
-                    continue
-                bucket = table.setdefault(r % a, [])
-                if len(bucket) < 2:
-                    bucket.append(r)
-            residue_index[a] = table
-    if not modular:
-        residue_index.clear()
-    used = set()
-    probe = stratified(list(expr), 6) if bidir else []
-    # per target beam recursion, expressions are immutable (tuple trees), cost union
-    def leaf(v):
-        return (anc[v], ())
-
-    def build_fallback(v):
-        if v in expr:
-            return
-        if v <= 1:
-            raise ValueError("missing unit")
-        # Guaranteed recursive construction from 1; use existing inexpensive nodes.
-        b = 16 if v < 4096 else 256
-        if v <= b:
-            a = v // 2
-            c = v - a
-            build_fallback(a)
-            build_fallback(c)
-            add(v, ('+', a, c))
-            return
-        q, r = divmod(v, b)
-        build_fallback(b)
-        build_fallback(q)
-        p = q * b
-        add(p, ('*', q, b))
-        if r:
-            build_fallback(r)
-            add(v, ('+', p, r))
-
-    for t in ts:
-        current_bases = sorted(set(bases) | set(stratified([v for v in used if v > 1], 3)), reverse=True)
-        known = sorted(expr)
-        probes = list(dict.fromkeys(probe + sorted(used)))
-
-        @lru_cache(None)
-        def rec(v, depth):
-            if v in expr:
-                return leaf(v)
-            if depth <= 0 or v <= 1:
-                return None
-            cand = []
-            direct = None
-            direct_cost = 10 ** 9
-            if bidir:
-                # Reverse operation with a known operand; hash lookup of its complement.
-                for a in probes:
-                    for o, b, rev in (('+', v - a, False), ('-', a - v, False), ('-', v + a, True),
-                                      ('*', v // a if v % a == 0 else 0, False), ('/', v * a, True),
-                                      ('/', a // v if a % v == 0 else 0, False)):
-                        if b not in expr or not 0 < b <= L:
-                            continue
-                        ds = anc[a] | anc[b] | {v}
-                        c = len(ds - used)
-                        if c < direct_cost:
-                            direct = (ds, ((v, (o, b, a) if rev else (o, a, b)),))
-                            direct_cost = c
-                if direct_cost == 1:
-                    return direct
-            # Match two products or one product and another known value.
-            if products and direct_products and depth == 4:
-                for a in products_sorted:
-                    for b, o, rev in ((v - a, '+', False), (a - v, '-', False), (a + v, '-', True)):
-                        if b not in expr or b == v:
-                            continue
-                        ds = anc[a] | anc[b] | {v}
-                        c = len(ds - used)
-                        if c < direct_cost:
-                            direct = (ds, ((v, (o, b, a) if rev else (o, a, b)),))
-                            direct_cost = c
-                    if direct_cost == 1:
-                        return direct
-            for a in current_bases:
-                if a >= v:
-                    continue
-                q, r = divmod(v, a)
-                splits = [(q, r, '+'), (q + 1, a - r, '-')]
-                # Match a nearby already constructible quotient; the residue
-                # need not be the conventional remainder modulo a.
-                pos = bisect_left(known, q)
-                for qq in known[max(0, pos - 1):pos + 2]:
-                    p = a * qq
-                    if p <= L and p != v:
-                        splits.append((qq, abs(v - p), '+' if p < v else '-'))
-                table = residue_index.get(a)
-                if table is not None:
-                    for rr in table.get(v % a, ()):
-                        qq = (v - rr) // a
-                        if qq > 0:
-                            splits.append((qq, rr, '+'))
-                    for rr in table.get((-v) % a, ()):
-                        qq = (v + rr) // a
-                        if qq > 0:
-                            splits.append((qq, rr, '-'))
-                for qq, rr, sign in dict.fromkeys(splits):
-                    if qq < 1 or qq >= v or a * qq > L:
-                        continue
-                    if rr and rr not in expr:
-                        continue
-                    # rank split by residual + base cost + estimated remaining magnitude
-                    c = len((anc[a] | (anc[rr] if rr else set())) - used) + (1 if not rr else 2)
-                    if qq in expr:
-                        p = a * qq
-                        ds = anc[a] | anc[qq] | (anc[rr] if rr else set()) | {p, v}
-                        if p in expr:
-                            ds = anc[p] | (anc[rr] if rr else set()) | {v}
-                        est = len(ds - used)
-                    else:
-                        est = c + max(2, (qq.bit_length() - 9) * .30)
-                    cand.append((est, a, qq, rr, sign))
-            cand.sort()
-            best = direct
-            bc = direct_cost
-            for _, a, q, r, sign in cand[:width]:
-                sub = rec(q, depth - 1)
-                if sub is None:
-                    continue
-                p = a * q
-                if p in expr:
-                    ds = anc[p]
-                    es = ()
-                else:
-                    ds = sub[0] | anc[a] | {p}
-                    es = sub[1] + ((p, ('*', a, q)),)
-                if r:
-                    ds = ds | anc[r] | {v}
-                    es = es + ((v, (sign, p, r)),)
-                cost = len(ds - used)
-                if cost < bc:
-                    best = (ds, es)
-                    bc = cost
-            return best
-
-        out = rec(t, 4)
-        if out is None:
-            build_fallback(t)
-            used |= anc[t]
-            continue
-        for v, e in out[1]:
-            if v not in expr:
-                expr[v] = e
-                anc[v] = anc[e[1]] | anc[e[2]] | {v}
-        used |= anc[t]
-    return compile_dag(s, ts, expr, anc, L)
+def binary_paths():
+    """Kernel name -> absolute binary path, built lazily and cached per process."""
+    global _BINARY_PATHS
+    if _BINARY_PATHS is None:
+        from .native.build import binaries
+        _BINARY_PATHS = binaries()
+    return _BINARY_PATHS
 
 
-def adaptive_v4(s, ts, L, seed=3, width=3, wide=True, bidir=True):
-    """V4 quotient-neighbour policy: no product pool, no residue index."""
-    return adaptive_quotient(s, ts, L, seed=seed, width=width, wide=wide, bidir=bidir,
-                             products=False, modular=False, direct_products=False)
+def reset_binaries():
+    """Forget the cached build (tests and long-lived research shells)."""
+    global _BINARY_PATHS
+    _BINARY_PATHS = None
 
 
-def adaptive_v5(s, ts, L, seed=3, width=3, wide=True, bidir=True, products=True,
-                modular=True, direct_products=True, factor_count=4):
-    """V5 product/residue policy."""
-    return adaptive_quotient(s, ts, L, seed=seed, width=width, wide=wide, bidir=bidir,
-                             products=products, modular=modular,
-                             direct_products=direct_products, factor_count=factor_count)
+def puzzle_numbers(row):
+    """Parse and range-check the integers sent to the native kernels."""
+    starting = json.loads(row['starting_values'])
+    targets = json.loads(row['targets'])
+    limit = int(row['value_limit'])
+    if type(limit) is not int or not 0 < limit <= SIGNED_64_MAX:
+        raise ValueError(f"{row.get('id', '?')}: value_limit outside the native signed 64-bit range")
+    for label, values in (('starting_values', starting), ('targets', targets)):
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"{row.get('id', '?')}: {label} must be a nonempty list")
+        for value in values:
+            if type(value) is not int or not 0 < value <= SIGNED_64_MAX:
+                raise ValueError(
+                    f"{row.get('id', '?')}: {label} value outside the native signed 64-bit range"
+                )
+            if value > limit:
+                raise ValueError(f"{row.get('id', '?')}: {label} value exceeds value_limit")
+    if len(set(starting)) != len(starting):
+        raise ValueError(f"{row.get('id', '?')}: duplicate starting values")
+    if len(starting) > int(row['registers']):
+        raise ValueError(f"{row.get('id', '?')}: more starting values than registers")
+    return starting, targets, limit
 
 
-def plans(s, ts):
-    """Feature-adaptive plan order used by the V7 portfolio stage."""
-    maxbit = max(ts).bit_length()
-    spread = maxbit - min(ts).bit_length()
-    asc = sorted(ts)
-    yield 'asc-seed5', asc, 5, 3
-    if len(ts) >= 20:
-        if spread >= 6:
-            order = sorted(ts, key=lambda t: (-t.bit_length(), t))
-        else:
-            order = sorted(ts, key=lambda t: (t % 256, t))
-        yield 'feature-order', order, 6, 3
-        if maxbit >= 40:
-            yield 'wide-asc', asc, 7, 4
-    elif len(s) <= 2 and maxbit >= 25:
-        yield 'small-start-wide', asc, 7, 4
+def parse_graph(text, row):
+    """Strictly parse the native ``value op left right`` graph protocol."""
+    starting, targets, limit = puzzle_numbers(row)
+    start = set(starting)
+    lines = text.splitlines()
+    if not lines or not lines[0].strip().isdigit():
+        raise ValueError(f"{row.get('id', '?')}: native constructor emitted no protocol header")
+    count = int(lines[0].strip())
+    body = [line for line in lines[1:] if line.strip()]
+    if len(body) != count:
+        raise ValueError(
+            f"{row.get('id', '?')}: native constructor declared {count} nodes but emitted {len(body)}"
+        )
+    graph = {}
+    for number, line in enumerate(body, start=1):
+        parts = line.split()
+        if len(parts) != 4:
+            raise ValueError(f"{row.get('id', '?')}: malformed native node line {number}: {line!r}")
+        value_text, op, left_text, right_text = parts
+        try:
+            value, left, right = int(value_text), int(left_text), int(right_text)
+        except ValueError as exc:
+            raise ValueError(
+                f"{row.get('id', '?')}: non-integer native node line {number}: {line!r}"
+            ) from exc
+        if op not in OPERATORS:
+            raise ValueError(f"{row.get('id', '?')}: unknown native operator {op!r} on line {number}")
+        if not 1 <= value <= limit:
+            raise ValueError(f"{row.get('id', '?')}: native value {value} outside 1..{limit}")
+        if value in graph or value in start:
+            raise ValueError(f"{row.get('id', '?')}: duplicate native producer for value {value}")
+        for operand in (left, right):
+            if operand in start:
+                continue
+            if operand not in graph:
+                raise ValueError(
+                    f"{row.get('id', '?')}: native node {value} depends on undefined value {operand}"
+                )
+        try:
+            produced = arithmetic(op, left, right)
+        except ValueError as exc:
+            raise ValueError(
+                f"{row.get('id', '?')}: native node {value} does not satisfy {left} {op} {right}"
+            ) from exc
+        if produced != value:
+            raise ValueError(
+                f"{row.get('id', '?')}: native node {value} does not satisfy {left} {op} {right}"
+            )
+        graph[value] = (op, left, right)
+    missing = [value for value in targets if value not in start and value not in graph]
+    if missing:
+        raise ValueError(
+            f"{row.get('id', '?')}: native graph is missing {len(missing)} target(s): {missing[:3]}"
+        )
+    return graph
+
+
+def construct(row, width, mode, kernel, binary=None, timeout=TIMEOUT_SECONDS):
+    """Run one native kernel and return its validated value DAG."""
+    from .native.build import KERNELS
+    if kernel not in KERNELS:
+        raise ValueError(f"unknown native constructor kernel: {kernel!r}")
+    if type(width) is not int or width < 1:
+        raise ValueError(f"invalid native constructor width: {width!r}")
+    if type(mode) is not int or mode < 0:
+        raise ValueError(f"invalid native constructor mode: {mode!r}")
+    starting, targets, limit = puzzle_numbers(row)
+    executable = binary if binary is not None else binary_paths()[kernel]
+    payload = ' '.join(map(str, [limit, len(starting), len(targets), *starting, *targets]))
+    try:
+        result = subprocess.run(
+            [str(executable), str(width), str(mode)],
+            input=payload, text=True, capture_output=True, timeout=timeout, check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ValueError(
+            f"{row.get('id', '?')}: native {kernel} timed out after {timeout}s"
+        ) from exc
+    except OSError as exc:
+        raise ValueError(f"{row.get('id', '?')}: cannot run native {kernel}: {exc}") from exc
+    if result.returncode != 0:
+        stderr = (result.stderr or '').strip().splitlines()
+        detail = stderr[0] if stderr else 'no stderr'
+        raise ValueError(
+            f"{row.get('id', '?')}: native {kernel} exited {result.returncode}: {detail}"
+        )
+    return parse_graph(result.stdout, row)

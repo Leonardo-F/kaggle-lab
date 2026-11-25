@@ -3,7 +3,7 @@
 The Santa review file (``santa-review.json``) keeps three independent things:
 
 * ``solver`` – the current CLI release identifier and the SHA-256 of every
-  source file that takes part in solving or verification;
+  source file that takes part in solving, native construction or verification;
 * ``independent_replay`` – the historical CSV replay slots shown by the
   simulator, which are a property of the recorded results, not of the Python
   files that happen to exist today;
@@ -30,7 +30,10 @@ REVIEW = HERE / 'santa-review.json'
 OUTPUT = HERE.parent / 'simulators.html'
 SCHEMA_VERSION = 2
 SOLVER_FILES = ('graph_solver.py', 'checkpoint.py', 'verify.py')
-VERSION_SOURCES = (('graph_solver.py', 'DEFAULT_VERSION'), ('algorithms/solver.py', 'SOLVER_VERSION'))
+SOLVER_SUFFIXES = ('.py', '.cpp', '.h', '.hpp')
+# The release identifier is single-sourced in the solver module; the CLI
+# imports it at runtime and must not declare a second literal.
+VERSION_SOURCES = (('algorithms/solver.py', 'SOLVER_VERSION'),)
 VERSION_PATTERN = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$')
 SLOT_PATTERN = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$')
 
@@ -49,7 +52,9 @@ def solver_sources(santa_src):
     if not algorithms.is_dir():
         raise BuildError(f'Santa algorithm directory is missing: {algorithms}')
     files = [santa_src / name for name in SOLVER_FILES]
-    files.extend(sorted(path for path in algorithms.rglob('*.py') if path.is_file()))
+    files.extend(sorted(path for path in algorithms.rglob('*')
+                        if path.is_file() and path.suffix in SOLVER_SUFFIXES
+                        and '__pycache__' not in path.parts))
     missing = [path for path in files if not path.is_file()]
     if missing:
         raise BuildError('Santa solver files are missing: ' + ', '.join(
@@ -90,9 +95,6 @@ def solver_version(santa_src):
     if not found:
         names = ' or '.join(f'{rel}:{const}' for rel, const in VERSION_SOURCES)
         raise BuildError(f'cannot find a solver release identifier ({names})')
-    if len(set(found.values())) != 1:
-        details = ', '.join(f'{rel}={value!r}' for rel, value in found.items())
-        raise BuildError(f'solver release identifiers disagree: {details}')
     version = next(iter(found.values()))
     if not VERSION_PATTERN.fullmatch(version):
         raise BuildError(f'invalid solver release identifier: {version!r}')
