@@ -1,0 +1,379 @@
+{
+  "schema_version": 1,
+  "kind": "release",
+  "version": "v10",
+  "solver_version": "v10",
+  "policy": "full",
+  "solver_commit": null,
+  "solver_commit_note": "V10 was integrated after the research run; the integration commit is recorded in Git history.",
+  "report_date": "2026-11-27",
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 164306,
+  "max_steps": 349,
+  "submission_sha256": "171e6e002919bd23669540df92d5b5746337bdb9ca276bdd0b3fdc4a37143a28",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "local_filename": "elf-calculator-independent-v10-score-164306.csv",
+  "stages": {
+    "v10_stage3": 165110,
+    "v10final": 164306
+  },
+  "comparison": {
+    "vs_v9": {
+      "v9_score": 175604,
+      "score": 164306,
+      "saved": 11298,
+      "reduction_pct": 6.433794218810506,
+      "improved": 857,
+      "unchanged": 143,
+      "worse": 0
+    },
+    "vs_stage3": {
+      "stage3_score": 165110,
+      "saved": 804,
+      "improved": 233,
+      "unchanged": 767,
+      "worse": 0
+    },
+    "winners": {
+      "stage3": 767,
+      "constructor_order_cf": 131,
+      "constructor_order_fast": 102
+    }
+  },
+  "winners": {
+    "stage3": 767,
+    "constructor_order_cf": 131,
+    "constructor_order_fast": 102
+  },
+  "holdout_ablation": {
+    "split": "fixed clean holdout (100 official scored puzzles)",
+    "scores": {
+      "v9": 18192,
+      "stage1": 17023,
+      "stage3": 16912,
+      "stage3_order": 16902,
+      "stage3_hybrid": 16844,
+      "adaptive": 16874,
+      "full": 16842
+    },
+    "winners": {
+      "stage3": 81,
+      "constructor_order_cf": 14,
+      "constructor_order_fast": 5
+    },
+    "improved_vs_stage3": {
+      "order": 6,
+      "hybrid": 17,
+      "full": 19,
+      "adaptive": 10
+    },
+    "route_counts": {
+      "full": 200,
+      "adaptive_order": 84,
+      "adaptive_hybrid": 37
+    },
+    "worker_seconds_full": 1958.919,
+    "note": "Stage 1 is the pressure/joint portfolio plus exact repair before the two joint-stage native routes; Stage 3 adds constructor_joint and constructor_cf; order/hybrid/full add the two order routes."
+  },
+  "per_puzzle_metrics": {
+    "path": "docs/reports/v10-full1000-metrics.csv",
+    "columns": [
+      "id",
+      "v9",
+      "stage3",
+      "full",
+      "winner",
+      "seconds",
+      "repeat"
+    ],
+    "rows": 1000,
+    "v9_total": 175604,
+    "stage3_total": 165110,
+    "full_total": 164306
+  },
+  "per_puzzle_holdout_metrics": {
+    "path": "docs/reports/v10-holdout100-metrics.csv",
+    "rows": 100,
+    "v9_total": 18192,
+    "stage1_total": 17023,
+    "stage3_total": 16912,
+    "full_total": 16842
+  },
+  "cost": {
+    "sum_per_puzzle_seconds": 18524.689,
+    "median_puzzle_seconds": 10.440999999999999,
+    "policy": "full",
+    "jobs_in_research_run": 4,
+    "note": "Research worker seconds on Linux/GCC 14.2; wall-clock depends on jobs and machine."
+  },
+  "timeout_retests": {
+    "initial_route_timeouts": 5,
+    "serial_retest_successes": 5,
+    "submission_changed": false,
+    "ids": [
+      "scored_0681",
+      "scored_0685",
+      "scored_0690",
+      "scored_0725",
+      "scored_0719"
+    ],
+    "note": "Candidate routes timed out at the original 18-second native timeout; serial retests used the unchanged route function and parameters. None improved the selected program, so the submitted CSV and checkpoint were preserved."
+  },
+  "verification": {
+    "full_replay": {
+      "puzzles": 1000,
+      "validated": 1000,
+      "score": 164306,
+      "max_steps": 349,
+      "verifier": "src/verify.py",
+      "submission_sha256": "171e6e002919bd23669540df92d5b5746337bdb9ca276bdd0b3fdc4a37143a28",
+      "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428"
+    },
+    "source": "uploaded research artifact; replay against official puzzles only"
+  },
+  "provenance": {
+    "uploaded_archive_sha256": "5e44a3c45046a0c72c3043ada16b50b6c1c83a8bb1690b12b36458645f877669",
+    "uploaded_submission_sha256": "171e6e002919bd23669540df92d5b5746337bdb9ca276bdd0b3fdc4a37143a28",
+    "uploaded_report_sha256": "6418e290d01a28367efb3a4d0e7134d823ecb85bbad28e8938d7d9b166c1c918",
+    "research_sqlite_sha256": "dbb68c6c9598fa934293a441e22122e5bade87fc5c441fafcfad8e1a05cfb459",
+    "research_environment": {
+      "python": "3.13.5",
+      "compiler": "GCC 14.2.0",
+      "flags": [
+        "-O3",
+        "-std=c++17"
+      ],
+      "platform": "Linux"
+    },
+    "note": "The research run produced the CSV; this repository adds a production port of the same frozen pipeline. The archived CSV is never a solver input."
+  },
+  "native": {
+    "kernels": [
+      "constructor_wide",
+      "constructor_mitm",
+      "constructor_pressure",
+      "constructor_joint",
+      "constructor_cf",
+      "constructor_order_fast",
+      "constructor_order_cf"
+    ],
+    "research_binaries": {
+      "constructor_wide": "54848d529281d3d61b7bdb03b6da294f82bfbde8a8f0a72e25d66b41c3dc50fe",
+      "constructor_mitm": "a249637380aa2f8e41be431b1a85da53d378f983f098f2049a99d37c7f2a8d65",
+      "constructor_pressure": "4554e26d90d779fb87c686644330088753e1e698d13fcb812e6f1e0ee39bf8d2",
+      "constructor_joint": "53a2d2422263ebecb54b2538a4d689c2914f45c8cef5eb031fecfe3d88c77c49",
+      "constructor_cf": "36cbf48b41344f7e3f70b59ddc3a7327df60431e300a222988631dc20e04fdd5",
+      "constructor_order_fast": "54b3f88aef37965995bd800721c1342bde1fe97d835b7bd4e3d060ff3f095215",
+      "constructor_order_cf": "dfa10eb3c85c30a0a2905460baf57759e299dc7d3275e3a788e0c9989b63458c"
+    },
+    "note": "Research binaries are recorded for provenance only; they are not used as a release dependency.",
+    "port_build": {
+      "compiler": {
+        "family": "clang",
+        "path": "/usr/bin/g++",
+        "source": "auto",
+        "version": "Apple clang version 21.0.0 (clang-2100.3.34.2)"
+      },
+      "flags": [
+        "-O3",
+        "-std=c++17"
+      ],
+      "compat_include": true,
+      "binaries": {
+        "constructor_cf": "53530666e83f30b82e01ae62173e5abfa819e089ce0791aed4db5b27d721fc5e",
+        "constructor_joint": "6f490a9e08359e8836877820fc2cbdcfdfcbd5056502db37215e2092cca9346c",
+        "constructor_mitm": "051dc002b08c7730e7b3b4dbc2523cb1644f5927829a82924036f0fe615500ac",
+        "constructor_order_cf": "5ba90bbf564906aff6b21a2ef603487bd2ca88e66a625e72db82351863ad568b",
+        "constructor_order_fast": "818592450df94dd964a960d160e6d6280ef2213416bcb12447f39b4f0a7d7cbe",
+        "constructor_pressure": "99a0677bb8a9812be20c087fc50c977de572bc1403311e67d035023cc56e2c21",
+        "constructor_wide": "14069a872576bfcb2cacc72ec4c3b9ae0a42f83bbd970c537e0178cd85fa5d12"
+      },
+      "note": "本机 Apple Clang 21 构建；仅用于本次代表性/留出集独立重解，不是研究 CSV 的来源。"
+    }
+  },
+  "reproduction": {
+    "build": "python src/algorithms/native/build.py",
+    "default_command": "python src/graph_solver.py data/puzzles.csv --version v10 --policy full --jobs 4 --output experiments/v10.csv",
+    "v9_command": "python src/graph_solver.py data/puzzles.csv --version v9 --jobs 4 --output experiments/v9.csv",
+    "checkpoint_command": "python src/graph_solver.py data/puzzles.csv --version v10 --jobs 4 --checkpoint experiments/v10.sqlite --output experiments/v10.csv",
+    "resume_command": "python src/graph_solver.py data/puzzles.csv --version v10 --jobs 4 --checkpoint experiments/v10.sqlite --resume --output experiments/v10.csv",
+    "verify_command": "python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v10-score-164306.csv"
+  },
+  "limitations": [
+    "164,306 is a local instruction total verified by replay, not a Kaggle leaderboard score; no Kaggle submission was made in this integration.",
+    "The full 1,000-puzzle V10 run was produced by the research package on Linux/GCC 14.2; this integration replay verifies the delivered CSV but cannot claim the same full run on macOS/Apple Clang.",
+    "V10 order and joint constructors iterate unordered containers; equal-length ties can differ across standard libraries, so cross-toolchain byte identity is not claimed.",
+    "Five routes hit the original 18-second timeout during the research run; serial retests did not improve the selected programs. A production rerun can still time out under load.",
+    "No global optimality proof exists; stage lower bounds are tied to the fixed candidate DAGs.",
+    "V1-V8 remain reproducible from fixed Git commits; V9 remains runnable via --version v9 but uses the new schema 4 checkpoint layout."
+  ],
+  "independent_rerun": {
+    "environment": {
+      "platform": "macOS 27.0.1 arm64",
+      "compiler": "Apple clang 21.0.0",
+      "python": "3.13.2",
+      "jobs": 4,
+      "note": "本机 Apple Clang 21 + compat 头；与研究运行的 Linux/GCC 14.2 不同。"
+    },
+    "smoke": {
+      "puzzles": 10,
+      "validated": 10,
+      "score": 1565,
+      "max_steps": 220,
+      "ids": [
+        "scored_0037",
+        "scored_0042",
+        "scored_0072",
+        "scored_0202",
+        "scored_0248",
+        "scored_0266",
+        "scored_0270",
+        "scored_0406",
+        "scored_0490",
+        "scored_0832"
+      ],
+      "score_and_winner_match_archived": true,
+      "programs_match_archived": 8,
+      "programs_total": 10,
+      "note": "8/10 程序与归档 Linux CSV 逐字节相同；scored_0248 与 scored_0406 等长但寄存器选择不同，分数与 winner 不变。这 10 题与本机冻结研究实现逐题程序一致。"
+    },
+    "holdout100": {
+      "puzzles": 100,
+      "validated": 100,
+      "score": 16842,
+      "max_steps": 314,
+      "v10_stage1": 17022,
+      "v10_stage3": 16916,
+      "v10final": 16842,
+      "improved_vs_stage3": 20,
+      "unchanged_vs_stage3": 80,
+      "worse_vs_stage3": 0,
+      "session_elapsed_seconds": 192.18,
+      "submission_sha256": "90f3cca41f746b16369fe2c6e37a14f27352b20bb166939d090456b88fb06567",
+      "puzzles_sha256": "43b764ff29ae558e6ab50e681d45796bd90da52e0640b4d8227c437cbd3a1289",
+      "score_matches_archived": true,
+      "score_matches_archived_count": 96,
+      "program_matches_archived_count": 92,
+      "winner_matches_archived_count": 99,
+      "differences": [
+        {
+          "id": "scored_0169",
+          "archived": 118,
+          "rerun": 117,
+          "note": "等长/更短来自容器迭代顺序；本机冻结研究实现同样得到 117"
+        },
+        {
+          "id": "scored_0498",
+          "archived": 185,
+          "rerun": 184,
+          "note": "order_cf 路线候选图不同；本机冻结研究实现同样得到 184"
+        },
+        {
+          "id": "scored_0565",
+          "archived": 251,
+          "rerun": 248,
+          "note": "本机 winner 从 stage3 变为 order_fast；本机冻结研究实现同样得到 248"
+        },
+        {
+          "id": "scored_0865",
+          "archived": 264,
+          "rerun": 269,
+          "note": "等长候选/修复路径不同；本机冻结研究实现同样得到 269"
+        }
+      ],
+      "note": "100 题总分与归档完全一致（16,842），但逐题 4 题有等量反向差异，净和为 0；4 道差异题在本机用冻结研究代码重跑均与本移植版逐程序一致，因此差异归因于工具链/容器迭代顺序，不是整合逻辑。"
+    },
+    "claim": "本次合入独立重解了 10 道代表性题和固定留出集 100 题；没有重跑正式 1,000 题，不声称由本仓库独立复现 164,306。"
+  },
+  "tests": {
+    "santa_python": 123,
+    "santa_node": 7,
+    "web_python": 17,
+    "native_build": "ok",
+    "report_check": "ok",
+    "web_bundle_check": "ok",
+    "git_diff_check": "ok",
+    "note": "计数来自本次合入实际执行；不包含未重跑的装箱/量子测试。"
+  },
+  "acceptance": {
+    "static": [
+      "python -m py_compile 全部生产 Python（实际执行）",
+      "七个 C++17 构造器源码编译（实际执行）",
+      "CLI --help/默认/v9/--policy 检查（实际执行）"
+    ],
+    "full_replay": [
+      "python src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v10-score-164306.csv",
+      "1,000/1,000 合法、164,306、最长 349"
+    ],
+    "independent_rerun": "见 independent_rerun：10 题代表性 + 100 题固定留出集（16,842）",
+    "simulator": [
+      "模拟器 HTML 加载、V1–V10 槽位、V10 默认选择、V9/V10 比较、逐步回放、目标状态、164,306 文案",
+      "统一入口 web/simulators.html 与 web/tests 构建一致性"
+    ],
+    "not_run": [
+      "本次合入未完整重跑正式 1,000 题",
+      "未做 Kaggle 提交",
+      "未覆盖 Safari/Firefox/真实移动设备"
+    ]
+  },
+  "port_source_hashes": {
+    "src/graph_solver.py": "b1cc3768dc4d7818748af5518912432152cf2eb7e05635edd1b9c05d5ad9f9e5",
+    "src/checkpoint.py": "370236f37bc286e0afdf7fa41af7315cdc273039d36cf28a171099d269ef3053",
+    "src/verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4",
+    "src/algorithms/__init__.py": "90ebcc2dec83fd3e1bdbad03c61fef977a25c93c639bab56a1b2ec014f30e41e",
+    "src/algorithms/common.py": "7009d0558aafe3fe814e5e7674050dcad7a8b67bcdd9619f1e316c844e24175a",
+    "src/algorithms/construct.py": "00ab73e409409a76cbcae19e2537771d46839ee25fbc43c52a0d39763f4c49c9",
+    "src/algorithms/graph.py": "0580d2523178a35ff95acb7127cc80dbcea90671f7fb7eaeb586b312503f9d73",
+    "src/algorithms/native/build.py": "579c0f5d8ac7efd3fb5fb7fe58d162be4821071adb4531c1d4517cec6c53cd31",
+    "src/algorithms/native/compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+    "src/algorithms/native/constructor_cf.cpp": "a4596e37d10f85601104127fd83424e8c284033305d02f250060d53b8e94d49f",
+    "src/algorithms/native/constructor_joint.cpp": "0e63c95504a93649ac3a06fd84ea875a4f40778371b66c8cf73f165ad6bb5d69",
+    "src/algorithms/native/constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+    "src/algorithms/native/constructor_order_cf.cpp": "c01b90bfa81b074726ab9426060cf40682b6cd889a55ecf096ac1e4279038832",
+    "src/algorithms/native/constructor_order_fast.cpp": "a8b3339099a65176e4efb97f85a0dbb1d676cd9b0b07fdeedf91cd7421f17d9c",
+    "src/algorithms/native/constructor_pressure.cpp": "dbe8009db4ac1f3f72fba56674ca00c5e840a415a5ef43fef5e8d8886f7f805e",
+    "src/algorithms/native/constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
+    "src/algorithms/rewrite.py": "bbe61b6423ce19bf49525450676a4307462b8cded2a300cf3adf48ca4fa5cade",
+    "src/algorithms/schedule.py": "9798c6df7915a30f8989d94ce55bbd697aed2f1ea64773797d46670d44f31dc1",
+    "src/algorithms/solver.py": "8cb82dea08137bd43fbf6a9fc5afd7e05a0bbc6376dfd82fe8a30b3328abe160",
+    "src/algorithms/v10.py": "9b02fe83c4e0fcb7c37bd893c663e8308094432d629b78ee15c893cbe618e8ed",
+    "src/algorithms/v9.py": "77e0057d0176d432498abfc807bb21242c83b93991d5ea38bce22927ef501ace"
+  },
+  "browser_acceptance": {
+    "browser": "Google Chrome 158.0.8127.88",
+    "mode": "headless=new + Playwright, file:// 离线",
+    "simulator": {
+      "loaded": true,
+      "default_version": "v10",
+      "versions": "v1–v10",
+      "v10_label": "V10 Full",
+      "imported_v10": "1,000 题 · 164,306 步 · 覆盖 1000/1000",
+      "imported_v9": "1,000 题 · 175,604 步 · 覆盖 1000/1000",
+      "puzzle": "scored_0037",
+      "v10_steps": 220,
+      "v9_steps": 248,
+      "coverage": "30 / 30",
+      "program_rows": 220,
+      "page_errors": 0,
+      "external_requests": 0
+    },
+    "unified_entry": {
+      "santa_tab_visible": true,
+      "v10_option": "V10 Full",
+      "score_text": "164,306 步",
+      "page_errors": 0,
+      "external_requests": 0
+    },
+    "interactive_report": {
+      "title": "Santa 2026 · 算法互动报告",
+      "contains_v10_section": true,
+      "contains_164306": true,
+      "score_curve_last": "V10 164,306",
+      "simulator_iframe": true,
+      "page_errors": 0,
+      "external_requests": 0
+    },
+    "not_verified": "未覆盖 Safari/Firefox/真实移动设备；未在浏览器内运行 Python/C++ 求解器。"
+  }
+}

@@ -1,23 +1,23 @@
 # Santa 2026 报告目录说明
 
-本目录保存 Santa 2026（The Elf Calculator）的机器可读历史证据：正式版本记录、研究消融记录、工程等价重构验收和混合归档。这里只说明每份文件的用途与读取关系，不重复 [algorithm-evolution.md](../algorithm-evolution.md) 的完整成绩表。
+本目录保存 Santa 2026（The Elf Calculator）的机器可读历史证据：正式版本记录（V1–V10）、研究消融记录、工程等价重构验收和混合归档。这里只说明每份文件的用途与读取关系，不重复 [algorithm-evolution.md](../algorithm-evolution.md) 的完整成绩表。V10 另附两份逐题指标 CSV（正式 1,000 题与固定留出集 100 题）。
 
 ## 1. 四类报告
 
 | 类别 | 文件 | 作用 | 是否被 [build_report.py](../build_report.py) 读取 |
 |---|---|---|---|
-| 正式版本 release | [v1.json](v1.json) – [v9.json](v9.json)（9 份） | 每代算法在同一官方计分集上的独立求解结果：分数、验证题数、输入/输出哈希、参数、源码/二进制指纹与复跑记录 | 是。`load_report_data()` 读取全部 `vN.json` 生成正式成绩曲线，并用 [submissions/latest.json](../../submissions/latest.json) 指向的报告做交叉核对 |
-| 研究消融 ablation | [v3-handoff-ablation.json](v3-handoff-ablation.json)、[v5-handoff-ablation.json](v5-handoff-ablation.json)、[v9-stage2-ablation.json](v9-stage2-ablation.json)（3 份） | 小样本上的候选策略对照（V3 24 题、V5 8 题），以及 V9 Stage 2 冻结研究包的全量原始证据 | 否。只在 `algorithm-evolution.md` 以链接形式被引用 |
+| 正式版本 release | [v1.json](v1.json) – [v10.json](v10.json)（10 份） | 每代算法在同一官方计分集上的独立求解结果：分数、验证题数、输入/输出哈希、参数、源码/二进制指纹与复跑记录 | 是。`load_report_data()` 读取全部 `vN.json` 生成正式成绩曲线，并用 [submissions/latest.json](../../submissions/latest.json) 指向的报告做交叉核对 |
+| 研究消融 ablation | [v3-handoff-ablation.json](v3-handoff-ablation.json)、[v5-handoff-ablation.json](v5-handoff-ablation.json)、[v9-stage2-ablation.json](v9-stage2-ablation.json)、[v10-holdout100.json](v10-holdout100.json)（4 份） | 小样本上的候选策略对照（V3 24 题、V5 8 题）、V9 Stage 2 冻结研究包的全量原始证据，以及 V10 固定留出集 100 题策略消融 | 否。只在 `algorithm-evolution.md` 以链接形式被引用 |
 | 工程验收 validation | [v8-refactor.json](v8-refactor.json)（V8 重构）、[v9-integration.json](v9-integration.json)（V9 合入验收）（2 份） | V8 功能化等价重构与 V9 合入的工程验收记录：同环境双实现逐题对照、全量复现、归档校验、检查点、测试与 CI 结果 | 否（v9-integration 不进入成绩曲线；v8-refactor 作为可选面板读取并固定对照原始 [v8.json](v8.json)） |
 | 混合归档 merge | [v8-v9-merged.json](v8-v9-merged.json)（1 份） | 两份独立提交 CSV 的逐题取短后处理结果（174,884 步），记录来源、逐题选取计数、验证与哈希 | 否。只在 `algorithm-evolution.md` 与 [submissions/README.md](../../submissions/README.md) 中单列展示 |
 
 正式成绩曲线只包含 release；消融、验收与混合归档**不得**混入正式版本曲线：它们不是同一数据集/同一口径的独立算法发布，也不代表新的算法版本。
 
-15 份 JSON 体积合计约 50 KB，全部是研究证据。**保持现有路径，不做迁移**：数量少，分类信息由本 README 承担，避免无收益的路径变动带来的链接、构建常量和测试同步风险。
+17 份 JSON 体积合计约 60 KB，全部是研究证据；两份 V10 逐题指标 CSV 合计约 61 KB。**保持现有路径，不做迁移**：数量少，分类信息由本 README 承担，避免无收益的路径变动带来的链接、构建常量和测试同步风险。
 
 ## 2. 每个文件的作用
 
-### 2.1 正式版本（V1–V9）
+### 2.1 正式版本（V1–V10）
 
 | 文件 | 版本 | 首次记录提交 |
 |---|---|---|
@@ -29,13 +29,16 @@
 | [v6.json](v6.json) | V6 动态无环、路径联合 | `b539c05` |
 | [v7.json](v7.json) | V7 多构造器、调度 | `64db409` |
 | [v8.json](v8.json) | V8 Final 子图重写、组修复、寄存器 | `c9fdd61` |
-| [v9.json](v9.json) | V9 动态字典构造与寄存器压力调度 | 本次 V9 合入提交（见报告 `solver_commit` 字段） |
+| [v9.json](v9.json) | V9 动态字典构造与寄存器压力调度 | V9 合入提交（见报告 `solver_commit` 字段） |
+| [v10.json](v10.json) | V10 Full 七构造器、联合调度、目标顺序 | 本次 V10 合入提交（见 Git 历史；报告记录 `solver_commit_note`） |
 
 早期 7 份报告在提交 `35a688d`（`Simplify Santa test and report layout`）中从 `experiments/reports/` 移到 `docs/reports/`；[v6.json](v6.json) 起直接写在本目录。历史版本化源码基线仍可从固定提交 `9337a3549bea09257cbf36ae1f8da2cbd452942b` 复现。
 
-当前正式提交的最佳指针是 [submissions/latest.json](../../submissions/latest.json)（见 §4），指向 V9（175,604 步）。[v1.json](v1.json)–[v8.json](v8.json) 是历史记录，不会因新版本改写；报告生成器只按版本号读取，新的正式版本需要新增 `vN.json` 并同步 `submissions/latest.json` 与 Markdown 正式成绩表。
+当前正式提交的最佳指针是 [submissions/latest.json](../../submissions/latest.json)（见 §4），指向 V10 Full（164,306 步）。[v1.json](v1.json)–[v8.json](v8.json) 是历史记录，不会因新版本改写；报告生成器只按版本号读取，新的正式版本需要新增 `vN.json` 并同步 `submissions/latest.json` 与 Markdown 正式成绩表。
 
-[v9.json](v9.json) 记录本次从官方 1,000 题、全新 schema 3 检查点的独立全量复跑：分数 175,604、Stage 1 182,205、最长 415 步、CSV SHA-256 `05e7b630…`；同时保存输入/输出哈希、冻结参数、编译器与两个原生二进制哈希、检查点完整性、练习数据集单独记录，以及和冻结研究记录的对照：逐题程序 999/1000 相同，唯一差异题 `scored_0775` 等长（181 步）但寄存器选择不同，归因于本机 Apple Clang 工具链与冻结记录 Linux GCC 在等分平局时的顺序差异（用冻结源码在本机重跑可复现移植版程序）。两阶段总分、逐题分数/节点/调度尝试数与选择桶全部一致，**未声称逐字节复现冻结 CSV**。
+[v10.json](v10.json) 记录 V10 Full 的正式结果：164,306 步、最长 349、1,000/1,000 合法，V9 175,604、Stage 3 165,110；逐题分数见 [v10-full1000-metrics.csv](v10-full1000-metrics.csv)，留出集消融见 [v10-holdout100.json](v10-holdout100.json)。该 CSV 由用户交付的 Linux/GCC 研究运行产生；本仓库用 `src/verify.py` 做了全量回放，并用本机 10 道代表性题和固定留出集 100 题独立重解，4 道差异题与冻结实现逐题对照。报告明确区分"研究全量成绩""本次回放验证"与"本次独立重解"，不声称本次合入完整重跑了 1,000 题。
+
+[v9.json](v9.json) 记录 V9 从官方 1,000 题、全新 schema 3 检查点的独立全量复跑：分数 175,604、Stage 1 182,205、最长 415 步、CSV SHA-256 `05e7b630…`；同时保存输入/输出哈希、冻结参数、编译器与两个原生二进制哈希、检查点完整性、练习数据集单独记录，以及和冻结研究记录的对照：逐题程序 999/1000 相同，唯一差异题 `scored_0775` 等长（181 步）但寄存器选择不同，归因于本机 Apple Clang 工具链与冻结记录 Linux GCC 在等分平局时的顺序差异（用冻结源码在本机重跑可复现移植版程序）。两阶段总分、逐题分数/节点/调度尝试数与选择桶全部一致，**未声称逐字节复现冻结 CSV**。
 
 ### 2.2 研究消融（V3/V5）
 
@@ -69,6 +72,14 @@
 
 [v9-stage2-ablation.json](v9-stage2-ablation.json) 保存冻结 V9 研究包的全量原始记录（Stage 1 182,205 → Stage 2 175,604、逐题桶、resume 8 行 + 992 行 797.97 s、Python 3.13.5/GCC 构建信息、交接 ZIP/报告/CSV/日志哈希），只作阶段研究和逐题证据对照；本仓库自己的复跑记录在 [v9.json](v9.json)。其耗时和研究包工具链不能与本地复跑直接比较。
 
+### 2.7 V10 正式发布、逐题指标与留出集消融
+
+[v10.json](v10.json) 是 V10 Full 的正式发布记录：1,000 题、164,306 步、最长 349、1,000/1,000 合法；V9 175,604、Stage 3 165,110；改善/持平/退化 857/143/0；order_fast 胜 102 题、order_cf 胜 131 题。它明确把"研究全量成绩""本次合入回放""本次独立重解"分开，`limitations` 说明没有在本次合入中完整重跑 1,000 题。逐题分数见 [v10-full1000-metrics.csv](v10-full1000-metrics.csv)（1,000 行，`id,v9,stage3,full,winner,seconds,repeat`）。
+
+[v10-holdout100.json](v10-holdout100.json) 与 [v10-holdout100-metrics.csv](v10-holdout100-metrics.csv) 是固定留出集 100 题的策略消融：V9 18,192、Stage 1 17,023、Stage 3 16,912、Stage 3+Order 16,902、Stage 3+Hybrid 16,844、Adaptive 16,874、Full 16,842；Full 相对 Stage 3 改善 19 题。留出集是独立评测子集，不能与正式 1,000 题相加或替代正式成绩。
+
+**V10 "Stage 1" 口径：** 指联合调度 + pressure 构造 + 两轮反馈修复之后、joint/cf 两条联合路线之前的成绩；它不是四路线原始编译长度，也不等同于 V9 的 `v9_stage1` 口径。正式集没有单独记录这一阶段总分，只有逐题 CSV 的 `v9/stage3/full` 三列与留出集消融。
+
 ## 3. 读取与校验边界
 
 [build_report.py](../build_report.py) 读取本目录时遵守以下规则：
@@ -101,16 +112,18 @@ python3 docs/build_report.py --check
 python3 -m unittest discover -s tests -p 'test_report.py' -v
 ```
 
-当前独立版本是 V9；复跑需要先构建两个原生构造内核，再运行唯一求解入口（官方题目需自备）：
+当前独立版本是 V10 Full；复跑需要先构建七个原生构造内核，再运行求解入口（官方题目需自备；V9 仍可 `--version v9`）：
 
 ```bash
 python3 src/algorithms/native/build.py
-python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 8 \
+python3 src/graph_solver.py data/puzzles.csv --version v10 --policy full --jobs 4 \
+  --checkpoint experiments/v10.sqlite --output experiments/v10.csv
+python3 src/verify.py data/puzzles.csv experiments/v10.csv
+python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 4 \
   --checkpoint experiments/v9.sqlite --output experiments/v9.csv
-python3 src/verify.py data/puzzles.csv experiments/v9.csv
 ```
 
-V1–V8 历史版本需要固定提交中的版本化源码复现（当前 main 只保留功能化 V9 管线）：
+V1–V8 历史版本需要固定提交中的版本化源码复现（当前 main 保留 `v9.py` 与 `v10.py`）：
 
 ```bash
 # 在仓库根目录创建临时 worktree（已知提交，不依赖 Tag）

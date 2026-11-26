@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "kind": "ablation",
+  "version": "v10-holdout100",
+  "dataset": "fixed clean holdout, 100 official scored puzzles",
+  "puzzles": 100,
+  "validated": 100,
+  "score_full": 16842,
+  "score_v9": 18192,
+  "scores": {
+    "stage3": 16912,
+    "order": 16902,
+    "hybrid": 16844,
+    "full": 16842,
+    "adaptive": 16874
+  },
+  "stage1": 17023,
+  "winners": {
+    "stage3": {
+      "stage3": 100
+    },
+    "order": {
+      "stage3": 94,
+      "constructor_order_fast": 6
+    },
+    "hybrid": {
+      "stage3": 83,
+      "constructor_order_cf": 17
+    },
+    "full": {
+      "stage3": 81,
+      "constructor_order_cf": 14,
+      "constructor_order_fast": 5
+    },
+    "adaptive": {
+      "stage3": 90,
+      "constructor_order_fast": 5,
+      "constructor_order_cf": 5
+    }
+  },
+  "improved_vs_stage3": {
+    "stage3": 0,
+    "order": 6,
+    "hybrid": 17,
+    "full": 19,
+    "adaptive": 10
+  },
+  "route_counts": {
+    "full": 200,
+    "adaptive_order": 84,
+    "adaptive_hybrid": 37
+  },
+  "worker_seconds_est_by_policy": {
+    "stage3": 1557.729,
+    "order": 1697.667,
+    "hybrid": 1818.981,
+    "full": 1958.919,
+    "adaptive": 1872.846
+  },
+  "worker_seconds_total": 1959.244,
+  "by_bits": [
+    {
+      "bits": "0–9",
+      "n": 2,
+      "v9": 8,
+      "stage3": 8,
+      "order": 8,
+      "hybrid": 8,
+      "full": 8,
+      "adaptive": 8
+    },
+    {
+      "bits": "10–19",
+      "n": 12,
+      "v9": 719,
+      "stage3": 683,
+      "order": 683,
+      "hybrid": 683,
+      "full": 683,
+      "adaptive": 683
+    },
+    {
+      "bits": "20–29",
+      "n": 22,
+      "v9": 2625,
+      "stage3": 2562,
+      "order": 2558,
+      "hybrid": 2555,
+      "full": 2554,
+      "adaptive": 2558
+    },
+    {
+      "bits": "30–39",
+      "n": 25,
+      "v9": 4547,
+      "stage3": 4392,
+      "order": 4391,
+      "hybrid": 4363,
+      "full": 4363,
+      "adaptive": 4391
+    },
+    {
+      "bits": "40–49",
+      "n": 23,
+      "v9": 5164,
+      "stage3": 4743,
+      "order": 4738,
+      "hybrid": 4711,
+      "full": 4710,
+      "adaptive": 4710
+    },
+    {
+      "bits": "50–59",
+      "n": 14,
+      "v9": 4438,
+      "stage3": 3936,
+      "order": 3936,
+      "hybrid": 3936,
+      "full": 3936,
+      "adaptive": 3936
+    },
+    {
+      "bits": "60+",
+      "n": 2,
+      "v9": 691,
+      "stage3": 588,
+      "order": 588,
+      "hybrid": 588,
+      "full": 588,
+      "adaptive": 588
+    }
+  ],
+  "source": "santa_v10_full1000_final.zip results/holdout/REPORT.json",
+  "note": "留出集消融，不是正式 1,000 题成绩；不得与正式分数相加。Stage 1 是 pressure/修复之后、joint/cf 之前的成绩。"
+}

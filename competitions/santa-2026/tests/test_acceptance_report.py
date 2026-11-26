@@ -100,11 +100,19 @@ class AcceptanceReportTests(unittest.TestCase):
         self.assertEqual(regeneration["ties_to_v9"], 30)
         self.assertEqual(regeneration["formula_errors"], 0)
 
-    def test_integrated_source_hashes_match_the_worktree(self):
-        for name, digest in self.report["integrated_source_hashes"].items():
-            self.assertEqual(sha(SRC / name), digest, name)
-        self.assertEqual(set(self.report["integrated_source_hashes"]),
-                         set(checkpoint_engine.BOUND_SOURCES))
+    def test_integrated_source_hashes_are_historical_and_well_formed(self):
+        # This report records the V9 integration sources at its own commit.
+        # V10 moved the V9 pipeline into algorithms/v9.py and added five native
+        # kernels, so the historical hashes must not be expected to equal the
+        # current worktree.  Only shape and declared population are checked.
+        hashes = self.report["integrated_source_hashes"]
+        self.assertEqual(len(hashes), 14)
+        for name, digest in hashes.items():
+            self.assertRegex(name, r"^(algorithms/|checkpoint|graph_solver|verify)")
+            self.assertRegex(digest, r"^[0-9a-f]{64}$")
+        for name in ("graph_solver.py", "checkpoint.py", "verify.py",
+                     "algorithms/solver.py", "algorithms/native/constructor_wide.cpp"):
+            self.assertIn(name, hashes)
         self.assertEqual(self.report["native_build"]["compat_include"], False)
 
     def test_acceptance_report_is_not_a_formal_score_curve_node(self):
@@ -113,7 +121,7 @@ class AcceptanceReportTests(unittest.TestCase):
         self.assertFalse(build_report.FORMAL_REPORT_RE.fullmatch(self.path.name))
         data = build_report.load_report_data()
         self.assertEqual([row["version"] for row in data["historical"]],
-                         [f"v{number}" for number in range(1, 10)])
+                         [f"v{number}" for number in range(1, 11)])
         self.assertNotIn("v9-integration", {row["version"] for row in data["historical"]})
 
 

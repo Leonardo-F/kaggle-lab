@@ -1,9 +1,10 @@
-"""Build the two frozen C++17 constructor kernels used by the V9 solver.
+"""Build the seven frozen C++17 constructor kernels used by the V10 solver.
 
-The ``.cpp`` sources are byte-identical to the frozen V9 research handoff and
+The ``.cpp`` sources are byte-identical to the frozen V10 research handoff and
 are compiled before a solve starts into ``competitions/santa-2026/experiments/
 native-build/`` (git-ignored).  The bundled research archive contains prebuilt
-ELF binaries; those are never used as a release dependency.
+ELF binaries; those are never used as a release dependency.  V9 uses the first
+two kernels and keeps working through the same manifest.
 
 The build records the compiler identity (resolved path, ``--version`` line,
 family), flags, whether the libstdc++ compatibility header was needed, source
@@ -50,9 +51,17 @@ BUILD_DIR = Path(
     os.environ.get("SANTA_NATIVE_BUILD_DIR", SANTA_ROOT / "experiments" / "native-build")
 )
 COMPAT_DIR = NATIVE_DIR / "compat"
-KERNELS = ("constructor_wide", "constructor_mitm")
+KERNELS = (
+    "constructor_wide",
+    "constructor_mitm",
+    "constructor_pressure",
+    "constructor_joint",
+    "constructor_cf",
+    "constructor_order_fast",
+    "constructor_order_cf",
+)
 FLAGS = ("-O3", "-std=c++17")
-MANIFEST_SCHEMA = 2
+MANIFEST_SCHEMA = 3
 COMPILE_TIMEOUT = 180
 SANTA_CXX_ENV = "SANTA_CXX"
 COMPILER_CANDIDATES = (

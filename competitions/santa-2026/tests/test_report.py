@@ -232,7 +232,7 @@ class ReportContentTests(unittest.TestCase):
         self.assertNotIn('<script src=', self.html)
 
     def test_historical_versions_and_verified_scope_are_shown(self):
-        for version in range(1, 9):
+        for version in range(1, 11):
             self.assertIn(f'V{version}', self.html)
         self.assertIn('1,000 / 1,000', self.html)
         self.assertIn('不是 Kaggle 榜单成绩', self.html)
@@ -273,7 +273,7 @@ class OptionalRefactorReportTests(unittest.TestCase):
         archived = data['reports']['v8']
         self.assertEqual(archived['score'], self.archived['score'])
         self.assertEqual([row['version'] for row in data['historical']],
-                         [f'v{number}' for number in range(1, 10)])
+                         [f'v{number}' for number in range(1, 11)])
         status = report_mod.load_refactor_status(REFACTOR_REPORT, archived)
         self.assertEqual(status['state'], 'valid', status['reasons'])
 
@@ -309,34 +309,34 @@ class OptionalRefactorReportTests(unittest.TestCase):
         self.assertNotIn('class="refactor-bad"', content)
         scores = extract_json(content, 'score-data')
         self.assertEqual([row['version'] for row in scores],
-                         [f'V{number}' for number in range(1, 10)])
+                         [f'V{number}' for number in range(1, 11)])
         latest = json.loads(LATEST.read_text(encoding='utf-8'))
         self.assertEqual(scores[-1]['score'], latest['score'])
         self.assertEqual(scores[-1]['version'], latest['version'].upper())
         self.assertNotIn('V8 Refactored', content.split('id="score-data"')[1])
 
-    def test_v8_acceptance_survives_a_simulated_v10_best_version(self):
-        # Test-only fixtures: a future V10 formal report with a different but
+    def test_v8_acceptance_survives_a_simulated_v11_best_version(self):
+        # Test-only fixtures: a future V11 formal report with a different but
         # valid CSV and latest pointer.  Nothing is written under docs/reports.
         with tempfile.TemporaryDirectory() as tmp:
             tmpdir = Path(tmp)
             reports = {
                 f'v{number}': json.loads(
                     (REPORTS / f'v{number}.json').read_text(encoding='utf-8'))
-                for number in range(1, 10)
+                for number in range(1, 11)
             }
-            reports['v10'] = formal_payload('v10', SIMULATED_SCORE)
-            reports_dir, latest_path = make_reports_env(tmpdir, reports, 'v10')
+            reports['v11'] = formal_payload('v11', SIMULATED_SCORE)
+            reports_dir, latest_path = make_reports_env(tmpdir, reports, 'v11')
             markdown_text = SOURCE.read_text(encoding='utf-8')
-            v9_row = markdown_row('| V9 |')
-            v10_row = ('| V10 | 模拟的未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
-                       '[测试夹具](reports/v10.json) |')
-            markdown_text = markdown_text.replace(v9_row, v9_row + '\n' + v10_row)
+            v10_row = markdown_row('| V10 Full |')
+            v11_row = ('| V11 | 模拟的未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
+                       '[测试夹具](reports/v11.json) |')
+            markdown_text = markdown_text.replace(v10_row, v10_row + '\n' + v11_row)
             source = tmpdir / 'algorithm-evolution.md'
             source.write_text(markdown_text, encoding='utf-8')
             content, _ = render(source=source, docs_dir=DOCS,
                                 reports_dir=reports_dir, latest_path=latest_path)
-        self.assertIn('V10 Final 全量独立验证', content)
+        self.assertIn('V11', content)
         self.assertIn('185,000', content)
         self.assertIn('报告通过本页一致性校验：与原始 V8 报告一致', content)
         self.assertIn(f'等价重构复现：{V8_SCORE:,} 步', content)
@@ -344,11 +344,12 @@ class OptionalRefactorReportTests(unittest.TestCase):
         self.assertNotIn('class="refactor-bad"', content)
         scores = extract_json(content, 'score-data')
         self.assertEqual([row['version'] for row in scores],
-                         [f'V{number}' for number in range(1, 11)])
+                         [f'V{number}' for number in range(1, 12)])
         self.assertEqual(scores[7], {'version': 'V8', 'score': V8_SCORE,
                                      'validated': 1000})
         self.assertEqual(scores[8]['version'], 'V9')
-        self.assertEqual(scores[-1], {'version': 'V10', 'score': SIMULATED_SCORE,
+        self.assertEqual(scores[9]['version'], 'V10')
+        self.assertEqual(scores[-1], {'version': 'V11', 'score': SIMULATED_SCORE,
                                       'validated': 1000})
         self.assertNotIn('V8 Refactored', content.split('id="score-data"')[1])
 
@@ -612,11 +613,11 @@ class MarkdownScoreTableTests(unittest.TestCase):
         with self.assertRaisesRegex(report_mod.ReportError, '缺少正式报告的版本: V3'):
             report_mod.check_markdown_numbers(without_v3, self.data)
 
-        v9_row = markdown_row('| V9 |')
-        fake_v10 = ('| V10 | 模拟未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
-                    '[测试夹具](reports/v10.json) |')
-        with_fake = self.text.replace(v9_row, v9_row + '\n' + fake_v10)
-        with self.assertRaisesRegex(report_mod.ReportError, '没有正式报告的版本: V10'):
+        v10_row = markdown_row('| V10 Full |')
+        fake_v11 = ('| V11 | 模拟未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
+                    '[测试夹具](reports/v11.json) |')
+        with_fake = self.text.replace(v10_row, v10_row + '\n' + fake_v11)
+        with self.assertRaisesRegex(report_mod.ReportError, '没有正式报告的版本: V11'):
             report_mod.check_markdown_numbers(with_fake, self.data)
 
     def test_number_in_wrong_version_cell_is_rejected(self):

@@ -1,10 +1,10 @@
 # Santa 2026 · 多目标算术程序：从构造到计算图优化
 
-> 交互学习文档 · V9 当前发布版 / 功能化架构 + 冻结 V9 管线
+> 交互学习文档 · V10 Full 当前发布版 / 功能化架构 + 七个冻结 C++17 构造内核
 >
-> **阅读状态说明：** 本文对应 `feat/santa-v9` 上的 V9 正式发布：仓库只保留一套按职责组织的求解器（`algorithms/` 功能模块 + `native/` 两个冻结 C++17 构造内核），版本唯一权威是 `SOLVER_VERSION = "v9"`。V1–V8 历史实现固定在 [commit `9337a354`](https://github.com/Leonardo-F/kaggle-lab/tree/9337a3549bea09257cbf36ae1f8da2cbd452942b/competitions/santa-2026)，V8 功能化布局基线为 [commit `2875199`](https://github.com/Leonardo-F/kaggle-lab/tree/287519977aa85a19ef9e3074e6bfd2b9e578b5c3/competitions/santa-2026)；两者都可以用独立 worktree 复现，不再作为当前运行依赖。V8 等价重构记录（[v8-refactor.json](reports/v8-refactor.json)）是**历史验收**：文件存在时互动报告会与固定的 [v8.json](reports/v8.json) 对照展示，缺失时使用原始 V8 记录，不阻塞构建，也不进入正式版本曲线。
+> **阅读状态说明：** 本文对应 V10 Full 正式发布：仓库按职责组织求解器（`algorithms/` 功能模块 + `native/` 七个冻结 C++17 构造内核），版本唯一权威是 `SOLVER_VERSION = "v10"`；V9 仍可用 `--version v9` 在同一 checkout 复现。V1–V8 历史实现固定在 [commit `9337a354`](https://github.com/Leonardo-F/kaggle-lab/tree/9337a3549bea09257cbf36ae1f8da2cbd452942b/competitions/santa-2026)，V8 功能化布局基线为 [commit `2875199`](https://github.com/Leonardo-F/kaggle-lab/tree/287519977aa85a19ef9e3074e6bfd2b9e578b5c3/competitions/santa-2026)；两者都可以用独立 worktree 复现，不再作为当前运行依赖。V8 等价重构记录（[v8-refactor.json](reports/v8-refactor.json)）与 V9 验收记录（[v9-integration.json](reports/v9-integration.json)）都是**历史验收**：文件存在时互动报告会与固定的 [v8.json](reports/v8.json)、[v9.json](reports/v9.json) 对照展示，缺失时使用原始记录，不阻塞构建，也不进入正式版本曲线。
 
-**核心问题：** 给定初值与目标集合，用有限寄存器和尽可能少的四则运算覆盖全部目标。我们的办法是先构造合法程序，再通过跨目标共享、全局路径选择、子图重写和寄存器调度压缩真实指令数。V9 改成"两个原生动态字典构造内核 + 四路线择优 + 两阶段寄存器调度"：V1 到 V9 的本地全量成绩从 **250,642** 降至 **175,604**（减少 75,038 步，约 29.94%），其中 V8 194,444 → V9 再省 18,840 步（9.689%）。174,884 是 V8 与 V9 两份独立结果的逐题后处理混合归档，不是算法版本，不计入这条曲线。以上都不是 Kaggle 榜单成绩，也不是全局最优证明。
+**核心问题：** 给定初值与目标集合，用有限寄存器和尽可能少的四则运算覆盖全部目标。我们的办法是先构造合法程序，再通过跨目标共享、全局路径选择、子图重写和寄存器调度压缩真实指令数。V9 改成"两个原生动态字典构造内核 + 四路线择优 + 两阶段寄存器调度"；V10 Full 再扩展为"七个构造器 + 全路线联合调度 + 精确修复 + 目标顺序优化"，把正式 1,000 题从 **175,604** 压到 **164,306**（再省 11,298 步，6.43%）。V1 到 V10 的本地全量成绩从 **250,642** 降至 **164,306**（减少 86,336 步，约 34.45%）。174,884 是 V8 与 V9 两份独立结果的逐题后处理混合归档，不是算法版本，不计入这条曲线。以上都不是 Kaggle 榜单成绩，也不是全局最优证明。
 
 ## 学习导航
 
@@ -17,14 +17,15 @@
 | V8 为什么更强？ | [05 子图重写](#05-子图重写) | 10 min |
 | 48 个寄存器如何限制算法？ | [06 寄存器调度](#06-寄存器调度) | 8 min |
 | V9 为什么更强？ | [07 V9 动态字典构造与寄存器压力调度](#07-v9动态字典构造与寄存器压力调度) | 12 min |
-| 从 V1 到 V9 的变化 | [08 演进与实验](#08-演进与实验) | 5 min |
-| 如何阅读当前源码？ | [09 当前与目标架构](#09-当前与目标架构) | 5 min |
-| 怎样从零复现？ | [10 复现与交互回放](#10-复现与交互回放) | 按需 |
-| V10 还能优化什么？ | [11 局限与研究方向](#11-局限与研究方向) | 8 min |
+| V10 为什么更强？ | [08 V10 七个构造器、联合调度与目标顺序](#08-v10七个构造器联合调度与目标顺序) | 18 min |
+| 从 V1 到 V10 的变化 | [09 演进与实验](#09-演进与实验) | 5 min |
+| 如何阅读当前源码？ | [10 当前与目标架构](#10-当前与目标架构) | 5 min |
+| 怎样从零复现？ | [11 复现与交互回放](#11-复现与交互回放) | 按需 |
+| V10 还能优化什么？ | [12 局限与研究方向](#12-局限与研究方向) | 8 min |
 
 **动手入口：** [离线模拟器](../src/simulator.html) · [独立互动报告](../Santa-2026-Interactive-Report.html) · [成绩与提交](../submissions/README.md) · [实验进展](progress.md) · [公开方案对比](frontier-analysis.md)。
 
-本文的折叠练习使用 Markdown 支持的 HTML `details`，图示复用原有 `diagrams/` 中的 PNG；V9 章的新管线图只提供 Mermaid 源码块（互动报告不执行 Mermaid 渲染，阅读器不支持时以下方文字说明为准）。请将文件放在原 `docs/` 中，以保留相对链接；也可在下文直接读图注及算式。Markdown 本身不运行 Python 或 C++，不宣称可以直接求解新题；实际可执行的交互位于模拟器或 CLI。
+本文的折叠练习使用 Markdown 支持的 HTML `details`，图示复用原有 `diagrams/` 中的 PNG；V9/V10 章的管线图只提供 Mermaid 源码块（互动报告不执行 Mermaid 渲染，阅读器不支持时以下方文字说明为准）。请将文件放在原 `docs/` 中，以保留相对链接；也可在下文直接读图注及算式。Markdown 本身不运行 Python 或 C++，不宣称可以直接求解新题；实际可执行的交互位于模拟器或 CLI。
 
 ---
 
@@ -141,7 +142,7 @@ D_G(a)\cup D_G(b)\cup\{v\},&v\notin S,
 
 ## 03 构造搜索
 
-目标是从题目本身生成多个可执行候选，而不是从已有答案出发。以下技术对应历史 V1–V7 的 Python 构造搜索，作为教学与 V8 之前的历史记录保留；**当前 V9 的 Stage 1 已改为两个原生 C++17 动态字典构造内核**（见 [V9 章](#07-v9动态字典构造与寄存器压力调度)），这些 Python 构造器不再是运行依赖。
+目标是从题目本身生成多个可执行候选，而不是从已有答案出发。以下技术对应历史 V1–V7 的 Python 构造搜索，作为教学与 V8 之前的历史记录保留；**当前 V9/V10 的 Stage 1 已改为 C++17 动态字典构造内核**（V9 两个，V10 七个；见 [V9 章](#07-v9动态字典构造与寄存器压力调度)与 [V10 章](#08-v10七个构造器联合调度与目标顺序)），这些 Python 构造器不再是运行依赖。
 
 ### 3.1 多进制分解（V1）
 
@@ -232,7 +233,7 @@ V8 的内部基线仍使用 V7 特征规则及 V5 构造器。令 $n=|T|$、$w_{
 
 ## 04 全局图优化
 
-本节 V2–V7 的全局图优化与路径联合选择是历史路线，用于解释 V8 之前跨目标共享的收益来源；当前 V9 没有 Python 侧的路径联合选择阶段，只在构造内核产出的值图上做两轮 polish（[7.4](#74-两轮图压缩polish)）。
+本节 V2–V7 的全局图优化与路径联合选择是历史路线，用于解释 V8 之前跨目标共享的收益来源；当前 V9/V10 没有 Python 侧的路径联合选择阶段，只在构造内核产出的值图上做两轮 polish（[7.4](#74-两轮图压缩polish)）；V10 的 joint/cf 在原生构造器内部完成跨目标共享。
 
 ### 4.1 依赖替换与引用计数（V2–V3）
 
@@ -316,7 +317,7 @@ v=o_1(a,b),\qquad b=o_2(c,d).
 <details>
 <summary>等成本甚至暂时更大的图，为什么值得探索？</summary>
 
-图结构变动可能创造新的共享中间值或降低寄存器压力。搜索中的探索状态和最终提交的 incumbent 是两个对象：前者可暂时不改善，后者始终保留已验证的最短程序。更开放的探索策略可在后续版本单独研究；V8 冻结记录与当前 V9 管线都不应因此改写。
+图结构变动可能创造新的共享中间值或降低寄存器压力。搜索中的探索状态和最终提交的 incumbent 是两个对象：前者可暂时不改善，后者始终保留已验证的最短程序。更开放的探索策略可在后续版本单独研究；V8 冻结记录与当前 V10 管线都不应因此改写。
 
 </details>
 
@@ -337,7 +338,7 @@ v=o_1(a,b),\qquad b=o_2(c,d).
 
 ## 06 寄存器调度
 
-以下 6.1–6.3 是 V7/V8 的历史调度器。当前 V9 使用另一套两阶段实现：Stage 1 的 `compile_graph`（8 个确定性顺序）与 Stage 2 的 `schedule`（首现 DAG、压力三元组、6 种淘汰策略），见 [V9 章](#07-v9动态字典构造与寄存器压力调度)；两者不是同一实现，V8 的 `schedule_v8`/`compile_graph` 不能直接套用到 V9。
+以下 6.1–6.3 是 V7/V8 的历史调度器。当前 V9/V10 使用另一套两阶段实现：Stage 1 的 `compile_graph`（8 个确定性顺序）与 Stage 2 的 `schedule`（首现 DAG、压力三元组、6 种淘汰策略），见 [V9 章](#07-v9动态字典构造与寄存器压力调度)；两者不是同一实现，V8 的 `schedule_v8`/`compile_graph` 不能直接套用到 V9/V10。
 
 固定图仍须决定拓扑顺序、寄存器分配及被覆盖值的重算。令 next(v) 表示下一次使用位置，已发射且仍有后续用途的活值集合为
 
@@ -550,17 +551,290 @@ Stage 2 只做一件事：在 Stage 1 程序语义不变的前提下重排同一
 - Stage 1 只比较**四条已构造路线**，不保证这四条之外没有更好的构造；
 - Stage 2 只重排固定 DAG，不做 LNS、全局锚点或大整数构造；
 - 调度与构造都是启发式，**全局最优未知**；报告里的 `nodes`（固定 DAG 下界）不是理论可达的全局指令下界；
-- 没有 V10；所有数字都是本地独立验证的指令总数，不是 Kaggle 榜单成绩。
+- V10 已在此后替换默认管线（见 08 章）；V9 的这些数字仍是本地独立验证的指令总数，不是 Kaggle 榜单成绩。
 
 [返回学习导航](#学习导航)
 
-## 08 演进与实验
+## 08 V10：七个构造器、联合调度与目标顺序
 
-### 8.1 同一批 1,000 题的本地成绩
+V9 证明了"原生字典构造 + 寄存器压力调度"可以把全量成绩从 194,444 压到 175,604，但它的搜索仍有四个结构性限制：
 
-![V1–V9 本地独立验证总指令数](diagrams/version-scores.png)
+1. **只调度获胜路线。** 四条 Stage 1 路线先按编译长度选出唯一一条，其他路线的 DAG 被直接丢弃；一条路线编译后较长，不代表它的图在寄存器调度后仍较长。
+2. **没有跨目标耦合。** 每个目标独立构造；两个目标若共享同一个"枢轴"值，可以一个乘积加一个小残差同时得到，而 V9 的逐目标搜索看不到这种共享。
+3. **没有顺序优化。** 目标按输入顺序或简单排序处理，先构造的目标决定字典内容；换一个构造顺序可能让后续目标更便宜。
+4. **没有反馈修复。** 程序生成后不再回看"哪些值被重复计算、哪些依赖在寄存器压力下很贵"。
 
-> **图表口径：** 这张 PNG 由 `diagrams/version-scores.mmd`（xychart）经 mermaid.ink 渲染，覆盖 V1–V9（`version-scores.png` 已同步重绘）。互动报告顶部的动态成绩条和本节表格直接来自 `docs/reports/v1.json`–`v9.json`，与图中数字一致；图中是本地独立验证的指令总数，不是 Kaggle 榜单成绩。
+V10 Full 保留 V9 的构造内核、Stage 1 编译器和 Stage 2 调度器，在它们外面增加七个构造器、联合候选比较、精确反馈修复和目标顺序搜索。全量正式 1,000 题为 **164,306 步**，比 V9 少 **11,298** 步（−6.43%），857 题改善、143 题持平、0 题退化；最长程序 349 步。
+
+```mermaid
+flowchart TD
+    R[官方题目行] --> S1[Stage 1 四路线<br/>wide/mitm 6:3 与 6:4<br/>raw + 两轮 polish]
+    S1 --> J[V10.1 联合调度<br/>每个不同 DAG 都重新调度]
+    J --> PR[pressure 6:3 / 6:4<br/>压力感知构造]
+    PR --> RP[V10.2 精确反馈修复<br/>2 轮 / 8 次尝试]
+    RP --> JN[constructor_joint<br/>constructor_cf]
+    JN --> ST3[Stage 3]
+    ST3 --> OF[constructor_order_fast]
+    ST3 --> OC[constructor_order_cf]
+    OF --> SEL{Full 策略<br/>严格最短合法程序}
+    OC --> SEL
+    SEL --> V[verify.py 独立验证]
+```
+
+**不支持 Mermaid 的阅读器：** 四路线 Stage 1 → 所有不同 DAG 联合调度 → pressure 构造器 → 两轮精确修复 → joint/cf 两条联合构造路线 → order_fast/order_cf 两条目标顺序路线 → Full 策略在三者中取严格最短程序 → 独立验证。Stage 3 是 joint/cf 之后、order 路线之前的成绩；Full 再加两条 order 路线。
+
+### 8.1 七个构造器的职责
+
+七个构造器共享同一套字典、种子、`__int128` 中间乘积和"输出依赖后序值图"协议；差异在它们如何选择下一个值、如何估价、如何把多个目标耦合起来。
+
+| 构造器 | 在 V10 中的位置 | 核心机制 |
+|---|---|---|
+| `constructor_wide` | Stage 1 路线 1/2 | 动态可达值字典 + 一步反查 + 逆向残差分裂；V9 已有 |
+| `constructor_mitm` | Stage 1 路线 3/4 | 在 wide 上增加全字典商邻域匹配；V9 已有 |
+| `constructor_pressure` | Stage 3 前置 | 给字典值计算"年龄 × 依赖深度"的寄存器压力，按 `plan_cost` 选叶子和更新候选 |
+| `constructor_joint` | Stage 3 | 两个目标共享枢轴 $h$：$t=ah+r$、$u=bh+s$，按联合代价提案 |
+| `constructor_cf` | Stage 3 | 同上，但用 $u/t$ 的连分数半收敛项生成共享比例 $b/a$ |
+| `constructor_order_fast` | Full 策略 | 按"就绪代价 − 目标间共享收益"选择下一个目标，逐目标构造 |
+| `constructor_order_cf` | Full 策略 | 同一目标顺序选择，但对被选目标额外尝试连分数枢轴联合构造 |
+
+Stage 1 的四条路线与 V9 完全相同（`constructor_wide` / `constructor_mitm` × width 6 × mode 3/4），每条先编译、再两轮 polish、再编译，严格更短才替换。V10 没有改这两个内核的源码，也没有改 Stage 1 编译和 Stage 2 调度的参数。
+
+### 8.2 算术构造与计算图的数学原理
+
+所有构造器输出的都是一张**值依赖图** $G=(V,E)$：节点是正整数，边表示"由两个已有值经一次运算得到"。初值集合 $S$ 是免费节点，目标集合 $T$ 必须被覆盖。一条指令对应一个节点的一次求值：
+
+```math
+v=a\circ b,\qquad \circ\in\{+,-,\times,/\},\qquad 1\le v\le L,
+```
+
+其中除法要求整除。V10 的构造器不直接生成寄存器程序，而是选择表达式图；`compile_graph` 和 `schedule` 再把图编译成有限寄存器上的指令序列。
+
+**动态字典。** 内核只保留一个有界字典 $D$：每个值最多 3 条表达式，已物化值集合 $K$ 与"可一步物化"的字典值分开。加入节点 $v$ 后，把它与所有活跃值 $a$ 做
+
+```math
+a+b,\quad a-b,\quad b-a,\quad ab,\quad a/b\ (b\mid a),\quad b/a\ (a\mid b),
+```
+
+并把新值放进字典。因此构造是"从初值出发的有限闭包"，不是完整可达值枚举。
+
+**逆向残差。** 对目标 $t$ 和基底 $a$，V10 使用两类分裂：
+
+```math
+t=aq+r,\qquad q=\left\lfloor t/a\right\rfloor,\ r=t\bmod a,
+```
+
+```math
+t=a(q+1)-(a-r),\qquad 0<r<a.
+```
+
+递归构造 $q$（深度减 1），再补 $a$、乘积 $aq$ 与最后一步。深度上限 5、每层最多 `width=6` 个分裂，因此这是有界搜索；memo 只缓存当前目标构造过程中的子结果。
+
+**压力感知构造（`constructor_pressure`）。** 它把"这个值离上次使用多久"和"它的依赖链多深"折算成一个非负价格。设全局时钟 `tick` 在每次 `add` 时递增，`used_at[v]` 是 $v$ 最近一次作为操作数或结果的时间，`depth[v]` 是依赖深度：
+
+```math
+p(v)=0.12\cdot\min\left(2,\frac{\mathrm{tick}-\mathrm{used\_at}(v)}{64}\right)\cdot\min(4,\mathrm{depth}(v)),
+\qquad v\notin S.
+```
+
+初值与未物化值不参与这个价格（初值价格为 0，字典虚拟值按 1 或位宽估计）。一个候选计划 $P$ 的代价是
+
+```math
+\operatorname{plan\_cost}(P)=|P|+\sum_{x\in \operatorname{Ext}(P)} p(x),
+```
+
+其中 $\operatorname{Ext}(P)$ 是计划中引用、但当前尚未物化的外部值。`leaf` 在字典的至多 3 条表达式中选"两个操作数压力之和"最小者；`update` 也只按 `plan_cost` 严格更小替换候选。这样构造阶段就会偏向"便宜、近、浅"的操作数，而不是只看节点数。
+
+**联合构造（`constructor_joint` / `constructor_cf`）。** 对两个未覆盖目标 $t,u$，尝试一个共享枢轴 $h$：
+
+```math
+t=ah+r,\qquad u=bh+s,
+```
+
+其中 $a,b$ 是候选比例，$r,s$ 是可正可负的小残差。给定 $(a,b)$ 后，候选枢轴取
+
+```math
+h\in\left\{\left\lfloor\frac{t}{a}\right\rfloor,
+\left\lfloor\frac{t}{a}\right\rfloor+1,
+\left\lfloor\frac{u}{b}\right\rfloor,
+\left\lfloor\frac{u}{b}\right\rfloor+1,
+\left\lfloor\frac{t+u}{a+b}\right\rfloor,
+\left\lfloor\frac{t+u}{a+b}\right\rfloor+1\right\},
+```
+
+并要求 $2\le h<\min(t,u)$、$ah\le L$、$bh\le L$、$|r|<t$、$|s|<u$。联合代价为
+
+```math
+c(h,a,b)=p(h)+p(a)+p(b)+p(|r|)+p(|s|)+2+\mathbf 1_{r\ne0}+\mathbf 1_{s\ne0}.
+```
+
+计划按"先构造 $h$，再补 $a,b$，再发 $ah$ 与 $bh$，最后加/减残差"生成；生成后必须通过依赖完整性检查（每个操作数要么已知、要么在本计划中更早出现），并确认 $t,u$ 都被覆盖。只有当联合计划相对"分别单独构造 $t$ 与 $u$"的 `plan_cost` 至少省 2 时才会被接受。
+
+`constructor_joint` 用 bases 集合和 $b\approx ua/t$ 的整数近似生成 $(a,b)$；`constructor_cf` 改用 $u/t$ 的连分数。设 $u/t=[k_0;k_1,\ldots]$，其收敛项 $p_i/q_i$ 满足 $p_i/q_i\to u/t$；源码枚举有界半收敛项
+
+```math
+\frac{b}{a}=\frac{p_0+jp_1}{q_0+jq_1},
+\qquad j\in\left\{1,\left\lfloor\frac{\text{cap}}{2}\right\rfloor,\text{cap}-1,\text{cap}\right\},
+```
+
+其中 `cap` 同时受下一项商 $k$ 和 $2^{20}$ 的数值上限约束。这样比 joint 的邻域更系统地找到"小整数比例"，但两者都只保留代价最小的前 4 个提案，且每个目标对只尝试一次。
+
+### 8.3 寄存器压力与实际指令数的关系
+
+图节点数只是下界：一个图有 $N$ 个非初值节点，至少需要 $N$ 条指令，但有限寄存器会迫使调度器**重算**某些值，实际指令数可能大于 $N$。V10 继续使用 V9 的压力三元组作为候选顺序的排序代理：
+
+```math
+\operatorname{overflow}=\sum_k\max(0,|L_k|-R),\qquad
+\operatorname{peak}=\max_k|L_k|,\qquad
+\operatorname{area}=\sum_k|L_k|,
+```
+
+其中 $L_k$ 是第 $k$ 步的活值集合，$R$ 是寄存器数。压力三元组只用于排序，不用于最终接受；每个候选都必须实际 emit 并 replay。V10 的改进不是在调度器里加新公式，而是：
+
+- **让更多图进入调度器。** V10.1 对四个 Stage 1 路线产生的每个不同 DAG 都重新调度，而不是只调度最短编译程序的那一个；候选按 `(编译节点数, 程序长度)` 排序，节点数已经不小于当前最优时直接跳过（对固定候选成立的下界）。
+- **构造期就考虑压力。** `constructor_pressure` 的 `plan_cost`、`constructor_joint` 的 `price` 与 `order_*` 的 `readiness` 都把压力价格放进候选估价，使"图更小"与"调度后更短"更一致。
+- **修复重复计算。** 反馈修复显式统计每个值在程序中出现的次数，优先替换被重复计算且闭包大的值。
+
+因此 V10 的 `nodes` 指标仍然只是**固定候选 DAG 的下界**，不是全局下界；它的收益来自候选图更多、更便宜，而不是证明了某个图的最优调度。
+
+### 8.4 目标顺序：Order Fast 与 Order CF
+
+V9 的目标顺序基本由输入顺序/简单排序决定。V10 的 `constructor_order_fast` 在每轮从未覆盖目标中选一个，先估它的"就绪代价"：
+
+```math
+\operatorname{ready}(t)=
+\begin{cases}
+0,&t\in K,\\
+1,&t\in D\setminus K,\\
+\min\left\{\max(2,0.23(\operatorname{bits}(t)-7)),\
+\min_{a\in A,\,2\le a<t}\left[1+c(q)+\mathbf 1_{r\ne0}\left(1+c(r)\right)\right]\right\},&\text{否则},
+\end{cases}
+```
+
+其中 $q=\lfloor t/a\rfloor$、$r=t\bmod a$，$A$ 是活跃值集合，
+
+```math
+c(x)=
+\begin{cases}
+0,&x\in K,\\
+1,&x\in D\setminus K,\\
+\max(2,0.23(\operatorname{bits}(x)-7)),&\text{否则}.
+\end{cases}
+```
+
+再估计该目标对其他未覆盖目标的共享收益：
+
+```math
+\operatorname{benefit}(t)=\sum_{u\ne t}\left(\mathbf 1_{u\equiv0\pmod t\ \land\ u/t\in K}
++\mathbf 1_{|u-t|\in K}\right),
+```
+
+选择
+
+```math
+t^\*=\arg\min_{t}\left(\operatorname{ready}(t)-0.35\min(4,\operatorname{benefit}(t))\right).
+```
+
+直观上，先做"便宜且能解锁其他目标"的值。`constructor_order_cf` 使用同一目标选择，但对被选中的目标额外调用 `constructor_cf` 的枢轴联合提案，因此它同时改变"先做哪个"和"这个目标与哪个目标共享枢轴"。
+
+两条 order 路线都只改变构造顺序/候选，不改变 Stage 1 编译器和 Stage 2 调度器；它们的输出仍是值 DAG，之后走同一套 `compile_graph` + `schedule`。
+
+### 8.5 多路线搜索与合法候选择优
+
+V10 Full 的候选来源与顺序是冻结的：
+
+1. **Stage 1 四路线**：wide 6:3、wide 6:4、mitm 6:3、mitm 6:4；每条 raw + polish，各用 8 序编译。
+2. **联合调度（V10.1）**：取编译最短路线作为基线，先做 Stage 2 调度；再把其他路线的 raw/polish 程序按 `(nodes, length)` 排序，逐个提取首现 DAG、去重、重新调度。只有严格更短才替换。
+3. **pressure 6:3 / 6:4**：每个 mode 的 raw 与 polish 都编译、调度、回放，严格更短才替换。
+4. **精确反馈修复（V10.2）**：两轮；每轮最多选 16 个"重复计算 × 闭包"高的值，枚举反推表达式补丁，按代理 `nodes+0.08·excess+0.004·area` 排序，最多 8 次编译/调度尝试，每个被替换节点最多 2 次；只有实际 replay 更短才接受。
+5. **joint / cf**：两条原生联合构造路线，各走 8 序编译 + 调度；Stage 3 取三者最短。
+6. **order_fast / order_cf**：两条目标顺序路线，各走同一编译/调度；Full 在 Stage 3、order_fast、order_cf 三者中取严格最短。
+
+所有候选都从当前题目行重新构造，回放合法性由内部 `replay` 检查，最终导出再由 `verify.py` 全量独立验证。没有候选时不会用历史答案补齐。
+
+**平局规则。** 路线/候选比较一律"严格更短才替换"，等长保留先到者；Stage 1 四路线顺序固定；Stage 2 的候选顺序、随机种子（202609）和 6 种淘汰策略固定；V10 没有引入新的随机种子。等长程序在不同标准库下可能因 `unordered_map` 迭代顺序不同而选择不同寄存器，因此不声称跨工具链逐字节一致。
+
+### 8.6 全量正式结果
+
+V10 Full 在官方 1,000 道计分题上：
+
+| 指标 | 数值 |
+|---|---:|
+| V9 千题总分 | 175,604 |
+| V10 Stage 3 千题总分 | 165,110 |
+| **V10 Full 千题总分** | **164,306** |
+| 相比 V9 节省 | 11,298（6.43%） |
+| 改善 / 持平 / 退化 | 857 / 143 / 0 |
+| 合法解答 | 1,000 / 1,000 |
+| 最长程序 | 349 步 |
+| Stage 3 → Full 节省 | 804 步 |
+| Full 胜出路线 | Stage 3 767、order_cf 131、order_fast 102 |
+
+逐题分数在 [v10-full1000-metrics.csv](reports/v10-full1000-metrics.csv)（1,000 行，列为 `id,v9,stage3,full,winner,seconds,repeat`）；最终 CSV 为 [elf-calculator-independent-v10-score-164306.csv](../submissions/elf-calculator-independent-v10-score-164306.csv)，SHA-256 `171e6e00…`。本仓库用 `src/verify.py` 对这份 CSV 做了全量回放，1,000/1,000 合法、总分 164,306、最长 349。
+
+**口径：** 164,306 是本地独立验证的指令总数，不是 Kaggle 榜单成绩；本次合并没有重新做 Kaggle 提交。研究运行的环境、耗时和工具链见 [v10.json](reports/v10.json)。
+
+### 8.7 消融实验与计算成本
+
+固定留出集（100 道官方计分题）上的策略对照：
+
+| 策略 | 留出集 100 题得分 | 相对 V9 节省 | 相对 Stage 3 节省 |
+|---|---:|---:|---:|
+| V9 | 18,192 | — | — |
+| V10 Stage 1 | 17,023 | 1,169 | — |
+| V10 Stage 3 | 16,912 | 1,280 | — |
+| Stage 3 + Order Fast | 16,902 | 1,290 | 10 |
+| Stage 3 + Order CF（Hybrid） | 16,844 | 1,348 | 68 |
+| Adaptive | 16,874 | 1,318 | 38 |
+| **Full** | **16,842** | **1,350** | **70** |
+
+补充：Full 相对 Stage 3 在留出集改善 19 题；在正式集，两条 order 路线相对 Stage 3 额外减少 **804** 条指令（order_fast 胜 102 题、order_cf 胜 131 题）。Stage 1 是"联合调度 + pressure + 修复"之后、joint/cf 之前的成绩；Stage 3 再加 joint/cf；Order/Hybrid/Full 分别只加 order_fast、只加 order_cf、两条都加。Adaptive 按目标位宽中位数门控（20–59 位加 order_fast，40–59 位加 order_cf），是消融对照，不是默认策略。
+
+留出集研究运行的 Full worker 秒数约 1,958.9（4 进程）；正式 1,000 题的逐题秒数合计 18,524.7 秒，中位数 10.44 秒。计算成本集中在 Stage 1/pressure/修复和两条 native 联合路线；order 路线只在 Stage 3 之后追加。`--policy stage3` 可跳过两条 order 路线，`--policy order/hybrid/adaptive` 用于复现消融，默认 `full`。
+
+### 8.8 本仓库的独立复现方式
+
+```bash
+# 1) 构建七个冻结 C++17 内核（输出到 git-ignored 的 experiments/native-build/）
+python src/algorithms/native/build.py
+
+# 2) 默认 V10 Full，多进程 + SQLite 检查点
+python src/graph_solver.py data/puzzles.csv --version v10 --policy full --jobs 4 \
+  --checkpoint experiments/v10.sqlite --output experiments/v10.csv
+python src/graph_solver.py data/puzzles.csv --version v10 --jobs 4 \
+  --checkpoint experiments/v10.sqlite --resume --output experiments/v10.csv
+
+# 3) 独立验证
+python src/verify.py data/puzzles.csv experiments/v10.csv
+
+# 4) V9 仍可在同一 checkout 复现
+python src/graph_solver.py data/puzzles.csv --version v9 --jobs 4 --output experiments/v9.csv
+```
+
+检查点 schema 4 绑定输入、全部生产 Python（含 `v9.py`/`v10.py`）、七个 `.cpp`、兼容头、`build.py`、实际二进制哈希、编译器/flags/平台与 V10 参数（含 policy）。旧 schema 3 的 V9 检查点会提示回到产生它的提交，不能用新代码 resume。
+
+**已经实际执行的验证与未执行的验证要区分：**
+
+- 已执行：对交付的 V10 CSV 做全量回放（1,000/1,000、164,306）；本机 10 道代表性题（1,565）和固定留出集 100 题（16,842，与归档总分一致）独立重解；4 道差异题与本机冻结研究实现逐程序一致；CLI 的 v10/v9、检查点/恢复/验证、七个内核编译和模拟器回放测试。
+- 未执行：本次合入没有在 macOS/Apple Clang 上重新跑完整 1,000 题；因此不声称"本次合入独立复现了 164,306"。正式 1,000 题成绩来自用户交付的研究运行，本仓库做了全量回放、代表性重解和 100 题留出集重解。
+
+### 8.9 V10 的当前局限
+
+- **不是全局最优。** V10 只在七个构造器、固定深度/宽度/预算内搜索；没有最优性证书。
+- **工具链敏感。** 构造器遍历 `unordered_map`，等长候选的寄存器选择可能随标准库变化；冻结成绩是 Linux/GCC 14.2，本机 Apple Clang 的复现不保证逐字节一致。
+- **超时敏感。** joint/order 路线使用 18 秒原生超时；研究运行有 5 条候选路线超时，串行重测未改善最终程序。高负载下重跑仍可能超时，需降低 `--jobs` 或重试。
+- **Stage 1 口径。** 表中的 Stage 1 是"联合调度 + pressure + 修复"后的成绩（17,023 留出集），不是四路线原始编译长度；不要把 V10 Stage 1 与 V9 Stage 1 当成同一含义。
+- **计算成本。** 全量约 5.1 个 CPU 小时（逐题秒数合计），远高于 V9；这是用搜索换指令数的策略，不适合低预算场景。
+- **未做 V11。** 没有 LNS、大整数构造、新的全局下界或 Kaggle 提交。
+
+[返回学习导航](#学习导航)
+
+## 09 演进与实验
+
+### 9.1 同一批 1,000 题的本地成绩
+
+![V1–V10 本地独立验证总指令数](diagrams/version-scores.png)
+
+> **图表口径：** 这张 PNG 由 `diagrams/version-scores.mmd`（xychart）经 mermaid.ink 渲染，覆盖 V1–V10。互动报告顶部的动态成绩条和本节表格直接来自 `docs/reports/v1.json`–`v10.json`，与图中数字一致；图中是本地独立验证的指令总数，不是 Kaggle 榜单成绩。
 
 | 版本 | 核心贡献 | 指令数 | 较前代少 | 改善 / 持平 / 退化 | 独立验证记录 |
 |---|---|---:|---:|---|---|
@@ -572,7 +846,10 @@ Stage 2 只做一件事：在 Stage 1 程序语义不变的前提下重排同一
 | V6 | 动态无环、路径联合 | 204,255 | 12,149 | 799/201/0 | [V6 报告](reports/v6.json) |
 | V7 | 多构造器、调度 | 198,388 | 5,867 | 717/283/0 | [1,000/1,000](reports/v7.json) |
 | V8 Final | 子图重写、组修复、寄存器 | 194,444 | 3,944 | 775/225/0 | [1,000/1,000](reports/v8.json) |
-| V9 | 动态字典构造与寄存器压力调度 | **175,604** | 18,840 | 833/30/137 | [1,000/1,000](reports/v9.json) |
+| V9 | 动态字典构造与寄存器压力调度 | 175,604 | 18,840 | 833/30/137 | [1,000/1,000](reports/v9.json) |
+| V10 Full | 七个构造器、全路线联合调度、精确修复、目标顺序 | **164,306** | 11,298 | 857/143/0 | [1,000/1,000](reports/v10.json) |
+
+**V10 阶段对照（同一批 1,000 题）：** V9 **175,604** → V10 Stage 3 **165,110** → V10 Full **164,306**。Stage 3 已包含联合调度、pressure 构造器、两轮精确修复与 joint/cf 两条联合路线；Full 再加 order_fast 与 order_cf，相对 Stage 3 再省 **804** 步（order_fast 胜 102 题、order_cf 胜 131 题、Stage 3 胜 767 题）。V10 相对 V9 改善 857 题、持平 143 题、0 退化，最长程序 349 步。V10 的 "Stage 1"（留出集 17,023）是 pressure+修复之后、joint/cf 之前的成绩，口径与 V9 Stage 1 不同，不要横向相加。
 
 **V9 阶段对照（同一批 1,000 题，从官方题目独立复跑）：** V8 194,444 → V9 Stage 1 **182,205** → V9 Stage 2 **175,604**。Stage 2 只在 Stage 1 程序的首现 DAG 上重排调度，再省 **6,601** 步（相对 Stage 1 的 3.6228%），**394 题改善 / 606 持平 / 0 退化**；相对 V8 是 **833 改善 / 30 持平 / 137 退化**，共少 **18,840** 步（9.689%）。V9 最长程序 **415** 步（V8 为 535）。注意 V9 的 Stage 1 并非全面优于 V8：在低位宽桶上略差，收益来自动态字典构造在中位宽档的改进，以及 Stage 2 在高位宽档的调度压缩。
 
@@ -590,11 +867,11 @@ Stage 2 只做一件事：在 Stage 1 程序语义不变的前提下重排同一
 
 50+ 位（50 与 60 桶）合计节省 **3,802 / 6,601 = 57.6%**：调度收益明显集中在程序更长、寄存器压力更大的题上。该表与冻结研究包 `v9_stage2_full_report.json` 的 `bit_width_buckets` 完全一致。
 
-V1–V5 原复跑耗时分别为 156.5、285.5、424.8、624.2、640.6 秒（多版本并行，V5 6 个工作进程，其余 4 个，不是严格等资源 benchmark）。V7 与 V8 的 9 进程复跑分别为 878.73 与 1,174.13 秒。V7 最长 564 步；V8 最长 535 步；V9 最长 415 步。历史记录中 V6 以及各代复跑的配置以原报告为准；所有表格均为既有历史证据，不是本次重构后的测量。
+V1–V5 原复跑耗时分别为 156.5、285.5、424.8、624.2、640.6 秒（多版本并行，V5 6 个工作进程，其余 4 个，不是严格等资源 benchmark）。V7 与 V8 的 9 进程复跑分别为 878.73 与 1,174.13 秒。V7 最长 564 步；V8 最长 535 步；V9 最长 415 步；V10 最长 349 步。历史记录中 V6 以及各代复跑的配置以原报告为准；所有表格均为既有历史证据，不是本次重构后的测量。
 
 例题 `scored_0626` 在 V1–V5 为 275→273→258→256→249；`scored_0289` 为 28→28→27→27→27。历史早期 285,288→272,748、269,369→263,575 属不同实验，不能并入同一独立版本曲线。[历史进展](progress.md)
 
-### 8.2 各代全量阶段贡献
+### 9.2 各代全量阶段贡献
 
 | 版本 | 过程与全量指令数 |
 |---|---|
@@ -604,10 +881,11 @@ V1–V5 原复跑耗时分别为 156.5、285.5、424.8、624.2、640.6 秒（多
 | V6 | 216,404 → 无环搜索215,938 → 额外候选/融合205,959 → 路径联合204,255 |
 | V7 | 204,255 → 自适应构造200,987 → 路径并集200,034 → 动态融合199,675 → 调度198,388 |
 | V9 | 182,205（四路线 Stage 1 取最短）→ 175,604（Stage 2 首现 DAG 调度） |
+| V10 | 165,110（联合调度 + pressure + 修复 + joint/cf）→ 164,306（加 Order Fast/CF） |
 
 V6 路径联合额外改善 125 题。V7 的阶段合计改善 5,867 步，约 2.8724%。V9 的 Stage 2 改善 394 题、省 6,601 步（相对 Stage 1 的 3.6228%）。这些阶段属于各自实验报告：V9 的两个阶段键是按定义累加的实际程序长度（Stage 1 是四路线中已编译程序的最短者，Stage 2 是调度后的最终程序），不是同一序列的消融阶段，不能与 V8 八阶段增量直接相加，也不等于所有模块在相同计算预算下的独立因果贡献。
 
-### 8.3 V8 八阶段完整消融记录
+### 9.3 V8 八阶段完整消融记录
 
 | 阶段指标键 | 阶段 | 总指令数 | 增量减少 |
 |---|---|---:|---:|
@@ -622,7 +900,7 @@ V6 路径联合额外改善 125 题。V7 的阶段合计改善 5,867 步，约 2
 
 双运算重写贡献约 67.7% 的 V8 增量节省（2669/3944）。全量减少 1.988%（相对 V7）。这些是同一轮运行的逐题阶段指标累加；不能拼接不同配置的最优子成绩。
 
-### 8.4 历史样本消融（折叠阅读）
+### 9.4 历史样本消融（折叠阅读）
 
 <details>
 <summary>展开 V3–V8 样本实验及限制</summary>
@@ -643,7 +921,7 @@ V6 路径联合额外改善 125 题。V7 的阶段合计改善 5,867 步，约 2
 
 </details>
 
-### 8.5 复跑证据
+### 9.5 复跑证据
 
 V7 的归档 CSV SHA-256：`0bd4c26ac3ba32c5fb6aced54e14e6269fde836dbfe671f51cbdb116eb7dacef`。
 
@@ -657,15 +935,17 @@ V8 的归档 CSV SHA-256：`6f15091bcfddf4335f69126c2088696dfa7a9a3fcb9c4de6dbaa
 
 冻结研究包的全量 CSV SHA-256 为 `5ab0b72c170272591f4d9485730b9805c82d9b2b857827bc017ab53ca3f3ce63`。**两者不是逐字节相同**：逐题程序 **999 / 1,000 相同**，唯一差异题 `scored_0775` 的两版程序等长（均为 181 步）但寄存器选择不同；两阶段总分、逐题分数、节点数、调度尝试数与按位宽选择桶全部一致。用冻结研究源码在本机重新编译运行，得到与移植版完全相同的程序，因此该差异归因于本机 Apple Clang 21 与冻结记录的 Linux GCC 工具链在等分候选平局时的顺序差异，不是移植逻辑差异；本文不声称逐字节复现冻结记录。完整记录见 [v9.json](reports/v9.json)，原始研究证据（archive、全量报告、逐题对照 CSV、运行日志哈希）见 [v9-stage2-ablation.json](reports/v9-stage2-ablation.json)，原始研究耗时不能与本机复跑直接比较。
 
+**V10（2026-11-26/27，研究运行 + 本次合入回放）：** 研究包从官方 1,000 题、全新 SQLite 检查点得到 **164,306 步**、1,000/1,000 合法、最长 349；V9 175,604、Stage 3 165,110、Full 164,306；857 改善 / 143 持平 / 0 退化；Full 相对 Stage 3 省 804。研究运行逐题秒数合计 18,524.7 秒，中位数 10.44 秒；5 条候选路线在原 18 秒超时下失败，串行重测均成功且没有改善最终程序。研究环境为 Linux/GCC 14.2.0 + Python 3.13.5。交付 CSV 的 SHA-256 为 `171e6e00…`；本仓库用 `src/verify.py` 对这份 CSV 做了全量回放，仍为 1,000/1,000、164,306、最长 349。本次合入另在本机 Apple Clang 21 上对 10 道代表性题（总分 1,565）和固定留出集 100 题（总分 **16,842**，与归档留出集完全一致；20 改善 / 80 持平 / 0 退化）做了独立重解；4 道逐题分数差异在本机用冻结研究代码重跑后与本移植版逐程序一致，归因于工具链/容器迭代顺序。**没有**在本次合入中重新跑完整 1,000 题，因此不声称本次合入独立复现了 164,306。详见 [v10.json](reports/v10.json) 与 [逐题指标](reports/v10-full1000-metrics.csv)。
+
 练习 200 题独立复跑为 **36,045 步**、200/200 合法、最长 413、Stage 1 为 37,742、Stage 2 省 1,697（86 改善 / 114 持平 / 0 退化），约 131.15 秒；V8 重构报告记录的练习成绩为 40,207 步。练习题是独立数据集，不能与正式 1,000 题混算或拼成同一条曲线。
 
 [返回学习导航](#学习导航)
 
-### 8.6 混合归档：174,884 步（不计入版本曲线）
+### 9.6 混合归档：174,884 步（不计入版本曲线）
 
 把两份**独立**结果逐题取较短程序（等长取 V9），可得到 **174,884 步**、最长 392 步：137 题取 V8、863 题取 V9（其中 30 题等长，按平局取 V9），比独立 V9 再省 720 步。该结果由后处理工具 [merge_submissions.py](../src/merge_submissions.py) 生成：先用 [verify.py](../src/verify.py) 完整验证两份输入，再按题号对齐、解析 JSON 程序并按 `len(program)` 取短，平局取第二个输入，最后对输出再做一次独立验证并原子发布。
 
-它是归档后处理，**不是算法版本**：不参与求解、不被求解器/CLI/检查点引用、不进入正式独立版本曲线，`submissions/latest.json` 仍只指向独立 V9。归档 CSV 为 [elf-calculator-merged-v8-v9-score-174884.csv](../submissions/elf-calculator-merged-v8-v9-score-174884.csv)（SHA-256 `fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a`），报告为 [v8-v9-merged.json](reports/v8-v9-merged.json)。与用户上传的参考混合文件相比 999 / 1,000 程序相同；差异同样是 `scored_0775` 的等长寄存器选择，参考文件不是求解输入。
+它是归档后处理，**不是算法版本**：不参与求解、不被求解器/CLI/检查点引用、不进入正式独立版本曲线，`submissions/latest.json` 现在指向独立 V10 Full（164,306），不指向混合归档。归档 CSV 为 [elf-calculator-merged-v8-v9-score-174884.csv](../submissions/elf-calculator-merged-v8-v9-score-174884.csv)（SHA-256 `fe973ac4ed3ec8a587e18ce31b922daae4ec1060ad2bdc511d2130960978942a`），报告为 [v8-v9-merged.json](reports/v8-v9-merged.json)。与用户上传的参考混合文件相比 999 / 1,000 程序相同；差异同样是 `scored_0775` 的等长寄存器选择，参考文件不是求解输入。
 
 ```bash
 python3 src/merge_submissions.py data/puzzles.csv \
@@ -677,24 +957,30 @@ python3 src/verify.py data/puzzles.csv experiments/v8-v9-merged.csv
 
 [返回学习导航](#学习导航)
 
-## 09 当前与目标架构
+## 10 当前与目标架构
 
-### 9.1 为什么历史上需要多个版本？
+### 10.1 为什么历史上需要多个版本？
 
 在基线提交 `9337a354` 中，`v8.py` 仅转发 `v8_group.optimize`；group 调用 three、rewrite、register，rewrite 从 V7 重新生成候选，V7 依赖 V5/V6，V6 依赖 V5，V5 依赖 V3/V4。V1/V2 文件独立于 V8 调用链，但 V3 内部的早期构造策略仍参与重构后的 V8 运行。等价重构先迁移实际调用的每个阶段，再用同一批题目逐题确认程序与阶段指标不变，最后才删除版本文件。旧实现保存在 Git 历史中，不再作为 main 的运行依赖。
 
-### 9.2 现状：按功能而不是版本管理
+### 10.2 现状：功能模块 + 显式版本分发
 
 ```mermaid
 flowchart TD
-    G[graph_solver.py<br/>单一 CLI] --> S[solver.py<br/>唯一管线]
-    G --> C[checkpoint.py<br/>schema 3]
+    G[graph_solver.py<br/>单一 CLI] --> S[solver.py<br/>版本分发]
+    S --> V9[v9.py<br/>冻结 V9 管线]
+    S --> V10[v10.py<br/>V10 Full 管线]
+    G --> C[checkpoint.py<br/>schema 4]
     G --> V[verify.py<br/>独立验证]
-    G --> N[native/build.py<br/>构建与指纹]
-    S --> CO[construct.py<br/>四路线原生调用]
-    S --> GR[graph.py<br/>首现 DAG]
-    S --> RW[rewrite.py<br/>两轮 polish]
-    S --> SC[schedule.py<br/>Stage 1 编译 / Stage 2 调度]
+    G --> N[native/build.py<br/>七内核构建与指纹]
+    V10 --> CO[construct.py<br/>原生调用/协议解析]
+    V10 --> GR[graph.py<br/>首现 DAG]
+    V10 --> RW[rewrite.py<br/>两轮 polish]
+    V10 --> SC[schedule.py<br/>Stage 1 编译 / Stage 2 调度]
+    V9 --> CO
+    V9 --> GR
+    V9 --> RW
+    V9 --> SC
     CO --> N
     CO --> CM[common.py<br/>算术与内部回放]
     GR --> CM
@@ -705,71 +991,79 @@ flowchart TD
     M[merge_submissions.py<br/>归档后处理] --> V
 ```
 
-**不支持 Mermaid 的阅读器：** CLI 调用唯一 solver；solver 依次使用 construct、graph、rewrite、schedule 模块；construct 通过 native/build.py 构建并调用两个内核；checkpoint 绑定 solver 配置、native 构建与验证器；verify 独立于求解；merge 只做归档后处理。V8 的 `schedule_v8`/`compile_graph`/重写链不在当前调用图中。
+**不支持 Mermaid 的阅读器：** CLI 调用 `solver.py`；`solver.py` 按版本分发到 `v9.py` 或 `v10.py`；两者共享 construct、graph、rewrite、schedule 模块。construct 通过 native/build.py 构建并调用七个内核；checkpoint 绑定版本、配置、native 构建与验证器；verify 独立于求解；merge 只做归档后处理。
 
 | 当前文件 | 职责 | 说明 |
 |---|---|---|
 | [common.py](../src/algorithms/common.py) | 共享算术、内部 replay 合法性检查、程序大小限制 | 不含搜索策略；最终合法性仍由独立 `verify.py` 把关 |
-| [construct.py](../src/algorithms/construct.py) | 四路线原生构造调用、严格协议解析、超时与错误分类 | 只从题目行构造，不读历史答案；输入超出 signed 64 位明确拒绝 |
-| [graph.py](../src/algorithms/graph.py) | 从 Stage 1 程序提取**首现 DAG** | Stage 2 的输入；起始值是种子节点 |
+| [construct.py](../src/algorithms/construct.py) | 七路线原生构造调用、严格协议解析、超时与错误分类 | 只从题目行构造，不读历史答案；输入超出 signed 64 位明确拒绝 |
+| [graph.py](../src/algorithms/graph.py) | 从程序提取**首现 DAG** | Stage 2 与 V10 联合调度、反馈修复的输入 |
 | [rewrite.py](../src/algorithms/rewrite.py) | 冻结的两轮 polish 图改写 | 有界局部改写，不保证最优 |
 | [schedule.py](../src/algorithms/schedule.py) | Stage 1 八序编译 `compile_graph` 与 Stage 2 压力调度 `schedule` | 两个调度器刻意分开，不假设等价 |
-| [solver.py](../src/algorithms/solver.py) | 唯一公开管线 `solve`、`SOLVER_VERSION`、`DEFAULT_CONFIG`、`STAGES`、阶段指标 | 顺序即冻结顺序：四路线 → Stage 1 → Stage 2 |
-| [native/constructor_wide.cpp](../src/algorithms/native/constructor_wide.cpp) | 动态可达值字典 + 逆向残差构造内核 | 冻结研究源码，字节一致；不重写搜索策略 |
+| [v9.py](../src/algorithms/v9.py) | 冻结 V9 管线 | 四路线 → Stage 1 → Stage 2；保留用于 `--version v9` |
+| [v10.py](../src/algorithms/v10.py) | V10 Full 管线 | 联合调度、pressure、反馈修复、joint/cf、Order Fast/CF、策略选择 |
+| [solver.py](../src/algorithms/solver.py) | 版本分发、`SOLVER_VERSION="v10"`、`VERSIONS` | 默认 V10；显式 `version="v9"` 走冻结 V9 |
+| [native/constructor_wide.cpp](../src/algorithms/native/constructor_wide.cpp) | 动态可达值字典 + 逆向残差构造内核 | 冻结研究源码，字节一致 |
 | [native/constructor_mitm.cpp](../src/algorithms/native/constructor_mitm.cpp) | 同上并增加全字典商邻域匹配内核 | 冻结研究源码，字节一致 |
-| [native/build.py](../src/algorithms/native/build.py) | 求解前原生构建、编译器探测、manifest 指纹、锁与 smoke test | 输出到 git-ignored 的 `experiments/native-build/` |
+| [native/constructor_pressure.cpp](../src/algorithms/native/constructor_pressure.cpp) | 压力感知构造内核 | 用年龄 × 依赖深度给字典值定价 |
+| [native/constructor_joint.cpp](../src/algorithms/native/constructor_joint.cpp) | 两目标共享枢轴联合构造 | 枚举 bases 比例；联合代价择优 |
+| [native/constructor_cf.cpp](../src/algorithms/native/constructor_cf.cpp) | 连分数半收敛比例联合构造 | 与 joint 相同的枢轴计划，候选比例来自 $u/t$ |
+| [native/constructor_order_fast.cpp](../src/algorithms/native/constructor_order_fast.cpp) | 目标顺序构造 | readiness − 0.35 × benefit 选下一个目标 |
+| [native/constructor_order_cf.cpp](../src/algorithms/native/constructor_order_cf.cpp) | 顺序 + 联合构造 | 同一顺序选择，对被选目标再做 CF 枢轴提案 |
+| [native/build.py](../src/algorithms/native/build.py) | 求解前七内核构建、编译器探测、manifest 指纹、锁与 smoke test | 输出到 git-ignored 的 `experiments/native-build/` |
 | [native/compat/bits/stdc++.h](../src/algorithms/native/compat/bits/stdc++.h) | 无 libstdc++ 聚合头编译器的兼容转发头 | 只在探测确认缺失时加入 include path，不改变算法行为 |
 
-算法目录之外的工程组件：[graph_solver.py](../src/graph_solver.py) 是唯一 CLI（默认版本 v9、输出不覆盖、断点参数、求解前 preflight 原生构建）；[checkpoint.py](../src/checkpoint.py) 提供 schema 3 的 SQLite 检查点与指纹；[verify.py](../src/verify.py) 是独立验证器；[merge_submissions.py](../src/merge_submissions.py) 只是归档后处理，不被求解管线或检查点引用。
+算法目录之外的工程组件：[graph_solver.py](../src/graph_solver.py) 是唯一 CLI（默认版本 v10、`--policy` 可选、输出不覆盖、断点参数、求解前 preflight 原生构建）；[checkpoint.py](../src/checkpoint.py) 提供 schema 4 的 SQLite 检查点与指纹；[verify.py](../src/verify.py) 是独立验证器；[merge_submissions.py](../src/merge_submissions.py) 只是归档后处理，不被求解管线或检查点引用。
 
-**原生构建与指纹。** 两个 C++17 内核不是随仓库分发的预编译二进制：每次求解前由 `python3 src/algorithms/native/build.py` 显式构建（或在 preflight 中构建），输出到 git-ignored 的 `experiments/native-build/`。构建记录编译器路径/版本/家族、`-O3 -std=c++17`、全部源码哈希（两个 `.cpp`、`build.py`、兼容头）与两个二进制的 SHA-256 到 `manifest.json`；源码或编译器变化会使 manifest 失效并重建；构建带文件锁，多进程只读同一份产物。GCC/libstdc++ 是参考工具链；Apple Clang 等无 libstdc++ 聚合头的编译器通过 `compat/bits/stdc++.h` 兼容头受支持，但**跨平台逐字节等价未经证明**，平局候选的顺序可能随工具链不同（见 8.5 的 1/1,000 等长程序差异）。
+**原生构建与指纹。** 七个 C++17 内核不是随仓库分发的预编译二进制：每次求解前由 `python3 src/algorithms/native/build.py` 显式构建（或在 preflight 中构建），输出到 git-ignored 的 `experiments/native-build/`。构建记录编译器路径/版本/家族、`-O3 -std=c++17`、全部源码哈希（七个 `.cpp`、`build.py`、兼容头）与七个二进制的 SHA-256 到 `manifest.json`；源码或编译器变化会使 manifest 失效并重建；构建带文件锁，多进程只读同一份产物。GCC/libstdc++ 是参考工具链；Apple Clang 等无 libstdc++ 聚合头的编译器通过 `compat/bits/stdc++.h` 兼容头受支持，但**跨平台逐字节等价未经证明**，`unordered_map` 迭代顺序可能改变等长候选的寄存器选择（见 9.5 的 V9 等长差异）。
 
-**检查点 schema 3。** 检查点绑定输入 SHA-256、全部生产 Python（CLI/检查点/验证器 + `algorithms/` 全部 `.py`、`.cpp`、头文件与 `native/build.py`）、实际编译出的二进制哈希、编译器/flags/平台与全部求解参数；旧 V8 功能化布局（schema 2）或更早的版本化布局会被明确拒绝，并提示 V8 基线 `2875199` 或 V1–V7 固定提交 `9337a354` 复现。任何输入、源码、二进制、编译器和参数的改变都会拒绝 resume，不会放宽校验。
+**检查点 schema 4。** 检查点绑定输入 SHA-256、全部生产 Python（CLI/检查点/验证器 + `algorithms/` 全部 `.py`、`.cpp`、头文件与 `native/build.py`）、实际编译出的二进制哈希、编译器/flags/平台、版本与全部求解参数（V10 含 policy）；旧 V9 功能化布局（schema 3）、V8 布局（schema 2）或更早的版本化布局会被明确拒绝，并提示回到产生它的提交。任何输入、源码、二进制、编译器和参数的改变都会拒绝 resume，不会放宽校验。
 
-**版本单源。** `SOLVER_VERSION = "v9"` 是唯一权威，CLI 的 `DEFAULT_VERSION` 引用它；`--version v9` 与默认入口等价，其他历史版本会给出正确的 worktree 命令而不是静默回退。互动报告/统一入口的构建用 AST 静态读取这个字面量，不 import、不执行求解器，也不要求先编译原生内核。
+**版本单源。** `SOLVER_VERSION = "v10"` 是唯一权威，CLI 的 `DEFAULT_VERSION` 引用它；默认入口运行 V10 Full，`--version v10 --policy full` 等价，`--version v9` 运行冻结 V9，v1–v8 会给出正确的 worktree 命令而不是静默回退。互动报告/统一入口的构建用 AST 静态读取这个字面量，不 import、不执行求解器，也不要求先编译原生内核。
 
 另保留 `__init__.py`（只公开 `SOLVER_VERSION` 与 `solve`）与模拟器。历史 V1–V8 的版本化源码完整目录见[固定 Git 提交 `9337a354`](https://github.com/Leonardo-F/kaggle-lab/tree/9337a3549bea09257cbf36ae1f8da2cbd452942b/competitions/santa-2026/src/algorithms)，V8 功能化布局基线见[提交 `2875199`](https://github.com/Leonardo-F/kaggle-lab/tree/287519977aa85a19ef9e3074e6bfd2b9e578b5c3/competitions/santa-2026)。
 
-算法版本是一次研究发布，不等于一套永久 Python 模块。V9 已按这个原则直接替换相关功能模块，历史实现在 Git 恢复；历史阶段指标仍可保留用于实验比较。
+算法版本是一次研究发布，不等于一套永久 Python 模块。V10 在 V9 的功能模块上增加 `v10.py` 作为显式版本管线；这不是把历史实现重新复制一份，而是保留 `--version v9` 的复现能力所必需的边界。V1–V8 仍只存在于 Git 历史中。
 
 [返回学习导航](#学习导航)
 
-## 10 复现与交互回放
+## 11 复现与交互回放
 
-### 10.1 最新求解：默认入口
+### 11.1 最新求解：默认入口
 
-从 Kaggle 接受规则并下载数据，放入赛题目录 `data/`（官方题目数据不入库）。使用 Python 3.11+（检查点的文件锁依赖 POSIX）与 C++17 编译器（需要 `__int128` 支持；Linux 推荐 GCC/libstdc++）。以下命令在 `competitions/santa-2026/` 下执行；默认入口只运行当前 V9，`--version v9` 与默认等价，v1–v8 会提示改用固定提交的 worktree。
+从 Kaggle 接受规则并下载数据，放入赛题目录 `data/`（官方题目数据不入库）。使用 Python 3.11+（检查点的文件锁依赖 POSIX）与 C++17 编译器（需要 `__int128` 支持；Linux 推荐 GCC/libstdc++）。以下命令在 `competitions/santa-2026/` 下执行；默认入口运行 **V10 Full**，`--version v9` 运行冻结 V9，v1–v8 会提示改用固定提交的 worktree。
 
 ```bash
-# 1) 先显式构建两个冻结原生内核（输出到 git-ignored 的 experiments/native-build/）
+# 1) 先显式构建七个冻结原生内核（输出到 git-ignored 的 experiments/native-build/）
 python3 src/algorithms/native/build.py
 
-# 2) 当前唯一独立求解器（V9）
-python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 \
-  --checkpoint experiments/v9-fresh.sqlite --output experiments/v9-fresh.csv
+# 2) 默认 V10 Full（也可显式写 --version v10 --policy full）
+python3 src/graph_solver.py data/puzzles.csv --jobs 4   --checkpoint experiments/v10-fresh.sqlite --output experiments/v10-fresh.csv
+python3 src/verify.py data/puzzles.csv experiments/v10-fresh.csv
+
+# 3) V9 仍可在同一 checkout 复现
+python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 4   --checkpoint experiments/v9-fresh.sqlite --output experiments/v9-fresh.csv
 python3 src/verify.py data/puzzles.csv experiments/v9-fresh.csv
 ```
 
 输出路径应不存在，不覆盖已有文件。需要断点续跑时，使用同一输入、代码、参数、检查点及输出路径：
 
 ```bash
-python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 \
-  --checkpoint experiments/v9-fresh.sqlite --output experiments/v9-fresh.csv
+python3 src/graph_solver.py data/puzzles.csv --jobs 4   --checkpoint experiments/v10-fresh.sqlite --output experiments/v10-fresh.csv
 # 中断后
-python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 \
-  --checkpoint experiments/v9-fresh.sqlite --output experiments/v9-fresh.csv --resume
+python3 src/graph_solver.py data/puzzles.csv --jobs 4   --checkpoint experiments/v10-fresh.sqlite --output experiments/v10-fresh.csv --resume
 # 先跑一小批再恢复
-python3 src/graph_solver.py data/puzzles.csv --version v9 --jobs 6 \
-  --checkpoint experiments/v9-fresh.sqlite --output experiments/v9-fresh.csv --stop-after 32
+python3 src/graph_solver.py data/puzzles.csv --jobs 4   --checkpoint experiments/v10-fresh.sqlite --output experiments/v10-fresh.csv --stop-after 32
 ```
 
-检查点 schema 3 绑定输入 SHA-256、全部生产 Python、两个 `.cpp`、兼容头、`native/build.py`、实际二进制哈希、编译器/平台/参数；恢复时重放已保存记录并校验摘要。`--stop-after N` 限制本次调度的未完成题目数量；只有完成全部输入才导出 CSV（正式数据为 1,000 题）。同一指纹下可调整 jobs。旧布局的 SQLite 会被明确拒绝，应使用原提交继续或新建检查点。
+`--policy` 可选 `full`（默认）、`stage3`、`order`、`hybrid`、`adaptive`；它只影响 V10 在 Stage 3 之后追加哪些 order 路线，不改变已有构造器和调度参数。检查点 schema 4 绑定输入 SHA-256、全部生产 Python（含 `v9.py`/`v10.py`）、七个 `.cpp`、兼容头、`native/build.py`、实际二进制哈希、编译器/平台/版本/参数；恢复时重放已保存记录并校验摘要。`--stop-after N` 限制本次调度的未完成题目数量；只有完成全部输入才导出 CSV（正式数据为 1,000 题）。同一指纹下可调整 jobs。旧布局的 SQLite 会被明确拒绝，应使用原提交继续或新建检查点。
 
-**参考工具链复现（2026-11-26）：** 在 Linux + GCC 14.2.0 + Python 3.13.3 环境从官方 1,000 题独立求解，得到同样的 **175,604**、最长 415、1,000/1,000 合法，输出 CSV 与冻结研究记录逐字节一致（`5ab0b72c…`）；同一工具链下冻结研究实现与当前功能化移植实现逐题 1,000/1,000 一致（程序、阶段、节点、调度尝试、四条路线 0 差异），macOS 上唯一的 `scored_0775` 平局差异消失。详见 [v9-integration.json](reports/v9-integration.json)。
+**V10 成绩口径：** 164,306 来自用户交付的研究运行（Linux/GCC 14.2.0 + Python 3.13.5），本仓库对交付 CSV 做全量回放验证，并在本机对 10 道代表性题和固定留出集 100 题做了独立重解对照（留出集 16,842，与归档一致）；本次合入没有重新执行完整 1,000 题，详见 [v10.json](reports/v10.json)。V9 的 Linux/GCC 参考工具链全量复现仍是 **175,604**、最长 415、1,000/1,000 合法，输出与冻结记录逐字节一致（`5ab0b72c…`），详见 [v9-integration.json](reports/v9-integration.json)。
 
 仅验证结果（不运行求解器）：
 
 ```bash
+python3 src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v10-score-164306.csv
 python3 src/verify.py data/puzzles.csv submissions/elf-calculator-independent-v9-score-175604.csv
 python3 src/verify.py data/puzzles.csv submissions/elf-calculator-merged-v8-v9-score-174884.csv
 ```
@@ -784,9 +1078,9 @@ python3 src/merge_submissions.py data/puzzles.csv \
 python3 src/verify.py data/puzzles.csv experiments/v8-v9-merged.csv
 ```
 
-### 10.2 历史版本独立复现
+### 11.2 历史版本独立复现
 
-当前 main/发布分支只维护 V9，不要求同时保留旧版模块。使用固定的历史提交，在独立 worktree 执行旧入口（从仓库根目录）：
+当前发布保留 `solver.py` 分发、`v9.py` 与 `v10.py`；V1–V8 不要求同时保留旧版模块。使用固定的历史提交，在独立 worktree 执行旧入口（从仓库根目录）：
 
 ```bash
 git worktree add --detach ../kaggle-lab-santa-history 9337a3549bea09257cbf36ae1f8da2cbd452942b
@@ -809,16 +1103,16 @@ python3 src/verify.py /absolute/path/puzzles.csv experiments/v8-rerun.csv
 
 这里使用已知提交，不假设 Tag 已经创建。官方数据不得提交到 Git，所有算法从原始题目重新求解。历史答案仅用于回放和结束后的回归检查。
 
-### 10.3 动手用模拟器
+### 11.3 动手用模拟器
 
 1. 在浏览器离线打开 [simulator.html](../src/simulator.html)。
-2. 在自定义题区域输入练习 A 或 B，查看 JS 求解与寄存器变化；它是独立的教学实现，不是 Python + C++ 的 V9。
-3. 在 Python 版本回放区域导入题目 CSV 和各版本真实输出 CSV，选择相同题号并比较；默认槽位是 V1–V9：V1–V8 为历史结果，V9 为当前独立版本；V8+V9 混合结果用自定义标签回放。
-4. 观察目标命中、寄存器覆盖、指令数及共享节点/重算，切换版本比较同一题的不同程序。可以使用 [V9 CSV](../submissions/elf-calculator-independent-v9-score-175604.csv)、[V8 CSV](../submissions/elf-calculator-independent-v8-score-194444.csv) 与 [V7 CSV](../submissions/elf-calculator-independent-v7-score-198388.csv)；V8+V9 混合 CSV 用页面自定义标签回放，它不是默认算法槽位。
+2. 在自定义题区域输入练习 A 或 B，查看 JS 求解与寄存器变化；它是独立的教学实现，不是 Python + C++ 的 V10。
+3. 在 Python 版本回放区域导入题目 CSV 和各版本真实输出 CSV，选择相同题号并比较；默认槽位是 V1–V10：V1–V9 为历史结果，V10 Full 为当前默认版本；V8+V9 混合结果用自定义标签回放。
+4. 观察目标命中、寄存器覆盖、指令数及共享节点/重算，切换版本比较同一题的不同程序。默认选中 V10 Full；可以使用 [V10 CSV](../submissions/elf-calculator-independent-v10-score-164306.csv)、[V9 CSV](../submissions/elf-calculator-independent-v9-score-175604.csv)、[V8 CSV](../submissions/elf-calculator-independent-v8-score-194444.csv) 与 [V7 CSV](../submissions/elf-calculator-independent-v7-score-198388.csv)；V8+V9 混合 CSV 用页面自定义标签回放，它不是默认算法槽位。
 
-[互动算法报告](../Santa-2026-Interactive-Report.html) 保留历史学习视图与当前 V9 章节。报告 HTML 由 `docs/build_report.py` 统一重建，本文不宣称浏览器交互已逐项人工验证。
+[互动算法报告](../Santa-2026-Interactive-Report.html) 保留历史学习视图与当前 V10 章节。报告 HTML 由 `docs/build_report.py` 统一重建；模拟器回放与 HTML 加载由 `web/tests` 和本机浏览器冒烟检查覆盖，但本文不宣称所有浏览器交互都已人工逐项点击验证。
 
-### 10.4 重构验收状态
+### 11.4 重构验收状态
 
 V8 等价重构已作为**历史验收**固定下来，只与固定的 [v8.json](reports/v8.json) 对照，不随当前最佳版本改变：
 
@@ -831,15 +1125,23 @@ V8 等价重构已作为**历史验收**固定下来，只与固定的 [v8.json]
 
 - [x] 从官方 1,000 题独立全量复跑：175,604 步、1,000/1,000 合法、最长 415；Stage 1 为 182,205、Stage 2 省 6,601。
 - [x] 原生内核在本机重新构建；检查点 schema 3，1,000 条记录全部重放通过。
-- [x] 与冻结研究记录逐题程序 999/1,000 相同，唯一等长差异已定位为工具链平局顺序（见 8.5）。
+- [x] 与冻结研究记录逐题程序 999/1,000 相同，唯一等长差异已定位为工具链平局顺序（见 9.5）。
 - [x] 练习 200 题独立复跑 36,045 步；V8+V9 混合归档 174,884 步单独验证，不计入版本曲线。
-- [ ] 仓库内互动报告 HTML 与统一入口由集成提交统一重建，本文不改生成产物；测试与构建计数见 `v9.json` 的 `tests` 字段。
+- [x] 互动报告 HTML 与统一入口由集成提交统一重建；构建与测试结果见 `v10.json` 的 `tests` 与 `acceptance` 字段。
+
+当前 V10 发布状态（详细证据见 [v10.json](reports/v10.json)）：
+
+- [x] 交付 CSV 全量回放：1,000/1,000 合法、164,306 步、最长 349；SHA-256 `171e6e00…`。
+- [x] 七个构造器从源码构建；检查点 schema 4 绑定七个二进制与全部生产源码；`--version v9` 仍可运行。
+- [x] 本机 10 道代表性题（1,565）与固定留出集 100 题（16,842）独立重解；4 道差异题与本机冻结研究实现逐程序一致。
+- [x] 逐题指标与留出集消融归档；默认模拟器槽位改为 V10 Full。
+- [ ] 未在本次合入中完整重跑 1,000 题；不声称由本仓库独立复现 164,306。
 
 [返回学习导航](#学习导航)
 
-## 11 局限与研究方向
+## 12 局限与研究方向
 
-### 11.1 候选池中的精确图选择模型
+### 12.1 候选池中的精确图选择模型
 
 ![顺序构造与全局联合选择](diagrams/sequential-vs-joint.png)
 
@@ -857,33 +1159,33 @@ V8 等价重构已作为**历史验收**固定下来，只与固定的 [v8.json]
 \end{aligned}
 ```
 
-选中表达式强制两个操作数同时被选中且拓扑层更早，从而避免环；反之任何候选池内的合法 DAG 均可赋予拓扑层次。该模型优化的是有限候选池、无限寄存器松弛下的图成本，不是完整赛题最优性；也未用于表中任何正式版本成绩（包括 V8 与 V9）。
+选中表达式强制两个操作数同时被选中且拓扑层更早，从而避免环；反之任何候选池内的合法 DAG 均可赋予拓扑层次。该模型优化的是有限候选池、无限寄存器松弛下的图成本，不是完整赛题最优性；也未用于表中任何正式版本成绩（包括 V8、V9 与 V10）。
 
-### 11.2 V9 之后的开放问题（V10 未开始）
+### 12.2 V10 之后的开放问题
 
-V9 把独立全量成绩从 194,444 降到 175,604，但没有解决最优性问题。当前明确的边界是：
+V10 把独立全量成绩从 175,604 降到 164,306，但没有解决最优性问题。当前明确的边界是：
 
-- **全局最优未知。** Stage 1 只比较四条已构造路线，Stage 2 只在固定首现 DAG 上重排；两者都是启发式，没有最优性证书。
-- **报告 `nodes` 的含义。** 顶层 `nodes` 是 Stage 2 首现 DAG 的节点数，只表示"每个非初值节点至少一条指令"的**固定 DAG 下界**；四路线明细里的 `nodes` 另保留了编译器的历史指标语义（见 7.5）。两者都不是理论可达的全局指令下界，也不是已证明的最优值。
-- **本机工具链差异。** Apple Clang 21 + 兼容头与冻结记录的 Linux GCC 在 `scored_0775` 有一处等长平局差异（1/1,000）；两阶段总分、逐题分数/节点/调度尝试数一致，但不声称逐字节复现或跨平台等价。
-- **未使用的路线。** 冻结 V9 没有 LNS、全局锚点或大整数构造；[公开前沿分析](frontier-analysis.md)中调研过的共享池/LNS 方向没有进入当前管线。
-- **口径。** 175,604 是本地独立验证的指令总数，不是 Kaggle 榜单成绩（未做 Kaggle 提交）；174,884 是后处理混合归档，不是算法版本，也不进入独立版本曲线。
+- **全局最优未知。** V10 只比较七个构造器、固定深度/宽度/预算产生的候选；联合调度只在有限候选 DAG 上重排，没有最优性证书。
+- **报告 `nodes` 的含义。** 顶层 `nodes` 是 Stage 1 基线路线的 DAG 节点数；四路线明细里的 `nodes` 是编译器"最后 examined order"的历史指标。两者都不是理论可达的全局指令下界。
+- **工具链差异。** 构造器遍历 `unordered_map`，Apple Clang/libc++ 与冻结记录的 Linux GCC/libstdc++ 可能在等长候选上选择不同寄存器；V9 已有 1/1,000 等长差异，V10 不声称跨平台逐字节一致。
+- **超时敏感。** joint/order 路线使用 18 秒原生超时；研究运行有 5 条候选路线超时，串行重测没有改善最终程序。生产重跑仍可能超时。
+- **未使用的路线。** V10 没有 LNS、全局锚点、大整数构造或新的全局下界；[公开前沿分析](frontier-analysis.md)中调研的共享池/LNS 方向没有进入当前管线。
+- **口径。** 164,306 是本地独立验证的指令总数，不是 Kaggle 榜单成绩（未做 Kaggle 提交）；174,884 是后处理混合归档，不是算法版本，也不进入独立版本曲线。
 - **练习题独立。** 200 题练习集与正式 1,000 题是不同数据集，不能混算或拼成一条曲线。
-- **V10 未开始。**
 
 后续可验证方向：
 
 | 优先方向 | 问题 | 如何验证 |
 |---|---|---|
-| 扩展构造表达式空间 | 当前图的局部重写受限于已有值 | 同预算比较新候选覆盖与真实步数 |
-| 多图联合搜索 | 单个候选未必有最佳共享表达式 | 路径池多样性、选中表达式及边际收益 |
-| 寄存器感知的图优化 | 图节点代理忽略重算 | 记录 C(G)、实际指令、重算、峰值活值 |
+| 扩展构造表达式空间 | 七构造器的候选仍受深度/宽度/预算限制 | 同预算比较新候选覆盖与真实步数 |
+| 多目标联合搜索 | 当前 joint/cf 只共享一个枢轴，且最多 4 个提案 | 路径池多样性、共享枢轴数量、边际收益 |
+| 寄存器感知的图优化 | 构造期压力代理与实际调度仍有偏差 | 记录 C(G)、实际指令、重算、峰值活值 |
 | 可跨平台的确定性 | 随机数、枚举顺序、容器迭代与平局 | 固定输入与多工具链对照、逐题回归 |
 | 小题精确下界 | 启发式离最优多远？ | 小上限时 BFS 状态 (r,H)，单位指令代价；首次覆盖全部目标即最优 |
 
-未来消融应固定题集、硬件、进程数、随机种子和预算，报告分数、耗时分布、改善/持平/退化题数及失败原因。算法变更必须从官方题目独立求解并用 `src/verify.py` 验证；允许研究阶段单题退化，但不能用历史答案补齐。新版本应直接修改功能模块，而不是长期新增 `v9.py` 之类的版本文件。
+未来消融应固定题集、硬件、进程数、随机种子和预算，报告分数、耗时分布、改善/持平/退化题数及失败原因。算法变更必须从官方题目独立求解并用 `src/verify.py` 验证；允许研究阶段单题退化，但不能用历史答案补齐。主版本管线保持显式边界（当前 `v10.py`，V9 保留为 `v9.py`），历史 V1–V8 仍从 Git 提交恢复。
 
-### 11.3 相关研究
+### 12.3 相关研究
 
 - Bos 与 Coster，[Addition Chain Heuristics](https://link.springer.com/chapter/10.1007/0-387-34805-0_37), CRYPTO ’89：加法链和多目标共享。Santa 还允许其他运算、有限数值与有限寄存器。
 - Sethi 与 Ullman，[The Generation of Optimal Code for Arithmetic Expressions](https://doi.org/10.1145/321607.321620), JACM 1970：有限寄存器上的表达式求值。Santa 还要选择跨目标共享的表达式图。
@@ -891,6 +1193,6 @@ V9 把独立全量成绩从 194,444 降到 175,604，但没有解决最优性问
 
 ---
 
-**学习总结：** Santa 的难点不是单独计算一个数，而是同时选择多个目标的构造路径，复用有价值的中间结果，并在有限寄存器内将图编译为最短合法程序。当前只有一套可按功能演进的 V9 求解器：两个原生动态字典构造内核 + 四路线 Stage 1 择优 + 两轮 polish + 两阶段寄存器调度。V1–V9 的历史是它的研究证据；V8 之前的版本化实现保留在 Git 提交中，V8 与 V9 的本地全量成绩和逐题证据保留在 `docs/reports/`，而 174,884 的混合归档只是后处理产物，不构成第 10 个算法版本。
+**学习总结：** Santa 的难点不是单独计算一个数，而是同时选择多个目标的构造路径，复用有价值的中间结果，并在有限寄存器内将图编译为最短合法程序。当前默认求解器是 V10 Full：七个原生构造器（动态字典、MITM 商邻域、压力感知、joint 枢轴、CF 比例、Order Fast、Order CF）+ 全路线联合调度 + 精确反馈修复 + 两阶段寄存器调度；V9 的"两个内核 + 四路线 + 两阶段"仍保留在 `v9.py`，用于 `--version v9` 复现。V1–V10 的本地全量成绩与逐题证据保留在 `docs/reports/`，V8 之前的版本化实现保留在 Git 提交中；174,884 的混合归档只是后处理产物，不构成第 11 个算法版本。164,306 与 175,604 都是本地独立验证的指令总数，不是 Kaggle 榜单成绩，也不是全局最优证明。
 
 [返回学习导航](#学习导航)

@@ -22,12 +22,12 @@ python -m unittest discover -s web/tests -p 'test_*.py' -v
 
 在 Santa 页导入官方题目 CSV 与相应槽位的版本程序 CSV。导入文件时会显示该 CSV 的总指令数、覆盖题数、未知题号、无法解析的程序和未提供程序的题数；选同一题号可比较各版本的实际步数、合法性和计算图规模（唯一中间值、共享值、重算步），查看逐步寄存器状态，并复制当前程序 JSON。文件读取与 BigInt 回放在本地完成。
 
-V1–V9 是已归档结果的回放槽位：V1–V8 为历史版本，V9 为当前独立求解器。页面还可以添加**会话内**自定义结果标签（1–40 字符，不能与已有标签重复），导入自己的 CSV 参与同题比较（例如 V8+V9 混合归档，它不是算法版本）；自定义槽位可移除，数据不保存、不上传。默认 V1–V9 槽位不能删除。内嵌的 JavaScript 自定义题求解器是教学实现，不是当前 Python/C++ V9。
+V1–V10 是已归档结果的回放槽位：V1–V9 为历史版本，V10 Full 为当前默认独立求解器（页面默认选中）。导入 V10 提交 CSV 可回放真实结果并显示 164,306 步总分。页面还可以添加**会话内**自定义结果标签（1–40 字符，不能与已有标签重复），导入自己的 CSV 参与同题比较（例如 V8+V9 混合归档，它不是算法版本）；自定义槽位可移除，数据不保存、不上传。默认 V1–V10 槽位不能删除。内嵌的 JavaScript 自定义题求解器是教学实现，不是当前 Python/C++ V10。
 
 `santa-review.json` 是人工审核记录，分两部分：
 
-- `solver.current_version` 与 `solver.source_sha256`：当前 CLI 发布标识，以及 `graph_solver.py`、`checkpoint.py`、`verify.py` 和 `algorithms/` 下全部生产源码（`.py`、两个 `.cpp`、兼容头与 `native/build.py`）的真实 SHA-256。版本号只从 `algorithms/solver.py` 的 `SOLVER_VERSION` 静态读取，不执行求解器，也不要求先编译原生内核。
-- `independent_replay.versions`：历史 CSV 回放槽位（当前 V1–V9），必须与模拟器 `data-versions` 完全一致；不根据文件名推断。
+- `solver.current_version` 与 `solver.source_sha256`：当前 CLI 发布标识，以及 `graph_solver.py`、`checkpoint.py`、`verify.py` 和 `algorithms/` 下全部生产源码（`.py`、七个 `.cpp`、兼容头与 `native/build.py`）的真实 SHA-256。版本号只从 `algorithms/solver.py` 的 `SOLVER_VERSION` 静态读取，不执行求解器，也不要求先编译原生内核。
+- `independent_replay.versions`：历史 CSV 回放槽位（当前 V1–V10，默认 V10 Full），必须与模拟器 `data-versions` 完全一致；不根据文件名推断。
 
 修改 Santa 求解入口、验证器或算法模块后，先重放/核对受影响的历史 CSV，运行测试，再显式刷新审核：
 

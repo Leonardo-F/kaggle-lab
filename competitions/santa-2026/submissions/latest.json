@@ -1,9 +1,9 @@
 {
-  "version": "v9",
-  "score": 175604,
+  "version": "v10",
+  "score": 164306,
   "validated": 1000,
-  "submission_sha256": "05e7b630f9b9a26889a74e09dbc1317ece799e5d28d948ce28c02b99b0660cb8",
+  "submission_sha256": "171e6e002919bd23669540df92d5b5746337bdb9ca276bdd0b3fdc4a37143a28",
   "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
-  "local_filename": "elf-calculator-independent-v9-score-175604.csv",
-  "report": "../docs/reports/v9.json"
+  "local_filename": "elf-calculator-independent-v10-score-164306.csv",
+  "report": "../docs/reports/v10.json"
 }

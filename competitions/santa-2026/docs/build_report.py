@@ -53,9 +53,9 @@ GITHUB_BLOB = "https://github.com/Leonardo-F/kaggle-lab/blob/main/"
 INSERTS = (
     ("01-赛题与手算", "lab"),
     ("41-依赖替换与引用计数v2v3", "compare"),
-    ("81-同一批-1000-题的本地成绩", "scores"),
-    ("111-候选池中的精确图选择模型", "research"),
-    ("104-重构验收状态", "refactor"),
+    ("91-同一批-1000-题的本地成绩", "scores"),
+    ("121-候选池中的精确图选择模型", "research"),
+    ("114-重构验收状态", "refactor"),
 )
 REQUIRED_IDS = (
     "lab", "live-graph", "walk-slider", "walk-play", "walk-prev", "walk-next",

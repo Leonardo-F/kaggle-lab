@@ -13,11 +13,16 @@ import graph_solver
 from algorithms import construct as native_construct
 from algorithms.construct import parse_graph, puzzle_numbers
 from algorithms.native import build as native_build
-from algorithms.solver import DEFAULT_CONFIG, STAGES, SOLVER_VERSION, solve
+from algorithms.solver import DEFAULT_CONFIG, STAGES, SOLVER_VERSION, solve, v10, v9
 
 FROZEN_CPP = {
     "constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
     "constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+    "constructor_pressure.cpp": "dbe8009db4ac1f3f72fba56674ca00c5e840a415a5ef43fef5e8d8886f7f805e",
+    "constructor_joint.cpp": "0e63c95504a93649ac3a06fd84ea875a4f40778371b66c8cf73f165ad6bb5d69",
+    "constructor_cf.cpp": "a4596e37d10f85601104127fd83424e8c284033305d02f250060d53b8e94d49f",
+    "constructor_order_fast.cpp": "a8b3339099a65176e4efb97f85a0dbb1d676cd9b0b07fdeedf91cd7421f17d9c",
+    "constructor_order_cf.cpp": "c01b90bfa81b074726ab9426060cf40682b6cd889a55ecf096ac1e4279038832",
 }
 
 
@@ -56,17 +61,29 @@ class SolverTest(unittest.TestCase):
     def test_default_entry_solves_three_steps(self):
         result = self.run_cli()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('"version": "v9"', result.stdout)
+        self.assertIn('"version": "v10"', result.stdout)
+        self.assertIn('"policy": "full"', result.stdout)
         self.assertIn('"validated": 1', result.stdout)
         self.assertEqual(len(self.read_program()), 3)
 
-    def test_explicit_v9_alias_matches_default(self):
+    def test_explicit_v10_alias_matches_default(self):
         self.assertEqual(self.run_cli().returncode, 0)
         default = self.output.read_bytes()
         self.output.unlink()
-        result = self.run_cli("--version", "v9")
+        result = self.run_cli("--version", "v10")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.output.read_bytes(), default)
+
+    def test_explicit_v9_reproduction_is_available(self):
+        result = self.run_cli("--version", "v9")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('"version": "v9"', result.stdout)
+        self.assertEqual(len(self.read_program()), 3)
+
+    def test_policy_is_v10_only_and_defaults_to_full(self):
+        result = self.run_cli("--version", "v9", "--policy", "full")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("only available with the V10", result.stderr)
 
     def test_historical_versions_point_to_their_worktree_commits(self):
         for version, revision in (("v7", graph_solver.LEGACY_REVISION),
@@ -79,7 +96,7 @@ class SolverTest(unittest.TestCase):
                 self.assertIn(f"--version {version}", result.stderr)
 
     def test_unknown_version_has_no_misleading_worktree_command(self):
-        result = self.run_cli("--version", "v10")
+        result = self.run_cli("--version", "v11")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unknown solver version", result.stderr)
         self.assertNotIn("git worktree add", result.stderr)
@@ -105,36 +122,59 @@ class SolverTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unrecognized arguments: --reference", result.stderr)
 
-    def test_solve_returns_frozen_stage_and_route_metrics(self):
-        pid, program, metrics = solve(self.row())
+    def test_solve_returns_frozen_v9_stage_and_route_metrics(self):
+        pid, program, metrics = solve(self.row(), version="v9")
         self.assertEqual(pid, "test")
         self.assertEqual(len(program), 3)
         self.assertEqual(metrics["v9final"], len(program))
         self.assertGreaterEqual(metrics["v9_stage1"], metrics["v9final"])
-        for stage in STAGES:
+        for stage in v9.STAGES:
             self.assertIn(stage, metrics)
             self.assertIs(type(metrics[stage]), int)
         self.assertIs(type(metrics["nodes"]), int)
         self.assertIs(type(metrics["schedule_attempts"]), int)
         self.assertEqual([entry["config"] for entry in metrics["routes"]],
-                         [list(route) for route in DEFAULT_CONFIG["stage1_routes"]])
+                         [list(route) for route in v9.DEFAULT_CONFIG["stage1_routes"]])
         for entry in metrics["routes"]:
             self.assertIsNone(entry["error"])
             self.assertIs(type(entry["score"]), int)
             self.assertIs(type(entry["nodes"]), int)
-        self.assertEqual(set(DEFAULT_CONFIG), {
+        self.assertEqual(set(v9.DEFAULT_CONFIG), {
             "stage1_routes", "compile_tries", "compile_seed", "polish_rounds",
             "schedule_seed", "schedule_tries", "schedule_top", "schedule_modes",
         })
-        self.assertEqual(DEFAULT_CONFIG["stage1_routes"],
+        self.assertEqual(v9.DEFAULT_CONFIG["stage1_routes"],
                          (("constructor_wide_polish", 6, 3),
                           ("constructor_wide_polish", 6, 4),
                           ("constructor_mitm_polish", 6, 3),
                           ("constructor_mitm_polish", 6, 4)))
-        self.assertEqual((DEFAULT_CONFIG["compile_seed"], DEFAULT_CONFIG["compile_tries"],
-                          DEFAULT_CONFIG["polish_rounds"], DEFAULT_CONFIG["schedule_seed"],
-                          DEFAULT_CONFIG["schedule_tries"], DEFAULT_CONFIG["schedule_top"],
-                          DEFAULT_CONFIG["schedule_modes"]), (919, 8, 2, 202609, 32, 12, 6))
+        self.assertEqual((v9.DEFAULT_CONFIG["compile_seed"], v9.DEFAULT_CONFIG["compile_tries"],
+                          v9.DEFAULT_CONFIG["polish_rounds"], v9.DEFAULT_CONFIG["schedule_seed"],
+                          v9.DEFAULT_CONFIG["schedule_tries"], v9.DEFAULT_CONFIG["schedule_top"],
+                          v9.DEFAULT_CONFIG["schedule_modes"]), (919, 8, 2, 202609, 32, 12, 6))
+
+    def test_solve_returns_v10_stage_and_policy_metrics(self):
+        pid, program, metrics = solve(self.row())
+        self.assertEqual(pid, "test")
+        self.assertEqual(len(program), 3)
+        self.assertEqual(metrics["v10final"], len(program))
+        self.assertGreaterEqual(metrics["v9"], metrics["v10_stage1"])
+        self.assertGreaterEqual(metrics["v10_stage1"], metrics["v10_stage3"])
+        self.assertGreaterEqual(metrics["v10_stage3"], metrics["v10final"])
+        self.assertEqual(metrics["policy"], "full")
+        self.assertEqual(set(metrics["policies"]), {"stage3", "order", "hybrid", "full", "adaptive"})
+        self.assertEqual(len(metrics["routes"]), 4)
+        self.assertIs(type(metrics["nodes"]), int)
+        self.assertIs(type(metrics["schedule_attempts"]), int)
+        self.assertEqual(set(v10.DEFAULT_CONFIG), {
+            "stage1_routes", "compile_tries", "compile_seed", "polish_rounds",
+            "schedule_seed", "schedule_tries", "schedule_top", "schedule_modes",
+            "pressure_modes", "stage1_timeout", "extra_timeout", "repair_rounds",
+            "repair_budget", "policy",
+        })
+        self.assertEqual((v10.DEFAULT_CONFIG["stage1_timeout"], v10.DEFAULT_CONFIG["extra_timeout"],
+                          v10.DEFAULT_CONFIG["repair_rounds"], v10.DEFAULT_CONFIG["repair_budget"],
+                          v10.DEFAULT_CONFIG["policy"]), (45, 18, 2, 8, "full"))
 
     def test_solve_is_deterministic(self):
         first = solve(self.row())
@@ -145,6 +185,9 @@ class SolverTest(unittest.TestCase):
     def test_zero_step_when_targets_are_starting_values(self):
         row = self.row(targets="[9,27,81]", starting="[9,27,81]")
         pid, program, metrics = solve(row)
+        self.assertEqual(program, [])
+        self.assertEqual((metrics["v10_stage1"], metrics["v10_stage3"], metrics["v10final"]), (0, 0, 0))
+        pid, program, metrics = solve(row, version="v9")
         self.assertEqual(program, [])
         self.assertEqual((metrics["v9_stage1"], metrics["v9final"]), (0, 0))
 
@@ -164,8 +207,9 @@ class SolverTest(unittest.TestCase):
         algorithms = SRC / "algorithms"
         names = sorted(path.stem for path in algorithms.glob("*.py"))
         self.assertEqual(names, ["__init__", "common", "construct", "graph",
-                                 "rewrite", "schedule", "solver"])
-        self.assertFalse(list(algorithms.glob("v[0-9]*.py")))
+                                 "rewrite", "schedule", "solver", "v10", "v9"])
+        self.assertEqual(sorted(path.name for path in algorithms.glob("v[0-9]*.py")),
+                         ["v10.py", "v9.py"])
         native = algorithms / "native"
         self.assertEqual(sorted(path.name for path in native.glob("*.cpp")),
                          sorted(FROZEN_CPP))
@@ -202,15 +246,19 @@ class SolverTest(unittest.TestCase):
         self.assertIn("unique puzzle IDs", result.stderr)
 
     def test_stage1_failure_is_reported_not_faked(self):
-        with mock.patch("algorithms.solver.construct",
+        with mock.patch("algorithms.v9.construct",
                         side_effect=ValueError("native constructor failed")):
             with self.assertRaisesRegex(RuntimeError, "no legal candidate"):
+                solve(self.row(), version="v9")
+        with mock.patch("algorithms.v10.construct",
+                        side_effect=ValueError("native constructor failed")):
+            with self.assertRaisesRegex(ValueError, "native constructor failed"):
                 solve(self.row())
 
     def test_invalid_metrics_are_rejected_by_checkpoint_validator(self):
         import checkpoint as checkpoint_engine
         row = self.row()
-        _, program, metrics = solve(row)
+        _, program, metrics = solve(row, version="v9")
         broken = dict(metrics, v9final=len(program) + 1)
         with self.assertRaisesRegex(ValueError, "invalid stage metrics"):
             checkpoint_engine.validate_record("v9", row, program, broken)
@@ -221,11 +269,11 @@ class SolverTest(unittest.TestCase):
                                         "nodes": None, "score": None, "error": "boom"}])
         with self.assertRaisesRegex(ValueError, "invalid route metrics"):
             checkpoint_engine.validate_record("v9", row, program, broken)
-        self.assertEqual(SOLVER_VERSION, "v9")
+        self.assertEqual(SOLVER_VERSION, "v10")
 
     def test_solver_version_is_single_sourced(self):
         self.assertEqual(graph_solver.DEFAULT_VERSION, SOLVER_VERSION)
-        self.assertEqual(graph_solver.DEFAULT_VERSION, "v9")
+        self.assertEqual(graph_solver.DEFAULT_VERSION, "v10")
 
 
 class NativeProtocolTest(unittest.TestCase):
@@ -326,8 +374,15 @@ class SourceInventoryTest(unittest.TestCase):
                      "algorithms/solver.py", "checkpoint.py", "graph_solver.py", "verify.py"):
             self.assertIn(name, sources)
         self.assertNotIn("merge_submissions.py", sources)
-        self.assertEqual(checkpoint_engine.SCHEMA, 3)
-        self.assertEqual(checkpoint_engine.LAYOUT, "v9-functional")
+        self.assertEqual(checkpoint_engine.SCHEMA, 4)
+        self.assertEqual(checkpoint_engine.LAYOUT, "v10-functional")
+        for name in ("algorithms/native/constructor_pressure.cpp",
+                     "algorithms/native/constructor_joint.cpp",
+                     "algorithms/native/constructor_cf.cpp",
+                     "algorithms/native/constructor_order_fast.cpp",
+                     "algorithms/native/constructor_order_cf.cpp",
+                     "algorithms/v9.py", "algorithms/v10.py"):
+            self.assertIn(name, sources)
 
 
 if __name__ == "__main__":

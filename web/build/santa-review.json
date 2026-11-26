@@ -1,21 +1,28 @@
 {
   "schema_version": 2,
   "solver": {
-    "current_version": "v9",
+    "current_version": "v10",
     "source_sha256": {
-      "algorithms/__init__.py": "c1ce4af331e4611dc1637ae3f6a3d46cc30bc457a11b98048b3f5559719658c4",
+      "algorithms/__init__.py": "90ebcc2dec83fd3e1bdbad03c61fef977a25c93c639bab56a1b2ec014f30e41e",
       "algorithms/common.py": "7009d0558aafe3fe814e5e7674050dcad7a8b67bcdd9619f1e316c844e24175a",
       "algorithms/construct.py": "00ab73e409409a76cbcae19e2537771d46839ee25fbc43c52a0d39763f4c49c9",
       "algorithms/graph.py": "0580d2523178a35ff95acb7127cc80dbcea90671f7fb7eaeb586b312503f9d73",
-      "algorithms/native/build.py": "2b1c447b3c1102c8d80032a26aec90745b0f296179def8e8286450b5b6a63e2e",
+      "algorithms/native/build.py": "579c0f5d8ac7efd3fb5fb7fe58d162be4821071adb4531c1d4517cec6c53cd31",
       "algorithms/native/compat/bits/stdc++.h": "2d1f37ee90471a040c17d0a1dcef3c91cf1cd645731e3bc8f7958a978f7c652c",
+      "algorithms/native/constructor_cf.cpp": "a4596e37d10f85601104127fd83424e8c284033305d02f250060d53b8e94d49f",
+      "algorithms/native/constructor_joint.cpp": "0e63c95504a93649ac3a06fd84ea875a4f40778371b66c8cf73f165ad6bb5d69",
       "algorithms/native/constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
+      "algorithms/native/constructor_order_cf.cpp": "c01b90bfa81b074726ab9426060cf40682b6cd889a55ecf096ac1e4279038832",
+      "algorithms/native/constructor_order_fast.cpp": "a8b3339099a65176e4efb97f85a0dbb1d676cd9b0b07fdeedf91cd7421f17d9c",
+      "algorithms/native/constructor_pressure.cpp": "dbe8009db4ac1f3f72fba56674ca00c5e840a415a5ef43fef5e8d8886f7f805e",
       "algorithms/native/constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
       "algorithms/rewrite.py": "bbe61b6423ce19bf49525450676a4307462b8cded2a300cf3adf48ca4fa5cade",
       "algorithms/schedule.py": "9798c6df7915a30f8989d94ce55bbd697aed2f1ea64773797d46670d44f31dc1",
-      "algorithms/solver.py": "78ffc0c41ba5759ce809d786164472139aa0cf75baab68a204e46b5f6b900673",
-      "checkpoint.py": "7741c228ea49256a895b83588dcc5b331e0b676ef5386fe0ef98dea99b6a713b",
-      "graph_solver.py": "a62d885327d5cb94bf2f7917dd4e827204c70efea96c371ea78797437c5e8137",
+      "algorithms/solver.py": "8cb82dea08137bd43fbf6a9fc5afd7e05a0bbc6376dfd82fe8a30b3328abe160",
+      "algorithms/v10.py": "9b02fe83c4e0fcb7c37bd893c663e8308094432d629b78ee15c893cbe618e8ed",
+      "algorithms/v9.py": "77e0057d0176d432498abfc807bb21242c83b93991d5ea38bce22927ef501ace",
+      "checkpoint.py": "370236f37bc286e0afdf7fa41af7315cdc273039d36cf28a171099d269ef3053",
+      "graph_solver.py": "b1cc3768dc4d7818748af5518912432152cf2eb7e05635edd1b9c05d5ad9f9e5",
       "verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4"
     }
   },
@@ -29,7 +36,8 @@
       "v6",
       "v7",
       "v8",
-      "v9"
+      "v9",
+      "v10"
     ]
   }
 }

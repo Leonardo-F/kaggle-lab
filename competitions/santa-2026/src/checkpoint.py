@@ -28,13 +28,13 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from contextlib import closing
 from pathlib import Path
 
-from algorithms.solver import DEFAULT_CONFIG, STAGES
+from algorithms import v9, v10
 from algorithms.native import build as native_build
 from verify import verify
 
 SRC = Path(__file__).resolve().parent
-SCHEMA = 3
-LAYOUT = "v9-functional"
+SCHEMA = 4
+LAYOUT = "v10-functional"
 LEGACY_REVISIONS = {
     "versioned": "9337a3549bea09257cbf36ae1f8da2cbd452942b",
     "functional": "287519977aa85a19ef9e3074e6bfd2b9e578b5c3",
@@ -50,14 +50,20 @@ BOUND_SOURCES = ("checkpoint.py", "graph_solver.py", "verify.py") + ALGORITHM_SO
 
 CONFIGS = {
     "v9": {
-        "stages": STAGES,
+        "stages": v9.STAGES,
         "baseline": "v9_stage1",
         "final": "v9final",
-        "parameters": tuple(DEFAULT_CONFIG),
+        "parameters": tuple(v9.DEFAULT_CONFIG),
+    },
+    "v10": {
+        "stages": v10.STAGES,
+        "baseline": "v10_stage3",
+        "final": "v10final",
+        "parameters": tuple(v10.DEFAULT_CONFIG),
     },
 }
 
-DEFAULTS = {"v9": dict(DEFAULT_CONFIG)}
+DEFAULTS = {"v9": dict(v9.DEFAULT_CONFIG), "v10": dict(v10.DEFAULT_CONFIG)}
 
 
 def sha(path):
@@ -74,9 +80,9 @@ def record_digest(pid, program, metrics, meta):
 
 def solve_job(job):
     """Worker entry point: the same public solver used by the CLI."""
-    row, parameters = job
+    row, version, parameters = job
     from algorithms.solver import solve
-    return solve(row, parameters)
+    return solve(row, parameters, version=version)
 
 
 def validate_record(version, row, program, metrics):
@@ -94,20 +100,41 @@ def validate_record(version, row, program, metrics):
         if type(metrics.get(key)) is not int or metrics[key] < 0:
             raise ValueError(f'{row["id"]}: invalid {key} metric')
     routes = metrics.get("routes")
-    expected = len(DEFAULT_CONFIG["stage1_routes"])
-    if type(routes) is not list or len(routes) != expected:
+    if type(routes) is not list or len(routes) != len(v10.STAGE1_ROUTES if version == "v10" else v9.DEFAULT_CONFIG["stage1_routes"]):
         raise ValueError(f'{row["id"]}: invalid route metrics')
+    if version == "v9":
+        for entry in routes:
+            if not isinstance(entry, dict) or not isinstance(entry.get("config"), list):
+                raise ValueError(f'{row["id"]}: invalid route entry')
+            if len(entry["config"]) != 3 or type(entry["config"][1]) is not int:
+                raise ValueError(f'{row["id"]}: invalid route configuration')
+            error = entry.get("error")
+            if error is not None:
+                if not isinstance(error, str) or entry.get("nodes") is not None or entry.get("score") is not None:
+                    raise ValueError(f'{row["id"]}: malformed failed route')
+                continue
+            if any(type(entry.get(key)) is not int or entry[key] < 0 for key in ("nodes", "score")):
+                raise ValueError(f'{row["id"]}: invalid route score')
+        return
+    # V10 records the ablation stages explicitly: Stage 1 is the compiled DAG
+    # before scheduling, V9 is the scheduled base route, Stage 3 is the joint
+    # portfolio plus repair, and the final program is the selected policy.
+    for key in ("v10_stage1", "v9", "v10_stage3"):
+        if type(metrics.get(key)) is not int or metrics[key] < 0:
+            raise ValueError(f'{row["id"]}: invalid {key} metric')
+    if not (metrics["v9"] >= metrics["v10_stage1"] >= metrics["v10_stage3"]):
+        raise ValueError(f'{row["id"]}: inconsistent V10 stage metrics')
+    if metrics.get("policy") not in v10.POLICIES:
+        raise ValueError(f'{row["id"]}: invalid V10 policy')
+    if not isinstance(metrics.get("winner"), str) or not metrics["winner"]:
+        raise ValueError(f'{row["id"]}: invalid V10 winner')
+    if not isinstance(metrics.get("policies"), dict) or set(metrics["policies"]) != set(v10.POLICIES):
+        raise ValueError(f'{row["id"]}: incomplete V10 policy metrics')
     for entry in routes:
-        if not isinstance(entry, dict) or not isinstance(entry.get("config"), list):
+        if not isinstance(entry, dict) or not isinstance(entry.get("label"), str):
             raise ValueError(f'{row["id"]}: invalid route entry')
-        if len(entry["config"]) != 3 or type(entry["config"][1]) is not int:
-            raise ValueError(f'{row["id"]}: invalid route configuration')
-        error = entry.get("error")
-        if error is not None:
-            if not isinstance(error, str) or entry.get("nodes") is not None or entry.get("score") is not None:
-                raise ValueError(f'{row["id"]}: malformed failed route')
-            continue
-        if any(type(entry.get(key)) is not int or entry[key] < 0 for key in ("nodes", "score")):
+        if any(type(entry.get(key)) is not int or entry[key] < 0
+               for key in ("raw", "polish", "raw_nodes", "polish_nodes")):
             raise ValueError(f'{row["id"]}: invalid route score')
 
 
@@ -178,26 +205,38 @@ def _reject_legacy_metadata(payload):
             "checkpoint uses the legacy versioned layout; resume it with the original "
             f"Git commit ({LEGACY_REVISIONS['versioned']}) or create a new SQLite file"
         )
+    if layout == "v9-functional":
+        raise ValueError(
+            "checkpoint uses the previous V9 functional layout; resume it with the commit "
+            "that produced it (the V9 integration revision) or create a new SQLite file"
+        )
     if layout == "functional":
         raise ValueError(
             "checkpoint uses the V8 functional layout (schema 2); resume it with the V8 "
             f"baseline commit ({LEGACY_REVISIONS['functional']}) or create a new SQLite file"
         )
     raise ValueError(
-        "checkpoint layout is not the current v9-functional schema; "
+        "checkpoint layout is not the current v10-functional schema; "
         "resume it with the commit that produced it or create a new SQLite file"
     )
 
 
-def run_checkpoint(puzzles, output, checkpoint, version="v9", jobs=4, resume=False,
-                   stop_after=None, parameters=None):
+def run_checkpoint(puzzles, output, checkpoint, version="v10", jobs=4, resume=False,
+                   stop_after=None, parameters=None, policy=None):
     """Solve ``puzzles`` with the frozen solver, persisting every result."""
     if version not in CONFIGS:
         hint = ""
         if version == "v8":
             hint = f" resume it with the V8 baseline commit ({LEGACY_REVISIONS['functional']})"
-        raise ValueError(f"the functional solver only supports v9, not {version};{hint}")
+        raise ValueError(
+            f"the functional solver supports v9 and v10, not {version};{hint}"
+        )
     config = CONFIGS[version]
+    if policy is not None:
+        if version != "v10":
+            raise ValueError("--policy is only available with the V10 solver")
+        parameters = dict(parameters or {})
+        parameters["policy"] = policy
     stages = config["stages"]
     resolved = dict(DEFAULTS[version])
     if parameters is not None:
@@ -261,7 +300,7 @@ def run_checkpoint(puzzles, output, checkpoint, version="v9", jobs=4, resume=Fal
             print(f"checkpoint: {resumed}/{len(rows)}; scheduled {len(todo)}; jobs={jobs}", flush=True)
             totals = {stage: sum(record[stage] for record in metrics.values()) for stage in stages}
             with ProcessPoolExecutor(max_workers=jobs) as executor:
-                futures = {executor.submit(solve_job, (row, parameters)): row["id"] for row in todo}
+                futures = {executor.submit(solve_job, (row, version, parameters)): row["id"] for row in todo}
                 for future in as_completed(futures):
                     pid, program, record_metrics = future.result()
                     if pid != futures[future] or pid in programs:
@@ -299,6 +338,7 @@ def run_checkpoint(puzzles, output, checkpoint, version="v9", jobs=4, resume=Fal
                 final, baseline = config["final"], config["baseline"]
                 report.update(
                     version=version,
+                    policy=parameters.get("policy") if version == "v10" else None,
                     resumed_at_start=resumed,
                     session_elapsed_seconds=round(time.monotonic() - started, 2),
                     improved=sum(record[final] < record[baseline] for record in metrics.values()),

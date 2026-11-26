@@ -15,7 +15,7 @@
 | 路径 | 作用 | 打开方式 |
 | --- | --- | --- |
 | [web/interactive.html](web/interactive.html) | 赛题互动页：两个标签，分别嵌入正方形装箱模拟器和 Santa 2026 算法互动报告 | 需与仓库文件一起打开；支持 `#squares` / `#santa` |
-| [web/simulators.html](web/simulators.html) | 统一离线模拟器：把两个赛题模拟器嵌入成一个 HTML | 可单独下载，约 8.7 MB |
+| [web/simulators.html](web/simulators.html) | 统一离线模拟器：把两个赛题模拟器嵌入成一个 HTML | 可单独下载，约 9 MB |
 | [web/build/](web/build/) | 统一模拟器的构建源码：`build.py`、`template.html`、`santa-review.json` | 见 [web/build/README.md](web/build/README.md) |
 | [Santa 互动报告](competitions/santa-2026/Santa-2026-Interactive-Report.html) | 由 `docs/algorithm-evolution.md` 自动生成的单文件学习报告 | 可单独下载，离线打开 |
 | [web/tests/](web/tests/) | 构建一致性与互动页结构测试 | `python -m unittest discover -s web/tests -p 'test_*.py' -v` |

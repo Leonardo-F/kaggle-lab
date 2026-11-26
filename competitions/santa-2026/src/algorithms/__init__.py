@@ -1,4 +1,4 @@
-"""Functional Santa 2026 solver package."""
+"""Santa 2026 solver package with explicit V9/V10 version dispatch."""
 
 from .solver import SOLVER_VERSION, solve
 

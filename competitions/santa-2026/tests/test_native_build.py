@@ -232,13 +232,17 @@ class ConstructBinaryCacheTests(NativeBuildTestCase):
         (self.native_dir / "compat" / "._bits").write_bytes(b"\x00\x05\x16\x07junk")
         (self.native_dir / ".DS_Store").write_bytes(b"junk")
         sources = native_build.source_files()
-        self.assertEqual(sorted(sources), ["build.py", "compat/bits/stdc++.h",
-                                           "constructor_mitm.cpp", "constructor_wide.cpp"])
+        self.assertEqual(sorted(sources), [
+            "build.py", "compat/bits/stdc++.h", "constructor_cf.cpp",
+            "constructor_joint.cpp", "constructor_mitm.cpp", "constructor_order_cf.cpp",
+            "constructor_order_fast.cpp", "constructor_pressure.cpp", "constructor_wide.cpp",
+        ])
         native_build.ensure_built()
         manifest = self.manifest()
         self.assertEqual(sorted(manifest["sources"]), [
-            "build.py", "compat/bits/stdc++.h",
-            "constructor_mitm.cpp", "constructor_wide.cpp",
+            "build.py", "compat/bits/stdc++.h", "constructor_cf.cpp",
+            "constructor_joint.cpp", "constructor_mitm.cpp", "constructor_order_cf.cpp",
+            "constructor_order_fast.cpp", "constructor_pressure.cpp", "constructor_wide.cpp",
         ])
 
     def test_binary_path_cache_invalidates_after_rebuild(self):

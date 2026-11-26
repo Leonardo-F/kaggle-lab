@@ -51,16 +51,17 @@ class CheckpointTest(unittest.TestCase):
         report = self.read_report()
         self.assertEqual(report["resumed_at_start"], 1)
         self.assertEqual(report["validated"], 3)
-        self.assertEqual(report["score"], report["v9final"])
+        self.assertEqual(report["score"], report["v10final"])
         self.assertEqual(report["improved"] + report["unchanged"] + report["worse"], 3)
         fingerprint = report["fingerprint"]
-        self.assertEqual(fingerprint["version"], "v9")
-        self.assertEqual(fingerprint["schema"], 3)
-        self.assertEqual(fingerprint["layout"], "v9-functional")
+        self.assertEqual(fingerprint["version"], "v10")
+        self.assertEqual(fingerprint["schema"], 4)
+        self.assertEqual(fingerprint["layout"], "v10-functional")
         self.assertEqual(fingerprint["parameters"]["compile_tries"], 8)
+        self.assertEqual(fingerprint["parameters"]["policy"], "full")
         self.assertEqual(fingerprint["parameters"]["stage1_routes"],
                          [[name, width, mode] for name, width, mode in
-                          checkpoint_engine.DEFAULTS["v9"]["stage1_routes"]])
+                          checkpoint_engine.DEFAULTS["v10"]["stage1_routes"]])
         for name in ("algorithms/solver.py", "algorithms/construct.py",
                      "algorithms/schedule.py", "algorithms/rewrite.py",
                      "algorithms/native/build.py",
@@ -69,7 +70,9 @@ class CheckpointTest(unittest.TestCase):
                      "algorithms/native/compat/bits/stdc++.h"):
             self.assertIn(name, fingerprint["sources"])
         self.assertEqual(sorted(fingerprint["native"]["binaries"]),
-                         ["constructor_mitm", "constructor_wide"])
+                         ["constructor_cf", "constructor_joint", "constructor_mitm",
+                          "constructor_order_cf", "constructor_order_fast",
+                          "constructor_pressure", "constructor_wide"])
         self.assertTrue(fingerprint["native"]["compiler"]["path"])
         self.assertEqual(fingerprint["native"]["flags"], ["-O3", "-std=c++17"])
 
@@ -77,24 +80,26 @@ class CheckpointTest(unittest.TestCase):
         result = self.run_solver("--jobs", "1")
         self.assertEqual(result.returncode, 0, result.stderr)
         report = self.read_report()
-        stages = ["v9_stage1", "v9final"]
+        stages = ["v10_stage1", "v10_stage3", "v10final"]
         costs = [report[stage] for stage in stages]
-        self.assertEqual(report["score"], report["v9final"])
+        self.assertEqual(report["score"], report["v10final"])
         self.assertEqual(costs, sorted(costs, reverse=True))
         metrics = json.loads(Path(str(self.output) + ".metrics.json").read_text())
         self.assertEqual(set(metrics), {"a", "b", "c"})
         for record in metrics.values():
-            self.assertEqual(set(record), {"v9_stage1", "v9final", "routes",
-                                           "nodes", "schedule_attempts"})
+            for key in ("v10_stage1", "v9", "v10_stage3", "v10final", "routes",
+                        "nodes", "schedule_attempts", "policies"):
+                self.assertIn(key, record)
+            self.assertEqual(record["policy"], "full")
             self.assertEqual(len(record["routes"]), 4)
-            self.assertEqual([entry["config"] for entry in record["routes"]],
-                             [["constructor_wide_polish", 6, 3],
-                              ["constructor_wide_polish", 6, 4],
-                              ["constructor_mitm_polish", 6, 3],
-                              ["constructor_mitm_polish", 6, 4]])
+            self.assertEqual([entry["label"] for entry in record["routes"]],
+                             ["constructor_wide_polish:6:3",
+                              "constructor_wide_polish:6:4",
+                              "constructor_mitm_polish:6:3",
+                              "constructor_mitm_polish:6:4"])
             for entry in record["routes"]:
-                self.assertIsNone(entry["error"])
-                self.assertIs(type(entry["score"]), int)
+                self.assertIs(type(entry["raw"]), int)
+                self.assertIs(type(entry["polish"]), int)
             self.assertIs(type(record["nodes"]), int)
             self.assertIs(type(record["schedule_attempts"]), int)
         self.assertEqual(set(metrics["a"]), set(metrics["b"]))
@@ -103,7 +108,7 @@ class CheckpointTest(unittest.TestCase):
         self.assertEqual(self.run_solver("--jobs", "1", "--stop-after", "1").returncode, 0)
         with self.assertRaisesRegex(ValueError, "provenance mismatch"):
             checkpoint_engine.run_checkpoint(
-                self.puzzles, self.output, self.checkpoint, "v9",
+                self.puzzles, self.output, self.checkpoint, "v10",
                 jobs=1, resume=True, parameters={"schedule_tries": 33},
             )
 
@@ -113,7 +118,7 @@ class CheckpointTest(unittest.TestCase):
         self.assertNotEqual(self.run_solver("--jobs", "1").returncode, 0)
 
     def test_checkpoint_rejects_other_versions(self):
-        with self.assertRaisesRegex(ValueError, "only supports v9"):
+        with self.assertRaisesRegex(ValueError, "supports v9 and v10"):
             checkpoint_engine.run_checkpoint(
                 self.puzzles, self.output, self.checkpoint, "v6", jobs=1,
             )
