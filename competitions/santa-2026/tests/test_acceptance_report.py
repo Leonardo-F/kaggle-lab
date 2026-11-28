@@ -121,7 +121,8 @@ class AcceptanceReportTests(unittest.TestCase):
         self.assertFalse(build_report.FORMAL_REPORT_RE.fullmatch(self.path.name))
         data = build_report.load_report_data()
         self.assertEqual([row["version"] for row in data["historical"]],
-                         [f"v{number}" for number in range(1, 11)])
+                         [f"v{number}" for number in range(1, 12)])
+        self.assertEqual(data["statuses"]["v11"], "report-only")
         self.assertNotIn("v9-integration", {row["version"] for row in data["historical"]})
 
 

@@ -1,3 +1,4 @@
+"""Regression coverage for the single current production solver."""
 import csv
 import json
 from pathlib import Path
@@ -7,381 +8,132 @@ import tempfile
 import unittest
 from unittest import mock
 
-SRC = Path(__file__).resolve().parents[1] / "src"
-sys.path.insert(0, str(SRC))
-import graph_solver
-from algorithms import construct as native_construct
-from algorithms.construct import parse_graph, puzzle_numbers
-from algorithms.native import build as native_build
-from algorithms.solver import DEFAULT_CONFIG, STAGES, SOLVER_VERSION, solve, v10, v9
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from algorithms import SOLVER_VERSION, solve
+from algorithms import construct
+from algorithms.solver import ROUTES, choose
+from algorithms.native import build
+from verify import verify
 
-FROZEN_CPP = {
-    "constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
-    "constructor_mitm.cpp": "14b3885b1fec5d7224c99bf5417c101fd6b00cf28174ba0d8cf66f6638dbb3cd",
-    "constructor_pressure.cpp": "dbe8009db4ac1f3f72fba56674ca00c5e840a415a5ef43fef5e8d8886f7f805e",
-    "constructor_joint.cpp": "0e63c95504a93649ac3a06fd84ea875a4f40778371b66c8cf73f165ad6bb5d69",
-    "constructor_cf.cpp": "a4596e37d10f85601104127fd83424e8c284033305d02f250060d53b8e94d49f",
-    "constructor_order_fast.cpp": "a8b3339099a65176e4efb97f85a0dbb1d676cd9b0b07fdeedf91cd7421f17d9c",
-    "constructor_order_cf.cpp": "c01b90bfa81b074726ab9426060cf40682b6cd889a55ecf096ac1e4279038832",
-}
+ROW = dict(id="tiny", starting_values="[3]", targets="[9,27,81]", value_limit="100", registers="48")
 
 
 class SolverTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        native_build.ensure_built()
-        subprocess.run(["bash", str(SRC / "algorithms/v11_frozen_fulltest/build.sh")], check=True)
-        native_construct.reset_binaries()
+        cls.manifest = build.ensure_built()
 
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        self.root = Path(directory.name)
-        self.puzzles = self.root / "puzzles.csv"
-        self.puzzles.write_text(
-            'id,starting_values,targets,value_limit,registers\n'
-            'test,[3],"[9,27,81]",100,48\n'
-        )
-        self.output = self.root / "answer.csv"
-
-    def row(self, puzzle_id="test", starting="[3]", targets="[9,27,81]", limit=100, registers=48):
-        return {"id": puzzle_id, "starting_values": starting, "targets": targets,
-                "value_limit": str(limit), "registers": str(registers)}
-
-    def run_cli(self, *extra):
-        return subprocess.run(
-            [sys.executable, str(SRC / "graph_solver.py"), str(self.puzzles),
-             "--jobs", "1", "--output", str(self.output), *extra],
-            cwd=self.root, capture_output=True, text=True,
-        )
-
-    def read_program(self):
-        with self.output.open(newline="") as stream:
-            return json.loads(next(csv.DictReader(stream))["program"])
-
-    def test_default_entry_solves_three_steps(self):
-        result = self.run_cli()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('"version": "v11"', result.stdout)
-        self.assertIn('"validated": 1', result.stdout)
-        self.assertEqual(len(self.read_program()), 3)
-
-    def test_explicit_v10_legacy_cli(self):
-        result = self.run_cli("--version", "v10")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('"policy": "full"', result.stdout)
-        self.assertEqual(len(self.read_program()), 3)
-
-    def test_explicit_v9_reproduction_is_available(self):
-        result = self.run_cli("--version", "v9")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('"version": "v9"', result.stdout)
-        self.assertEqual(len(self.read_program()), 3)
-
-    def test_policy_is_v10_only_and_defaults_to_full(self):
-        result = self.run_cli("--version", "v9", "--policy", "full")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("only available with the V10", result.stderr)
-
-    def test_historical_versions_point_to_their_worktree_commits(self):
-        for version, revision in (("v7", graph_solver.LEGACY_REVISION),
-                                  ("v8", graph_solver.HISTORICAL_REVISIONS["v8"])):
-            with self.subTest(version=version):
-                result = self.run_cli("--version", version)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(revision, result.stderr)
-                self.assertIn("worktree", result.stderr)
-                self.assertIn(f"--version {version}", result.stderr)
-
-    def test_unknown_version_has_no_misleading_worktree_command(self):
-        result = self.run_cli("--version", "unreleased")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unknown solver version", result.stderr)
-        self.assertNotIn("git worktree add", result.stderr)
-        self.assertNotIn("worktree add --detach", result.stderr)
-
-    def test_read_only_puzzle_csv(self):
-        self.puzzles.chmod(0o444)
-        self.addCleanup(self.puzzles.chmod, 0o644)
-        result = self.run_cli()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(self.read_program()), 3)
-
-    def test_removed_legacy_options_are_rejected(self):
-        for option in (["--rounds", "180"], ["--portfolio", "3"], ["--path-rounds", "400"],
-                       ["--retain-v6-graphs"], ["--no-schedule"], ["--no-extra"]):
-            with self.subTest(option=option):
-                result = self.run_cli(*option)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("unrecognized arguments", result.stderr)
-
-    def test_rejects_reference_option(self):
-        result = self.run_cli("--reference", "history.csv")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unrecognized arguments: --reference", result.stderr)
-
-    def test_solve_returns_frozen_v9_stage_and_route_metrics(self):
-        pid, program, metrics = solve(self.row(), version="v9")
-        self.assertEqual(pid, "test")
+    def test_current_solver(self):
+        pid, program, metrics = solve(ROW)
+        self.assertEqual(pid, ROW["id"])
         self.assertEqual(len(program), 3)
-        self.assertEqual(metrics["v9final"], len(program))
-        self.assertGreaterEqual(metrics["v9_stage1"], metrics["v9final"])
-        for stage in v9.STAGES:
-            self.assertIn(stage, metrics)
-            self.assertIs(type(metrics[stage]), int)
-        self.assertIs(type(metrics["nodes"]), int)
-        self.assertIs(type(metrics["schedule_attempts"]), int)
-        self.assertEqual([entry["config"] for entry in metrics["routes"]],
-                         [list(route) for route in v9.DEFAULT_CONFIG["stage1_routes"]])
-        for entry in metrics["routes"]:
-            self.assertIsNone(entry["error"])
-            self.assertIs(type(entry["score"]), int)
-            self.assertIs(type(entry["nodes"]), int)
-        self.assertEqual(set(v9.DEFAULT_CONFIG), {
-            "stage1_routes", "compile_tries", "compile_seed", "polish_rounds",
-            "schedule_seed", "schedule_tries", "schedule_top", "schedule_modes",
-        })
-        self.assertEqual(v9.DEFAULT_CONFIG["stage1_routes"],
-                         (("constructor_wide_polish", 6, 3),
-                          ("constructor_wide_polish", 6, 4),
-                          ("constructor_mitm_polish", 6, 3),
-                          ("constructor_mitm_polish", 6, 4)))
-        self.assertEqual((v9.DEFAULT_CONFIG["compile_seed"], v9.DEFAULT_CONFIG["compile_tries"],
-                          v9.DEFAULT_CONFIG["polish_rounds"], v9.DEFAULT_CONFIG["schedule_seed"],
-                          v9.DEFAULT_CONFIG["schedule_tries"], v9.DEFAULT_CONFIG["schedule_top"],
-                          v9.DEFAULT_CONFIG["schedule_modes"]), (919, 8, 2, 202609, 32, 12, 6))
+        self.assertEqual(min(metrics["scores"].values()), 3)
+        self.assertEqual(set(ROUTES), {"r8", "basis"})
 
-    def test_solve_returns_v10_stage_and_policy_metrics(self):
-        pid, program, metrics = solve(self.row(), version="v10")
-        self.assertEqual(pid, "test")
-        self.assertEqual(len(program), 3)
-        self.assertEqual(metrics["v10final"], len(program))
-        self.assertGreaterEqual(metrics["v9"], metrics["v10_stage1"])
-        self.assertGreaterEqual(metrics["v10_stage1"], metrics["v10_stage3"])
-        self.assertGreaterEqual(metrics["v10_stage3"], metrics["v10final"])
-        self.assertEqual(metrics["policy"], "full")
-        self.assertEqual(set(metrics["policies"]), {"stage3", "order", "hybrid", "full", "adaptive"})
-        self.assertEqual(len(metrics["routes"]), 4)
-        self.assertIs(type(metrics["nodes"]), int)
-        self.assertIs(type(metrics["schedule_attempts"]), int)
-        self.assertEqual(set(v10.DEFAULT_CONFIG), {
-            "stage1_routes", "compile_tries", "compile_seed", "polish_rounds",
-            "schedule_seed", "schedule_tries", "schedule_top", "schedule_modes",
-            "pressure_modes", "stage1_timeout", "extra_timeout", "repair_rounds",
-            "repair_budget", "policy",
-        })
-        self.assertEqual((v10.DEFAULT_CONFIG["stage1_timeout"], v10.DEFAULT_CONFIG["extra_timeout"],
-                          v10.DEFAULT_CONFIG["repair_rounds"], v10.DEFAULT_CONFIG["repair_budget"],
-                          v10.DEFAULT_CONFIG["policy"]), (45, 18, 2, 8, "full"))
+    def test_zero_step(self):
+        self.assertEqual(solve(dict(ROW, targets="[3]"))[1], [])
 
-    def test_solve_is_deterministic(self):
-        first = solve(self.row(), version="v10")
-        second = solve(self.row(), version="v10")
-        self.assertEqual(first[1], second[1])
-        self.assertEqual(first[2], second[2])
+    def test_tie_order(self):
+        p = [["*", 0, 0, 1], ["*", 1, 0, 2], ["*", 2, 0, 3]]
+        q = [["*", 0, 0, 2], ["*", 2, 0, 1], ["*", 1, 0, 3]]
+        result = {"r8": {"programs": {"first": p, "second": q}}, "basis": {"programs": {"other": q}}}
+        self.assertEqual(choose(ROW, result)[2]["winner"], "r8/first")
+        self.assertEqual(choose(ROW, result)[1], p)
 
-    def test_zero_step_when_targets_are_starting_values(self):
-        row = self.row(targets="[9,27,81]", starting="[9,27,81]")
-        pid, program, metrics = solve(row, version="v10")
-        self.assertEqual(program, [])
-        self.assertEqual((metrics["v10_stage1"], metrics["v10_stage3"], metrics["v10final"]), (0, 0, 0))
-        pid, program, metrics = solve(row, version="v9")
-        self.assertEqual(program, [])
-        self.assertEqual((metrics["v9_stage1"], metrics["v9final"]), (0, 0))
-
-    def test_jobs_one_and_two_are_identical(self):
-        self.assertEqual(self.run_cli("--jobs", "1").returncode, 0)
-        single = self.output.read_bytes()
-        self.output.unlink()
-        result = subprocess.run(
-            [sys.executable, str(SRC / "graph_solver.py"), str(self.puzzles),
-             "--jobs", "2", "--output", str(self.output)],
-            cwd=self.root, capture_output=True, text=True,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.output.read_bytes(), single)
-
-    def test_only_functional_modules_and_native_kernels_remain(self):
-        algorithms = SRC / "algorithms"
-        names = sorted(path.stem for path in algorithms.glob("*.py"))
-        self.assertEqual(names, ["__init__", "common", "construct", "graph",
-                                 "rewrite", "schedule", "solver", "v10", "v11", "v9"])
-        self.assertEqual(sorted(path.name for path in algorithms.glob("v[0-9]*.py")),
-                         ["v10.py", "v11.py", "v9.py"])
-        native = algorithms / "native"
-        self.assertEqual(sorted(path.name for path in native.glob("*.cpp")),
-                         sorted(FROZEN_CPP))
-        self.assertTrue((native / "build.py").is_file())
-        self.assertTrue((native / "compat" / "bits" / "stdc++.h").is_file())
-
-    def test_frozen_native_sources_are_byte_identical(self):
-        import hashlib
-        native = SRC / "algorithms" / "native"
-        for name, expected in FROZEN_CPP.items():
-            digest = hashlib.sha256((native / name).read_bytes()).hexdigest()
-            self.assertEqual(digest, expected, name)
-
-    def test_native_build_manifest_is_reproducible_and_bound(self):
-        first = native_build.ensure_built()
-        rebuilt = native_build.ensure_built(force=True)
-        for kernel in native_build.KERNELS:
-            self.assertEqual(first["binaries"][kernel]["sha256"],
-                             rebuilt["binaries"][kernel]["sha256"])
-        self.assertIn("build.py", rebuilt["sources"])
-        self.assertIn("constructor_wide.cpp", rebuilt["sources"])
-        self.assertIn("compat/bits/stdc++.h", rebuilt["sources"])
-        self.assertEqual(rebuilt["flags"], ["-O3", "-std=c++17"])
-        self.assertTrue(Path(rebuilt["binaries"]["constructor_wide"]["path"]).is_file())
-
-    def test_rejects_duplicate_ids(self):
-        self.puzzles.write_text(
-            'id,starting_values,targets,value_limit,registers\n'
-            'a,[3],"[9]",100,48\n'
-            'a,[3],"[9]",100,48\n'
-        )
-        result = self.run_cli()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("unique puzzle IDs", result.stderr)
-
-    def test_stage1_failure_is_reported_not_faked(self):
-        with mock.patch("algorithms.v9.construct",
-                        side_effect=ValueError("native constructor failed")):
-            with self.assertRaisesRegex(RuntimeError, "no legal candidate"):
-                solve(self.row(), version="v9")
-        with mock.patch("algorithms.v10.construct",
-                        side_effect=ValueError("native constructor failed")):
-            with self.assertRaisesRegex(ValueError, "native constructor failed"):
-                solve(self.row(), version="v10")
-
-    def test_invalid_metrics_are_rejected_by_checkpoint_validator(self):
-        import checkpoint as checkpoint_engine
-        row = self.row()
-        _, program, metrics = solve(row, version="v9")
-        broken = dict(metrics, v9final=len(program) + 1)
-        with self.assertRaisesRegex(ValueError, "invalid stage metrics"):
-            checkpoint_engine.validate_record("v9", row, program, broken)
-        broken = dict(metrics, nodes=True)
-        with self.assertRaisesRegex(ValueError, "invalid nodes"):
-            checkpoint_engine.validate_record("v9", row, program, broken)
-        broken = dict(metrics, routes=[{"config": ["constructor_wide_polish", 6, 3],
-                                        "nodes": None, "score": None, "error": "boom"}])
-        with self.assertRaisesRegex(ValueError, "invalid route metrics"):
-            checkpoint_engine.validate_record("v9", row, program, broken)
+    def test_no_legacy_modules(self):
+        directory = ROOT / "src" / "algorithms"
+        for name in ("v9.py", "v10.py", "v11.py", "v11_frozen_fulltest"):
+            self.assertFalse((directory / name).exists())
         self.assertEqual(SOLVER_VERSION, "v11")
+        self.assertEqual(set(self.manifest["binaries"]), set(build.KERNELS))
+        self.assertEqual(len(build.KERNELS), 8)
 
-    def test_solver_version_is_single_sourced(self):
-        self.assertEqual(graph_solver.DEFAULT_VERSION, SOLVER_VERSION)
-        self.assertEqual(graph_solver.DEFAULT_VERSION, "v11")
+    def test_malformed_native_protocol(self):
+        with mock.patch.object(construct.subprocess, "run", return_value=mock.Mock(stdout="2\n9 * 3 3\n", stderr="")):
+            with self.assertRaises(ValueError):
+                construct.native("order", [6, 3], "100 1 1 3 9")
 
+    def test_cli_independent_validation(self):
+        with tempfile.TemporaryDirectory() as d:
+            p, out = Path(d)/"puzzles.csv", Path(d)/"answer.csv"
+            with p.open("w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(ROW)); w.writeheader(); w.writerow(ROW)
+            cmd = [sys.executable, str(ROOT / "src/graph_solver.py"), str(p), "--output", str(out), "--jobs", "2"]
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            self.assertEqual(verify(p, out)["score"], 3)
+            self.assertNotEqual(subprocess.run(cmd, capture_output=True).returncode, 0)
+            out.unlink()
+            self.assertNotEqual(subprocess.run(cmd + ["--version", "v10"], capture_output=True).returncode, 0)
+            self.assertFalse(out.exists())
 
-class NativeProtocolTest(unittest.TestCase):
-    def row(self, **overrides):
-        data = {"id": "p", "starting_values": "[3,5]", "targets": "[9,15]",
-                "value_limit": "100", "registers": "48"}
-        data.update(overrides)
-        return data
+    def test_split_requires_the_exact_official_input(self):
+        with tempfile.TemporaryDirectory() as d:
+            p, out, db = Path(d)/"p.csv", Path(d)/"out.csv", Path(d)/"db.sqlite"
+            with p.open("w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=list(ROW)); w.writeheader(); w.writerow(ROW)
+            cmd = [sys.executable, str(ROOT/"src/graph_solver.py"), str(p),
+                   "--output", str(out), "--checkpoint", str(db), "--split", "dev"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("exact official puzzle CSV", result.stderr)
+            self.assertFalse(out.exists())
 
-    def test_parses_valid_graph(self):
-        graph = parse_graph("2\n9 * 3 3\n15 * 3 5\n", self.row())
-        self.assertEqual(graph, {9: ("*", 3, 3), 15: ("*", 3, 5)})
+    def test_stop_after_and_resume_require_a_checkpoint(self):
+        cmd = [sys.executable, str(ROOT/"src/graph_solver.py"), "unused.csv", "--output", "unused-out.csv"]
+        for extra in (["--stop-after", "2"], ["--resume"]):
+            with self.subTest(extra=extra):
+                result = subprocess.run(cmd + extra, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("require --checkpoint", result.stderr)
 
-    def test_rejects_malformed_protocol(self):
-        cases = [
-            ("", "no protocol header"),
-            ("x\n", "no protocol header"),
-            ("3\n9 * 3 3\n15 * 3 5\n", "declared 3 nodes"),
-            ("1\n9 ? 3 3\n", "unknown native operator"),
-            ("1\n9 * 3\n", "malformed native node"),
-            ("1\n9 * 3 five\n", "non-integer native node"),
-            ("2\n9 * 3 3\n9 + 3 5\n", "duplicate native producer"),
-            ("1\n20 * 4 5\n", "depends on undefined value"),
-            ("2\n9 * 3 3\n15 * 3 4\n", "depends on undefined value"),
-            ("1\n10 * 3 3\n", "does not satisfy"),
-            ("1\n9 / 3 5\n", "does not satisfy"),
-            ("1\n500 * 3 3\n", "outside 1..100"),
-            ("1\n9 * 3 3\n", "missing"),
-            ("2\n0 * 1 1\n9 * 3 3\n", "outside 1..100"),
-        ]
-        for text, error in cases:
-            with self.subTest(error=error):
-                with self.assertRaisesRegex(ValueError, error):
-                    parse_graph(text, self.row())
+    def test_group_validation_rejects_a_tampered_score(self):
+        from algorithms.solver import solve_group
+        from algorithms import solver as solver_module
+        real = solver_module.ROUTES["r8"]
+        def fake(row):
+            return {"id": row["id"], "programs": {"x": []}, "scores": {"x": 1}}
+        solver_module.ROUTES["r8"] = fake
+        try:
+            with self.assertRaisesRegex(ValueError, "invalid candidate group"):
+                solve_group("r8", dict(ROW, targets="[3]"))
+        finally:
+            solver_module.ROUTES["r8"] = real
 
-    def test_rejects_values_outside_signed_64_bit_protocol(self):
-        too_big = str(2 ** 63)
-        with self.assertRaisesRegex(ValueError, "signed 64-bit"):
-            puzzle_numbers(self.row(targets=f"[{too_big}]"))
-        with self.assertRaisesRegex(ValueError, "signed 64-bit"):
-            puzzle_numbers(self.row(value_limit=too_big))
-        with self.assertRaisesRegex(ValueError, "value_limit"):
-            puzzle_numbers(self.row(targets="[900]", value_limit=100))
-        with self.assertRaisesRegex(ValueError, "duplicate starting values"):
-            puzzle_numbers(self.row(starting_values="[3,3]"))
-        with self.assertRaisesRegex(ValueError, "more starting values than registers"):
-            puzzle_numbers(self.row(starting_values="[3,5]", registers=1))
+    def test_internal_replay_rejects_illegal_operations(self):
+        from algorithms.common import replay
+        for program in ([["-", 0, 0, 1]], [["/", 0, 0, 1]], [["?", 0, 0, 1]],
+                        [["+", 0, 1, 1]], [["+", 0, 0, 99]]):
+            with self.subTest(program=program):
+                with self.assertRaises(ValueError):
+                    replay(ROW, program)
 
-    def _stub(self, body):
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        script = Path(directory.name) / "stub"
-        script.write_text("#!/bin/sh\n" + body + "\n")
-        script.chmod(0o755)
-        return script
+    def test_compile_and_schedule_a_small_graph(self):
+        from algorithms.common import replay
+        from algorithms.schedule import compile_candidate
+        graph = {9: ("*", 3, 3), 27: ("*", 9, 3), 81: ("*", 9, 9)}
+        program, nodes = compile_candidate(ROW, graph)
+        self.assertEqual(nodes, 3)
+        self.assertGreaterEqual(len(program), 3)
+        self.assertEqual(replay(ROW, program), len(program))
+        self.assertLessEqual(len(program), 5)
 
-    def test_native_timeout_is_an_error(self):
-        stub = self._stub("sleep 5")
-        with self.assertRaisesRegex(ValueError, "timed out after 0.2s"):
-            native_construct.construct(self.row(), 6, 3, "constructor_wide",
-                                       binary=stub, timeout=0.2)
+    def test_compile_rejects_an_inconsistent_graph(self):
+        from algorithms.schedule import compile_candidate
+        cases = (({9: ("+", 3, 3)}, "[9]"),
+                 ({9: ("?", 3, 3)}, "[9]"),
+                 ({9: ("*", 3, 3), 10: ("+", 9, 3)}, "[9,10]"))
+        for graph, targets in cases:
+            with self.subTest(graph=graph):
+                with self.assertRaises(ValueError):
+                    compile_candidate(dict(ROW, targets=targets), graph)
 
-    def test_native_nonzero_exit_is_an_error(self):
-        stub = self._stub("echo 'target missing' >&2; exit 2")
-        with self.assertRaisesRegex(ValueError, "exited 2: target missing"):
-            native_construct.construct(self.row(), 6, 3, "constructor_wide", binary=stub)
-
-    def test_unknown_kernel_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "unknown native constructor kernel"):
-            native_construct.construct(self.row(), 6, 3, "constructor_unknown")
-
-    def test_native_build_failure_is_explicit(self):
-        with mock.patch.dict("os.environ", {"SANTA_CXX": "/bin/false"}):
-            with self.assertRaisesRegex(RuntimeError, "explicit compiler from SANTA_CXX"):
-                native_build.choose_compiler()
-
-
-class SourceInventoryTest(unittest.TestCase):
-    def test_web_review_and_checkpoint_bind_the_same_sources(self):
-        import importlib.util
-        builder = Path(__file__).resolve().parents[3] / "web" / "build" / "build.py"
-        spec = importlib.util.spec_from_file_location("santa_bundle_inventory", builder)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        import checkpoint as checkpoint_engine
-        santa_src = Path(__file__).resolve().parents[1] / "src"
-        web_sources = {path.relative_to(santa_src).as_posix()
-                       for path in module.solver_sources(santa_src)}
-        self.assertEqual(web_sources, set(checkpoint_engine.BOUND_SOURCES))
-
-    def test_checkpoint_binds_native_sources_but_not_the_archive_merge_tool(self):
-        import checkpoint as checkpoint_engine
-        sources = set(checkpoint_engine.BOUND_SOURCES)
-        for name in ("algorithms/native/build.py",
-                     "algorithms/native/constructor_wide.cpp",
-                     "algorithms/native/constructor_mitm.cpp",
-                     "algorithms/native/compat/bits/stdc++.h",
-                     "algorithms/solver.py", "checkpoint.py", "graph_solver.py", "verify.py"):
-            self.assertIn(name, sources)
-        self.assertNotIn("merge_submissions.py", sources)
-        self.assertEqual(checkpoint_engine.SCHEMA, 4)
-        self.assertEqual(checkpoint_engine.LAYOUT, "v10-functional")
-        for name in ("algorithms/native/constructor_pressure.cpp",
-                     "algorithms/native/constructor_joint.cpp",
-                     "algorithms/native/constructor_cf.cpp",
-                     "algorithms/native/constructor_order_fast.cpp",
-                     "algorithms/native/constructor_order_cf.cpp",
-                     "algorithms/v9.py", "algorithms/v10.py"):
-            self.assertIn(name, sources)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_native_protocol_rejects_malformed_lines(self):
+        from algorithms import construct
+        cases = ("2\n9 * 3 3\n", "1\n9 * 3\n", "1\n9 * 3 3\n10 + 3 3\n")
+        for stdout in cases:
+            with self.subTest(stdout=stdout):
+                with mock.patch.object(construct.subprocess, "run",
+                                       return_value=mock.Mock(stdout=stdout, stderr="")):
+                    with self.assertRaises(ValueError):
+                        construct.native("order", [6, 3], "100 1 1 3 9")

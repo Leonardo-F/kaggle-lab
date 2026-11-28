@@ -22,12 +22,12 @@ python -m unittest discover -s web/tests -p 'test_*.py' -v
 
 在 Santa 页导入官方题目 CSV 与相应槽位的版本程序 CSV。导入文件时会显示该 CSV 的总指令数、覆盖题数、未知题号、无法解析的程序和未提供程序的题数；选同一题号可比较各版本的实际步数、合法性和计算图规模（唯一中间值、共享值、重算步），查看逐步寄存器状态，并复制当前程序 JSON。文件读取与 BigInt 回放在本地完成。
 
-V1–V10 是已归档结果的回放槽位：V1–V9 为历史版本，V10 Full 为当前默认独立求解器（页面默认选中）。导入 V10 提交 CSV 可回放真实结果并显示 164,306 步总分。页面还可以添加**会话内**自定义结果标签（1–40 字符，不能与已有标签重复），导入自己的 CSV 参与同题比较（例如 V8+V9 混合归档，它不是算法版本）；自定义槽位可移除，数据不保存、不上传。默认 V1–V10 槽位不能删除。内嵌的 JavaScript 自定义题求解器是教学实现，不是当前 Python/C++ V10。
+V1–V11 是回放槽位：V1–V10 为有归档 CSV 的历史版本，V11 为当前算法槽位（页面默认选中）。V11 只有研究报告与独立验证记录，仓库没有正式 CSV，导入区会显示提示而不会伪造结果；导入 V10 提交 CSV 可回放真实结果并显示 164,306 步总分。页面还可以添加**会话内**自定义结果标签（1–40 字符，不能与已有标签重复），导入自己的 CSV 参与同题比较（例如 V8+V9 混合归档，它不是算法版本）；自定义槽位可移除，数据不保存、不上传。默认 V1–V11 槽位不能删除。内嵌的 JavaScript 自定义题求解器是教学实现，不是当前 Python/C++ V11。
 
 `santa-review.json` 是人工审核记录，分两部分：
 
-- `solver.current_version` 与 `solver.source_sha256`：当前 CLI 发布标识，以及 `graph_solver.py`、`checkpoint.py`、`verify.py` 和 `algorithms/` 下全部生产源码（`.py`、七个 `.cpp`、兼容头与 `native/build.py`）的真实 SHA-256。版本号只从 `algorithms/solver.py` 的 `SOLVER_VERSION` 静态读取，不执行求解器，也不要求先编译原生内核。
-- `independent_replay.versions`：历史 CSV 回放槽位（当前 V1–V10，默认 V10 Full），必须与模拟器 `data-versions` 完全一致；不根据文件名推断。
+- `solver.current_version` 与 `solver.source_sha256`：当前 CLI 发布标识，以及 `graph_solver.py`、`checkpoint.py`、`verify.py` 和 `algorithms/` 下全部生产源码（`.py`、八个 `.cpp`、兼容头与 `native/build.py`）的真实 SHA-256。版本号只从 `algorithms/solver.py` 的 `SOLVER_VERSION` 静态读取，不执行求解器，也不要求先编译原生内核。
+- `independent_replay.versions`：CSV 回放槽位（当前 V1–V11，默认 V11），必须与模拟器 `data-versions` 完全一致；不根据文件名推断。槽位保留不等于仓库附带该版本的 CSV（V11 没有）。
 
 修改 Santa 求解入口、验证器或算法模块后，先重放/核对受影响的历史 CSV，运行测试，再显式刷新审核：
 
@@ -52,6 +52,16 @@ python competitions/santa-2026/docs/build_report.py --check
 ```
 
 构建依赖固定为 `Markdown==3.10.2` 与 `latex2mathml==3.81.1`；两者只在构建时使用，生成的报告不依赖网络、CDN 或客户端渲染器。输出路径固定为 `competitions/santa-2026/Santa-2026-Interactive-Report.html`，`--output` 可写到临时路径。
+
+### 当前 V11 等价重构验收
+
+本次工程重构把旧的 V9/V10/V11 运行目录合并为按职责组织的 V11，并同步模拟器、报告与统一入口。验收记录在 `competitions/santa-2026/docs/refactor-acceptance.md`；构建前先运行 Santa 测试，确认 `docs/reports/v11.json` 的 report-only 证据校验与 `submissions/latest.json` 仍指向真实 V10 CSV，再刷新源码指纹：
+
+```bash
+python -m unittest discover -s competitions/santa-2026/tests -p 'test_*.py' -v
+python web/build/build.py --refresh-santa-review
+python web/build/build.py
+```
 
 ### 可选的 V8 重构复现报告
 

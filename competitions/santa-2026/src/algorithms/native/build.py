@@ -1,34 +1,5 @@
-"""Build the seven frozen C++17 constructor kernels used by the V10 solver.
+"""Build and fingerprint the eight current C++17 graph kernels (POSIX)."""
 
-The ``.cpp`` sources are byte-identical to the frozen V10 research handoff and
-are compiled before a solve starts into ``competitions/santa-2026/experiments/
-native-build/`` (git-ignored).  The bundled research archive contains prebuilt
-ELF binaries; those are never used as a release dependency.  V9 uses the first
-two kernels and keeps working through the same manifest.
-
-The build records the compiler identity (resolved path, ``--version`` line,
-family), flags, whether the libstdc++ compatibility header was needed, source
-hashes and binary hashes in ``manifest.json``.  The manifest is what the
-checkpoint fingerprint binds, so a resumed run can only reuse the exact same
-native pipeline.  Bump ``MANIFEST_SCHEMA`` whenever this module's build
-contract changes.
-
-An explicitly requested compiler (``SANTA_CXX`` or the ``explicit`` argument)
-always wins: it has priority over a cached manifest, it is resolved through the
-PATH/absolute-path/symlink rules below, and it is never silently replaced by
-the cached compiler or by auto-detection.  When it is missing or unusable the
-build fails loudly.  Without an explicit compiler the previous behaviour is
-kept: a valid manifest is reused, otherwise the usual GCC-before-clang
-candidate list is probed.
-
-GCC/libstdc++ on Linux is the reference toolchain (the frozen full run used
-``g++ -O3 -std=c++17``).  A compiler without libstdc++, such as Apple Clang,
-is supported through the small ``compat/bits/stdc++.h`` forwarding header;
-this module adds it only when a compiler probe shows the real aggregate header
-is missing.  Compiler-dependent candidate ordering was checked against the
-frozen per-puzzle records; see ``docs/progress.md`` for the exact platforms
-and results.
-"""
 
 import argparse
 import hashlib
@@ -48,20 +19,12 @@ except ImportError:  # pragma: no cover - CI and release platforms are POSIX
 NATIVE_DIR = Path(__file__).resolve().parent
 SANTA_ROOT = NATIVE_DIR.parents[2]
 BUILD_DIR = Path(
-    os.environ.get("SANTA_NATIVE_BUILD_DIR", SANTA_ROOT / "experiments" / "native-build")
+    os.environ.get("SANTA_NATIVE_BUILD_DIR", SANTA_ROOT / "experiments" / "native-current")
 )
 COMPAT_DIR = NATIVE_DIR / "compat"
-KERNELS = (
-    "constructor_wide",
-    "constructor_mitm",
-    "constructor_pressure",
-    "constructor_joint",
-    "constructor_cf",
-    "constructor_order_fast",
-    "constructor_order_cf",
-)
+KERNELS = ("order", "factor", "bilayer", "congruence", "hyper", "synth", "basis", "synth_extended")
 FLAGS = ("-O3", "-std=c++17")
-MANIFEST_SCHEMA = 3
+MANIFEST_SCHEMA = 4
 COMPILE_TIMEOUT = 180
 SANTA_CXX_ENV = "SANTA_CXX"
 COMPILER_CANDIDATES = (
@@ -296,7 +259,13 @@ def _lock():
 
 
 def _smoke(binary):
-    result = _run([str(binary), "6", "3"], input="100 1 1 3 9\n")
+    if binary.name == "hyper":
+        args, data = ["0", "8"], "100 1 1 1 3 9\n1\n9 * 3 3\n"
+    elif binary.name in {"synth", "synth_extended"}:
+        args, data = ["3"], "100 1 1 1 3 9\n9 * 3 3\n"
+    else:
+        args, data = ["6", "3"], "100 1 1 3 9\n"
+    result = _run([str(binary), *args], input=data, timeout=45)
     if result.returncode != 0:
         raise RuntimeError(f"native smoke test failed for {binary.name}: {result.stderr.strip()}")
     lines = result.stdout.splitlines()

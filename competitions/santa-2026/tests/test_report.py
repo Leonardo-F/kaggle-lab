@@ -9,8 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-SANTA = ROOT / 'competitions' / 'santa-2026'
+SANTA = Path(__file__).resolve().parents[1]
+ROOT = SANTA.parents[1]
 DOCS = SANTA / 'docs'
 BUILDER = DOCS / 'build_report.py'
 SOURCE = DOCS / 'algorithm-evolution.md'
@@ -78,7 +78,14 @@ def make_reports_env(directory, reports, latest_version, *,
     csv_path.write_text(csv_text, encoding='utf-8')
     submission_sha256 = sha256_text(csv_text)
     payloads = {version: copy.deepcopy(payload) for version, payload in reports.items()}
-    payloads[latest_version]['submission_sha256'] = submission_sha256
+    if payloads[latest_version].get('artifact_status') != 'report-only':
+        payloads[latest_version]['submission_sha256'] = submission_sha256
+    if any(payload.get('artifact_status') == 'report-only' for payload in payloads.values()):
+        # A report-only record must ship its archived validation and audit.
+        evidence = directory / 'v11'
+        evidence.mkdir(exist_ok=True)
+        for name in ('validation.json', 'audit.json'):
+            (evidence / name).write_bytes((REPORTS.parent / 'v11' / name).read_bytes())
     for version, payload in payloads.items():
         (reports_dir / f'{version}.json').write_text(
             json.dumps(payload, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
@@ -180,14 +187,22 @@ class ReportContentTests(unittest.TestCase):
     def test_latest_score_and_range_come_from_machine_readable_files(self):
         latest = json.loads(LATEST.read_text(encoding='utf-8'))
         scores = embedded_report_json('score-data')
-        self.assertEqual(scores[-1]['score'], latest['score'])
-        self.assertEqual(scores[-1]['validated'], latest['validated'])
-        self.assertIn(f"{latest['score']:,}", self.html)
+        self.assertEqual([row['version'] for row in scores],
+                         [f'V{index}' for index in range(1, 12)])
         for index, row in enumerate(scores, start=1):
             data = json.loads((REPORTS / f'v{index}.json').read_text(encoding='utf-8'))
-            self.assertEqual(row['version'], f'V{index}')
             self.assertEqual(row['score'], data['score'])
+            self.assertEqual(row['validated'], data['validated'])
+            self.assertEqual(row['status'], data.get('artifact_status', 'archived-csv'))
             self.assertIn(f"{data['score']:,}", self.html)
+        # The downloadable best pointer stays on the archived V10 CSV; V11 is
+        # a report-only research record and must not be presented as a CSV.
+        archive = next(row for row in scores if row['version'] == latest['version'].upper())
+        self.assertEqual(archive['score'], latest['score'])
+        self.assertEqual(archive['status'], 'archived-csv')
+        self.assertEqual(scores[-1]['version'], 'V11')
+        self.assertEqual(scores[-1]['status'], 'report-only')
+        self.assertNotEqual(scores[-1]['score'], latest['score'])
 
     def test_required_interaction_anchors_exist_exactly_once(self):
         for element_id in report_mod.REQUIRED_IDS:
@@ -232,7 +247,7 @@ class ReportContentTests(unittest.TestCase):
         self.assertNotIn('<script src=', self.html)
 
     def test_historical_versions_and_verified_scope_are_shown(self):
-        for version in range(1, 11):
+        for version in range(1, 12):
             self.assertIn(f'V{version}', self.html)
         self.assertIn('1,000 / 1,000', self.html)
         self.assertIn('不是 Kaggle 榜单成绩', self.html)
@@ -273,7 +288,9 @@ class OptionalRefactorReportTests(unittest.TestCase):
         archived = data['reports']['v8']
         self.assertEqual(archived['score'], self.archived['score'])
         self.assertEqual([row['version'] for row in data['historical']],
-                         [f'v{number}' for number in range(1, 11)])
+                         [f'v{number}' for number in range(1, 12)])
+        self.assertEqual(data['statuses']['v11'], 'report-only')
+        self.assertEqual(data['statuses']['v10'], 'archived-csv')
         status = report_mod.load_refactor_status(REFACTOR_REPORT, archived)
         self.assertEqual(status['state'], 'valid', status['reasons'])
 
@@ -309,34 +326,36 @@ class OptionalRefactorReportTests(unittest.TestCase):
         self.assertNotIn('class="refactor-bad"', content)
         scores = extract_json(content, 'score-data')
         self.assertEqual([row['version'] for row in scores],
-                         [f'V{number}' for number in range(1, 11)])
+                         [f'V{number}' for number in range(1, 12)])
         latest = json.loads(LATEST.read_text(encoding='utf-8'))
-        self.assertEqual(scores[-1]['score'], latest['score'])
-        self.assertEqual(scores[-1]['version'], latest['version'].upper())
+        archive = next(row for row in scores if row['version'] == latest['version'].upper())
+        self.assertEqual(archive['score'], latest['score'])
+        self.assertEqual(archive['status'], 'archived-csv')
+        self.assertEqual(scores[-1]['status'], 'report-only')
         self.assertNotIn('V8 Refactored', content.split('id="score-data"')[1])
 
-    def test_v8_acceptance_survives_a_simulated_v11_best_version(self):
-        # Test-only fixtures: a future V11 formal report with a different but
-        # valid CSV and latest pointer.  Nothing is written under docs/reports.
+    def test_v8_acceptance_survives_a_simulated_v12_best_version(self):
+        # Test-only fixtures: a future V12 formal report with its own CSV and
+        # latest pointer.  Nothing is written under docs/reports.
         with tempfile.TemporaryDirectory() as tmp:
             tmpdir = Path(tmp)
             reports = {
                 f'v{number}': json.loads(
                     (REPORTS / f'v{number}.json').read_text(encoding='utf-8'))
-                for number in range(1, 11)
+                for number in range(1, 12)
             }
-            reports['v11'] = formal_payload('v11', SIMULATED_SCORE)
-            reports_dir, latest_path = make_reports_env(tmpdir, reports, 'v11')
+            reports['v12'] = formal_payload('v12', SIMULATED_SCORE)
+            reports_dir, latest_path = make_reports_env(tmpdir, reports, 'v12')
             markdown_text = SOURCE.read_text(encoding='utf-8')
-            v10_row = markdown_row('| V10 Full |')
-            v11_row = ('| V11 | 模拟的未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
-                       '[测试夹具](reports/v11.json) |')
-            markdown_text = markdown_text.replace(v10_row, v10_row + '\n' + v11_row)
+            v11_row = markdown_row('| V11 |')
+            v12_row = ('| V12 | 模拟的未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
+                       '[测试夹具](reports/v12.json) |')
+            markdown_text = markdown_text.replace(v11_row, v11_row + '\n' + v12_row)
             source = tmpdir / 'algorithm-evolution.md'
             source.write_text(markdown_text, encoding='utf-8')
             content, _ = render(source=source, docs_dir=DOCS,
                                 reports_dir=reports_dir, latest_path=latest_path)
-        self.assertIn('V11', content)
+        self.assertIn('V12', content)
         self.assertIn('185,000', content)
         self.assertIn('报告通过本页一致性校验：与原始 V8 报告一致', content)
         self.assertIn(f'等价重构复现：{V8_SCORE:,} 步', content)
@@ -344,13 +363,14 @@ class OptionalRefactorReportTests(unittest.TestCase):
         self.assertNotIn('class="refactor-bad"', content)
         scores = extract_json(content, 'score-data')
         self.assertEqual([row['version'] for row in scores],
-                         [f'V{number}' for number in range(1, 12)])
+                         [f'V{number}' for number in range(1, 13)])
         self.assertEqual(scores[7], {'version': 'V8', 'score': V8_SCORE,
-                                     'validated': 1000})
-        self.assertEqual(scores[8]['version'], 'V9')
+                                     'validated': 1000, 'status': 'archived-csv'})
         self.assertEqual(scores[9]['version'], 'V10')
-        self.assertEqual(scores[-1], {'version': 'V11', 'score': SIMULATED_SCORE,
-                                      'validated': 1000})
+        self.assertEqual(scores[10]['version'], 'V11')
+        self.assertEqual(scores[10]['status'], 'report-only')
+        self.assertEqual(scores[-1]['version'], 'V12')
+        self.assertEqual(scores[-1]['status'], 'archived-csv')
         self.assertNotIn('V8 Refactored', content.split('id="score-data"')[1])
 
     def test_tampered_stage_total_is_rejected_even_with_true_flags(self):
@@ -580,6 +600,29 @@ class FormalReportValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(report_mod.ReportError, 'SHA-256 does not match'):
             report_mod.load_report_data(reports_dir, latest_path)
 
+    def test_report_only_record_cannot_be_the_downloadable_best(self):
+        reports = {f'v{number}': json.loads(
+            (REPORTS / f'v{number}.json').read_text(encoding='utf-8'))
+            for number in range(1, 12)}
+        with self.assertRaisesRegex(report_mod.ReportError, 'report-only v11'):
+            self.load(reports, 'v11', csv_text=NEW_SUBMISSION_TEXT)
+
+    def test_report_only_record_must_match_archived_evidence(self):
+        reports = {f'v{number}': json.loads(
+            (REPORTS / f'v{number}.json').read_text(encoding='utf-8'))
+            for number in range(1, 12)}
+        reports['v11']['score'] += 1
+        with self.assertRaisesRegex(report_mod.ReportError, 'score'):
+            self.load(reports, 'v10')
+
+    def test_report_only_record_must_not_declare_a_csv(self):
+        reports = {f'v{number}': json.loads(
+            (REPORTS / f'v{number}.json').read_text(encoding='utf-8'))
+            for number in range(1, 12)}
+        reports['v11']['local_filename'] = 'invented.csv'
+        with self.assertRaisesRegex(report_mod.ReportError, 'local_filename'):
+            self.load(reports, 'v10')
+
     def test_reports_must_share_one_dataset_identity(self):
         reports = {
             'v1': formal_payload('v1', 250_642, puzzles_sha256='a' * 64),
@@ -613,11 +656,11 @@ class MarkdownScoreTableTests(unittest.TestCase):
         with self.assertRaisesRegex(report_mod.ReportError, '缺少正式报告的版本: V3'):
             report_mod.check_markdown_numbers(without_v3, self.data)
 
-        v10_row = markdown_row('| V10 Full |')
-        fake_v11 = ('| V11 | 模拟未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
-                    '[测试夹具](reports/v11.json) |')
-        with_fake = self.text.replace(v10_row, v10_row + '\n' + fake_v11)
-        with self.assertRaisesRegex(report_mod.ReportError, '没有正式报告的版本: V11'):
+        v11_row = markdown_row('| V11 |')
+        fake_v12 = ('| V12 | 模拟未来版本（仅测试夹具） | 185,000 | 9,444 | 0/0/0 | '
+                    '[测试夹具](reports/v12.json) |')
+        with_fake = self.text.replace(v11_row, v11_row + '\n' + fake_v12)
+        with self.assertRaisesRegex(report_mod.ReportError, '没有正式报告的版本: V12'):
             report_mod.check_markdown_numbers(with_fake, self.data)
 
     def test_number_in_wrong_version_cell_is_rejected(self):

@@ -27,7 +27,6 @@ import sys
 TESTS = Path(__file__).resolve().parent
 SRC = TESTS.parent / "src"
 sys.path.insert(0, str(SRC))
-from algorithms import construct as native_construct
 from algorithms.native import build as native_build
 
 NATIVE_DIR = SRC / "algorithms" / "native"
@@ -70,7 +69,6 @@ class NativeBuildTestCase(unittest.TestCase):
         )
         self._patches.start()
         self.addCleanup(self._patches.stop)
-        self.addCleanup(native_construct.reset_binaries)
         self._saved_env = os.environ.pop(native_build.SANTA_CXX_ENV, None)
         self.addCleanup(self._restore_env)
         self.compiler_a = write_wrapper(
@@ -151,7 +149,7 @@ class CompilerCacheTests(NativeBuildTestCase):
         self.use_compiler(self.compiler_a)
         native_build.ensure_built()
         # Invalidate through a source change while an explicit compiler is set.
-        target = self.native_dir / "constructor_wide.cpp"
+        target = self.native_dir / "order.cpp"
         target.write_text(target.read_text() + "\n// cache invalidation test\n")
         self.use_compiler(self.compiler_b)
         rebuilt = native_build.ensure_built()
@@ -160,22 +158,22 @@ class CompilerCacheTests(NativeBuildTestCase):
 
     def test_source_change_forces_rebuild(self):
         first = native_build.ensure_built()
-        target = self.native_dir / "constructor_mitm.cpp"
+        target = self.native_dir / "factor.cpp"
         target.write_text(target.read_text() + "\n// source change test\n")
         time.sleep(0.01)
         second = native_build.ensure_built()
-        self.assertNotEqual(first["sources"]["constructor_mitm.cpp"],
-                            second["sources"]["constructor_mitm.cpp"])
+        self.assertNotEqual(first["sources"]["factor.cpp"],
+                            second["sources"]["factor.cpp"])
         self.assertNotEqual(first["built_at"], second["built_at"])
 
     def test_binary_tampering_forces_rebuild(self):
         manifest = native_build.ensure_built()
-        binary = Path(manifest["binaries"]["constructor_wide"]["path"])
-        original_hash = manifest["binaries"]["constructor_wide"]["sha256"]
+        binary = Path(manifest["binaries"]["order"]["path"])
+        original_hash = manifest["binaries"]["order"]["sha256"]
         binary.write_bytes(binary.read_bytes() + b"\x00tampered")
         time.sleep(0.01)
         rebuilt = native_build.ensure_built()
-        self.assertEqual(rebuilt["binaries"]["constructor_wide"]["sha256"], original_hash)
+        self.assertEqual(rebuilt["binaries"]["order"]["sha256"], original_hash)
         self.assertNotIn(b"tampered", binary.read_bytes()[-32:])
 
     def test_force_rebuilds_even_when_manifest_is_valid(self):
@@ -201,15 +199,15 @@ class CompilerCacheTests(NativeBuildTestCase):
             "schema": dict(manifest, schema=1),
             "flags": dict(manifest, flags=["-O2", "-std=c++17"]),
             "sources": dict(manifest, sources=dict(manifest["sources"],
-                                                   **{"constructor_wide.cpp": "0" * 64})),
+                                                   **{"order.cpp": "0" * 64})),
             "compat": dict(manifest, compat_include="yes"),
             "compiler_path": dict(manifest, compiler=dict(manifest["compiler"], path="/bin/false")),
             "compiler_version": dict(manifest, compiler=dict(manifest["compiler"], version="other")),
             "binary_path": dict(manifest, binaries=dict(manifest["binaries"],
-                                                        constructor_wide={"path": "/tmp/not-there",
+                                                        order={"path": "/tmp/not-there",
                                                                           "sha256": "0" * 64})),
             "binary_hash": dict(manifest, binaries=dict(manifest["binaries"],
-                                                        constructor_wide={"path": manifest["binaries"]["constructor_wide"]["path"],
+                                                        order={"path": manifest["binaries"]["order"]["path"],
                                                                           "sha256": "0" * 64})),
         }
         for name, mutated in mutated_cases.items():
@@ -233,39 +231,16 @@ class ConstructBinaryCacheTests(NativeBuildTestCase):
         (self.native_dir / ".DS_Store").write_bytes(b"junk")
         sources = native_build.source_files()
         self.assertEqual(sorted(sources), [
-            "build.py", "compat/bits/stdc++.h", "constructor_cf.cpp",
-            "constructor_joint.cpp", "constructor_mitm.cpp", "constructor_order_cf.cpp",
-            "constructor_order_fast.cpp", "constructor_pressure.cpp", "constructor_wide.cpp",
+            "basis.cpp", "bilayer.cpp", "build.py", "compat/bits/stdc++.h",
+            "congruence.cpp", "factor.cpp", "hyper.cpp", "order.cpp", "synth.cpp", "synth_extended.cpp",
         ])
         native_build.ensure_built()
         manifest = self.manifest()
         self.assertEqual(sorted(manifest["sources"]), [
-            "build.py", "compat/bits/stdc++.h", "constructor_cf.cpp",
-            "constructor_joint.cpp", "constructor_mitm.cpp", "constructor_order_cf.cpp",
-            "constructor_order_fast.cpp", "constructor_pressure.cpp", "constructor_wide.cpp",
+            "basis.cpp", "bilayer.cpp", "build.py", "compat/bits/stdc++.h",
+            "congruence.cpp", "factor.cpp", "hyper.cpp", "order.cpp", "synth.cpp", "synth_extended.cpp",
         ])
 
-    def test_binary_path_cache_invalidates_after_rebuild(self):
-        native_build.ensure_built()
-        calls = []
-        real_binaries = native_build.binaries
-
-        def counting_binaries():
-            calls.append(1)
-            return real_binaries()
-
-        with mock.patch.object(native_build, "binaries", counting_binaries):
-            first = native_construct.binary_paths()
-            second = native_construct.binary_paths()
-            self.assertEqual(len(calls), 1)
-            self.assertEqual(first, second)
-            time.sleep(0.01)
-            native_build.ensure_built(force=True)
-            third = native_construct.binary_paths()
-            self.assertEqual(len(calls), 2)
-            manifest = json.loads((self.build_dir / "manifest.json").read_text())
-            self.assertEqual({name: str(path) for name, path in third.items()},
-                             {name: info["path"] for name, info in manifest["binaries"].items()})
 
 
 class CheckpointCompilerFingerprintTests(NativeBuildTestCase):
@@ -282,14 +257,13 @@ class CheckpointCompilerFingerprintTests(NativeBuildTestCase):
         output = self.root / "answer.csv"
 
         self.use_compiler(self.compiler_a)
-        checkpoint_engine.run_checkpoint(puzzles, output, checkpoint, "v9",
-                                         jobs=1, stop_after=0)
+        rows = {r["id"]: r for r in csv.DictReader(puzzles.read_text().splitlines())}
+        checkpoint_engine.run(puzzles, rows, output, native_build.ensure_built(), checkpoint=checkpoint, jobs=1, limit=0)
         self.assertFalse(output.exists())
 
         self.use_compiler(self.compiler_b)
-        with self.assertRaisesRegex(ValueError, "provenance mismatch"):
-            checkpoint_engine.run_checkpoint(puzzles, output, checkpoint, "v9",
-                                             jobs=1, resume=True)
+        with self.assertRaisesRegex(ValueError, "fingerprint changed"):
+            checkpoint_engine.run(puzzles, rows, output, native_build.ensure_built(), checkpoint=checkpoint, jobs=1, resume=True)
 
 
 if __name__ == "__main__":

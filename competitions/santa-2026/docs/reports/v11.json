@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "release",
+  "version": "v11",
+  "solver_version": "v11",
+  "report_date": "2026-11-28",
+  "puzzles": 1000,
+  "validated": 1000,
+  "score": 158955,
+  "max_steps": 348,
+  "submission_sha256": "02d3cc0a1de5c5178ee212dbf674a01630c95375696a071e5f19c53b66aa57bb",
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428",
+  "artifact_status": "report-only",
+  "artifact_note": "冻结 V11 研究运行有完整独立验证与审计记录，但原交付未附正式提交 CSV；本仓库不创建虚假 CSV，也不把 latest.json 指向本报告。可下载的正式归档仍是 V10（164,306）。",
+  "evidence": {
+    "validation": "docs/v11/validation.json",
+    "audit": "docs/v11/audit.json",
+    "fulltest_report": "docs/v11/FULLTEST_REPORT.md",
+    "manifest": "docs/v11/MANIFEST.json",
+    "merged_archive": "docs/v11/merged_validation.json"
+  },
+  "groups": {
+    "r8": {"score": 161446, "strict_wins": 508},
+    "basis": {"score": 161711, "strict_wins": 399},
+    "ties": 93,
+    "group_tasks": 2000,
+    "group_elapsed_seconds": 10464.631
+  },
+  "comparison": {
+    "vs_v10": {
+      "v10_score": 164306,
+      "score": 158955,
+      "saved": 5351,
+      "reduction_pct": 3.2567282996360447,
+      "improved": 848,
+      "unchanged": 70,
+      "worse": 82
+    },
+    "dev100": {
+      "v11": 15936,
+      "v10": 16494,
+      "r8": 16161
+    }
+  },
+  "merged_archive": {
+    "score": 158585,
+    "max_steps": 348,
+    "submission_sha256": "4b6a33deea40af888da631f3f38a476e153e303f16760f00d5972abc320d6e52",
+    "note": "V8+V9+V10+V11 逐题取短的归档后处理，不是独立算法版本，不进入版本曲线。"
+  },
+  "notes": [
+    "158,955 是本地独立验证的指令总数，不是 Kaggle 榜单成绩，也不是本次重构复跑成绩。",
+    "MILP 使用墙钟限时，不同机器和负载下的复跑分数可能不同。",
+    "R16 之后的多基底实验没有进入冻结候选。"
+  ]
+}

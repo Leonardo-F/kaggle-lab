@@ -1,161 +1,66 @@
-"""Solve and independently verify Santa puzzles with V9, V10 or V11."""
-
+"""Solve Santa puzzles independently with the current graph-search portfolio."""
 import argparse
-from concurrent.futures import ProcessPoolExecutor
 import csv
 import json
+import os
 from pathlib import Path
-import time
-import subprocess
 
-from algorithms import v11
+# Match the frozen research runner's recommended single-threaded numerical libraries.
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
 
-import checkpoint as checkpoint_engine
+from algorithms.solver import SOLVER_VERSION
 from algorithms.native import build as native_build
-from algorithms.solver import SOLVER_VERSION, VERSIONS, solve
-from verify import verify
+from checkpoint import run, sha
 
 DEFAULT_VERSION = SOLVER_VERSION
-LEGACY_REVISION = "9337a3549bea09257cbf36ae1f8da2cbd452942b"
-HISTORICAL_REVISIONS = {**{f"v{i}": LEGACY_REVISION for i in range(1, 8)},
-                        "v8": "287519977aa85a19ef9e3074e6bfd2b9e578b5c3"}
-
-
-def solve_job(job):
-    row, version, config = job
-    return solve(row, config, version=version)[1]
-
-
-def _reject_legacy_version(parser, version):
-    revision = HISTORICAL_REVISIONS.get(version)
-    if revision is None:
-        parser.error(
-            f"unknown solver version: {version!r}; the current solver is {DEFAULT_VERSION} "
-            f"(also: {', '.join(v for v in VERSIONS if v != DEFAULT_VERSION)}). "
-            f"Historical V1-V7 live at Git commit {LEGACY_REVISION} "
-            f"and V8 at {HISTORICAL_REVISIONS['v8']}."
-        )
-    parser.error(
-        f"--version {version} is not part of the current solver; available: {', '.join(VERSIONS)}. "
-        f"Historical {version} is preserved at Git commit {revision}. "
-        "Reproduce it from a detached worktree instead:\n"
-        f"  git worktree add --detach ../kaggle-lab-santa-{version} {revision}\n"
-        "  cd ../kaggle-lab-santa-"
-        f"{version}/competitions/santa-2026\n"
-        f"  python src/graph_solver.py <puzzles.csv> --version {version} "
-        "--output <output.csv> --jobs 8"
-    )
-
-
-def preflight(parser):
-    """Build (or verify) the frozen native constructors before any solving."""
-    try:
-        manifest = native_build.ensure_built()
-    except (RuntimeError, OSError) as exc:
-        parser.exit(2, f"error: native constructor build failed: {exc}\n")
-    compiler = manifest["compiler"]
-    print(f"native: {compiler['family']} {compiler['version']} · "
-          f"build={native_build.BUILD_DIR}", flush=True)
-    for kernel, info in manifest["binaries"].items():
-        print(f"native: {kernel} sha256={info['sha256']}", flush=True)
-    return manifest
+SPLITS = Path(__file__).resolve().parent / "algorithms" / "splits.json"
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("puzzles", type=Path)
-    parser.add_argument("--version", default=DEFAULT_VERSION,
-                        help="solver version (default: V11; also supports v9 and v10)")
-    parser.add_argument("--policy", choices=("stage3", "order", "hybrid", "full", "adaptive"),
-                        help="V10 candidate policy (default: full)")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--version", default=SOLVER_VERSION, help="compatibility flag; only the current version is supported")
     parser.add_argument("--jobs", type=int, default=4)
-    parser.add_argument("--checkpoint", type=Path, help="durable SQLite checkpoint")
-    parser.add_argument("--resume", action="store_true", help="resume the identified checkpoint")
-    parser.add_argument("--stop-after", type=int, help="schedule at most N unsolved puzzles")
-    parser.add_argument("--split", choices=["dev", "holdout", "all"],
-                        help="V11 official split with --checkpoint (default: all)")
+    parser.add_argument("--checkpoint", type=Path)
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--stop-after", type=int, help="maximum new group tasks; two groups per puzzle; do not export")
+    parser.add_argument("--split", choices=("dev", "holdout", "all"), default="all")
     args = parser.parse_args()
-    if args.version not in VERSIONS:
-        _reject_legacy_version(parser, args.version)
-    if args.policy is not None and args.version != "v10":
-        parser.error("--policy is only available with the V10 solver")
-    if args.jobs < 1:
-        parser.error("--jobs must be positive")
-    if args.stop_after is not None and args.stop_after < 0:
-        parser.error("--stop-after must be nonnegative")
-    if args.resume and args.checkpoint is None:
-        parser.error("--resume requires --checkpoint")
-    if args.stop_after is not None and args.checkpoint is None:
-        parser.error("--stop-after requires --checkpoint")
-    if args.output.exists() and not args.resume:
+    if args.version != SOLVER_VERSION:
+        parser.error(f"Only {SOLVER_VERSION} is supported; use Git history for old implementations")
+    if args.jobs < 1 or (args.stop_after is not None and args.stop_after < 0):
+        parser.error("jobs must be positive and stop-after nonnegative")
+    if (args.resume or args.stop_after is not None) and args.checkpoint is None:
+        parser.error("--resume and --stop-after require --checkpoint")
+    if args.output.exists():
         parser.error(f"output already exists: {args.output}")
-
-    with args.puzzles.open(encoding="utf-8", newline="") as stream:
-        reader = csv.DictReader(stream)
-        required = {"id", "starting_values", "targets", "value_limit", "registers"}
-        if not required <= set(reader.fieldnames or []):
-            parser.error("expected an official puzzle CSV")
-        rows = list(reader)
-    if not rows or len({row["id"] for row in rows}) != len(rows):
-        parser.error("expected nonempty input with unique puzzle IDs")
-
-    if args.split is not None and (args.version != "v11" or args.checkpoint is None):
-        parser.error("--split requires V11 and --checkpoint")
-    if args.version == "v11":
-        if args.checkpoint is not None:
-            if args.checkpoint.exists() != args.resume:
-                parser.error("use --resume with an existing V11 checkpoint")
-            if args.output.exists():
-                parser.error(f"output already exists: {args.output}")
-            try:
-                v11.batch(args.puzzles, args.checkpoint, args.output, args.jobs,
-                          args.split or "all", args.stop_after)
-            except subprocess.CalledProcessError as exc:
-                parser.exit(exc.returncode)
-            return
-    else:
-        preflight(parser)
-
-    if args.checkpoint is not None:
-        try:
-            checkpoint_engine.run_checkpoint(
-                args.puzzles, args.output, args.checkpoint, args.version,
-                jobs=args.jobs, resume=args.resume, stop_after=args.stop_after,
-                policy=args.policy,
-            )
-        except ValueError as exc:
-            parser.exit(2, f"error: {exc}\n")
-        return
-
-    config = {"policy": args.policy} if args.policy is not None else None
-    start = time.monotonic()
-    score = 0
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with ProcessPoolExecutor(max_workers=args.jobs) as executor:
-        programs = []
-        jobs = ((row, args.version, config) for row in rows)
-        for count, program in enumerate(executor.map(solve_job, jobs), start=1):
-            programs.append(program)
-            score += len(program)
-            if count % 50 == 0 or count == len(rows):
-                print(f"{count}/{len(rows)} · {score} instructions · "
-                      f"{time.monotonic() - start:.1f}s", flush=True)
-
-    with args.output.open("x", encoding="utf-8", newline="") as stream:
-        writer = csv.writer(stream)
-        writer.writerow(("id", "program"))
-        for row, program in zip(rows, programs):
-            writer.writerow((row["id"], json.dumps(program, separators=(",", ":"))))
+    if args.checkpoint is not None and args.checkpoint.exists() != args.resume:
+        parser.error("use --resume with an existing checkpoint only")
+    if args.checkpoint is not None and args.checkpoint.resolve() in (args.puzzles.resolve(), args.output.resolve()):
+        parser.error("checkpoint, puzzle input and output must be different files")
     try:
-        report = verify(args.puzzles, args.output)
-    except Exception:
-        args.output.unlink()
-        raise
-    report.update(version=args.version, policy=args.policy or (
-        "full" if args.version == "v10" else None), jobs=args.jobs,
-        elapsed_seconds=round(time.monotonic() - start, 1))
-    print(json.dumps(report, indent=2))
+        with args.puzzles.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            if not {"id", "starting_values", "targets", "value_limit", "registers"} <= set(reader.fieldnames or []):
+                raise ValueError("expected an official puzzle CSV")
+            raw = list(reader)
+        rows = {row["id"]: row for row in raw}
+        if not raw or len(raw) != len(rows):
+            raise ValueError("expected nonempty input with unique puzzle IDs")
+        if args.split != "all":
+            splits = json.loads(SPLITS.read_text())
+            if sha(args.puzzles) != splits["sha256"]:
+                raise ValueError("dev/holdout require the exact official puzzle CSV")
+            rows = {pid: rows[pid] for pid in splits[args.split]}
+        manifest = native_build.ensure_built()
+        report = run(args.puzzles, rows, args.output, manifest, checkpoint=args.checkpoint,
+                     resume=args.resume, jobs=args.jobs, split=args.split, limit=args.stop_after)
+        if report is not None:
+            print(json.dumps(report, indent=2))
+    except (ValueError, OSError, RuntimeError) as exc:
+        parser.exit(2, f"error: {exc}\n")
 
 
 if __name__ == "__main__":

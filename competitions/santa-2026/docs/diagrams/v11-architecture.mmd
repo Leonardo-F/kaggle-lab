@@ -1,0 +1,18 @@
+%% 当前 V11 生产求解器结构。PNG 为同结构的 Pillow 手工排版版本。
+flowchart TD
+    P["题目行<br/>初值 / 目标 / 上限 / 寄存器"] --> N["原生构造协议<br/>construct.py"]
+    subgraph CAND["① 两组候选（各自从题目重新构造）"]
+        N --> A["多图组合组 r8<br/>order · factor · bilayer · congruence"]
+        N --> B["自由基底组 basis<br/>order + 自由基底"]
+        A --> H["超图联合 MILP<br/>optimize.py · 0.7 s"]
+        H --> S["二步 / 三步合成<br/>synth"]
+        B --> S4["三步 / 四步合成<br/>synth_extended"]
+    end
+    subgraph SHARED["② 共用编译、调度、回放与导出"]
+        S --> C["DAG 编译 + 寄存器压力调度<br/>graph.py · schedule.py"]
+        S4 --> C
+        C --> L["调度局部搜索<br/>schedule_local.py"]
+        L --> R["逐候选 replay<br/>真实指令数"]
+        R --> W["取最短合法程序<br/>等长保留先到者"]
+        W --> O["独立验证 + 原子导出<br/>verify.py"]
+    end

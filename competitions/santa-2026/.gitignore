@@ -1,0 +1,7 @@
+# Local competition inputs and runtime artifacts
+/data/
+/experiments/
+__pycache__/
+*.py[cod]
+.DS_Store
+._*

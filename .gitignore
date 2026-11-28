@@ -26,17 +26,9 @@ competitions/google-quantum-circuit-compilation/official/
 competitions/santa-2026/data/
 competitions/santa-2026/*submission*.csv
 
-# Santa solver checkpoints and run logs (derived from official puzzles)
+# Santa solver checkpoints, native builds and run logs (derived from official puzzles)
 competitions/santa-2026/experiments/
 
-# Santa 2026 submission CSVs are tracked: the V7/V8 programs are our own output,
+# Santa 2026 submission CSVs are tracked: the V7/V8/V9/V10 programs are our own output,
 # not official puzzle data. Keep only files named <version>-score-<steps>.csv.
 !competitions/santa-2026/submissions/*.csv
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/order
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/factor
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/bilayer
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/hyper
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/synth
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/congruence/congruence
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/variants/basis12free/basis
-/competitions/santa-2026/src/algorithms/v11_frozen_fulltest/variants/synth9/synth9

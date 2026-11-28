@@ -1,5 +1,7 @@
 # Santa V11 — final full independent test (checkpoint 10)
 
+> **归档说明：** 本文是冻结研究运行的原始报告，`v11_frozen_fulltest/runs/` 下的 CSV、SQLite、审计与验证文件只存在于原始研究交付包，不在本仓库；本仓库保留机器可读的 [validation.json](validation.json)、[audit.json](audit.json) 与 [merged_validation.json](merged_validation.json)。生产源码已等价重构到 `src/algorithms/`，复现命令见 [V11 说明](README.md)。
+
 Frozen R16 portfolio, 1,000 official puzzles, original input SHA-256 `b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428`. The full run started from an empty database in checkpoint01 and resumed only its own checkpoints. The runner accepted the frozen configuration fingerprint throughout. No historical programs were used as solver input. V10 per-puzzle score metrics were read only during post-run audits. No GitHub modifications.
 
 ## Final results

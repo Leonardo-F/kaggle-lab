@@ -44,6 +44,10 @@ SIMULATOR = SANTA / "src" / "simulator.html"
 REPORTS = HERE / "reports"
 LATEST = SANTA / "submissions" / "latest.json"
 REFACTOR_REPORT = REPORTS / "v8-refactor.json"
+RESEARCH_VERSION = "v11"
+RESEARCH_DIR = HERE / "v11"
+ARTIFACT_STATUSES = ("archived-csv", "report-only")
+EVIDENCE_FIELDS = ("validation", "audit")
 OUTPUT = SANTA / "Santa-2026-Interactive-Report.html"
 GITHUB_BLOB = "https://github.com/Leonardo-F/kaggle-lab/blob/main/"
 
@@ -53,9 +57,9 @@ GITHUB_BLOB = "https://github.com/Leonardo-F/kaggle-lab/blob/main/"
 INSERTS = (
     ("01-赛题与手算", "lab"),
     ("41-依赖替换与引用计数v2v3", "compare"),
-    ("91-同一批-1000-题的本地成绩", "scores"),
-    ("121-候选池中的精确图选择模型", "research"),
-    ("114-重构验收状态", "refactor"),
+    ("101-同一批-1000-题的本地成绩", "scores"),
+    ("131-候选池中的精确图选择模型", "research"),
+    ("124-重构验收状态", "refactor"),
 )
 REQUIRED_IDS = (
     "lab", "live-graph", "walk-slider", "walk-play", "walk-prev", "walk-next",
@@ -132,6 +136,74 @@ def _sha256_field(container: dict, field: str, context: str) -> str:
             f"{context} {field!r} must be a 64-character lowercase hex SHA-256"
         )
     return value
+
+
+def report_status(entry: dict) -> str:
+    """How the report's submission artifact is available in this repository.
+
+    ``archived-csv`` (the default for historical releases) means the exact CSV
+    is shipped next to ``submissions/latest.json``.  ``report-only`` means the
+    independent validation and audit are archived but no CSV exists; such a
+    record may be charted, but it can never become the downloadable best.
+    """
+    status = entry["data"].get("artifact_status", "archived-csv")
+    if status not in ARTIFACT_STATUSES:
+        raise ReportError(
+            f"{entry['path'].name} artifact_status must be one of {ARTIFACT_STATUSES}"
+        )
+    return status
+
+
+def check_research_evidence(entry: dict, evidence_dir: Path) -> None:
+    """Cross-check a report-only record against its archived validation/audit.
+
+    The check is deliberately strict: score, puzzle counts, maximum steps and
+    both hashes must equal the independent evidence.  No values are inferred.
+    """
+    data = entry["data"]
+    context = entry["path"].name
+    if data.get("local_filename"):
+        raise ReportError(
+            f"{context} is report-only but declares local_filename "
+            f"{data['local_filename']!r}; a missing CSV must not be invented"
+        )
+    evidence = data.get("evidence")
+    if not isinstance(evidence, dict):
+        raise ReportError(f"{context} is report-only but has no evidence mapping")
+    for field in EVIDENCE_FIELDS:
+        relative = evidence.get(field)
+        if not isinstance(relative, str) or not relative.strip():
+            raise ReportError(f"{context} evidence is missing the {field!r} path")
+        path = evidence_dir / "v11" / Path(relative).name
+        if not path.is_file():
+            raise ReportError(f"{context} evidence file is missing: {path}")
+        payload = _read_json(path)
+        if not isinstance(payload, dict):
+            raise ReportError(f"{path} must contain a JSON object")
+        if field == "validation":
+            for key in ("puzzles", "validated", "score", "max_steps",
+                        "submission_sha256", "puzzles_sha256"):
+                if payload.get(key) != data.get(key):
+                    raise ReportError(
+                        f"{context} {key}={data.get(key)!r} disagrees with "
+                        f"{path.name} {payload.get(key)!r}"
+                    )
+        else:
+            if payload.get("score") != data.get("score"):
+                raise ReportError(f"{context} score disagrees with {path.name}")
+            if payload.get("total") != data.get("puzzles"):
+                raise ReportError(f"{context} puzzle count disagrees with {path.name}")
+            if payload.get("complete") != data.get("validated"):
+                raise ReportError(f"{context} validated count disagrees with {path.name}")
+            if payload.get("puzzles_sha256") != data.get("puzzles_sha256"):
+                raise ReportError(f"{context} dataset hash disagrees with {path.name}")
+            routes = payload.get("groups_by_route")
+            if routes is not None and (
+                    not isinstance(routes, dict)
+                    or len(routes) < 2
+                    or any(not _is_int(value) or value < 0 for value in routes.values())
+                    or sum(routes.values()) != payload.get("groups")):
+                raise ReportError(f"{context} group inventory disagrees with {path.name}")
 
 
 def _load_formal_reports(reports_dir: Path) -> tuple[list[dict], list[str]]:
@@ -226,6 +298,10 @@ def load_report_data(reports_dir: Path = REPORTS, latest_path: Path = LATEST) ->
     """
     entries, compatibility_notes = _load_formal_reports(reports_dir)
     by_version = {entry["version"]: entry for entry in entries}
+    for entry in entries:
+        status = report_status(entry)
+        if status == "report-only":
+            check_research_evidence(entry, reports_dir.parent)
 
     latest = _read_json(latest_path)
     if not isinstance(latest, dict):
@@ -241,6 +317,11 @@ def load_report_data(reports_dir: Path = REPORTS, latest_path: Path = LATEST) ->
         raise ReportError(f"latest.json version {latest_version!r} has no formal report")
     entry = by_version[latest_version]
     report = entry["data"]
+    if report_status(entry) == "report-only":
+        raise ReportError(
+            f"{latest_path} points to report-only {latest_version}; the downloadable "
+            "best must have a verified CSV. Keep latest.json on the archived version."
+        )
 
     latest_score = _int_field(latest, "score", str(latest_path), minimum=0)
     latest_validated = _int_field(latest, "validated", str(latest_path), minimum=0)
@@ -310,6 +391,8 @@ def load_report_data(reports_dir: Path = REPORTS, latest_path: Path = LATEST) ->
         "latest_report": report,
         "historical": historical,
         "reports": {item["version"]: item["data"] for item in entries},
+        "statuses": {item["version"]: report_status(item) for item in entries},
+        "research": by_version.get(RESEARCH_VERSION, {}).get("data"),
         "submission": submission,
         "compatibility_notes": compatibility_notes,
     }
@@ -410,7 +493,8 @@ def check_markdown_numbers(markdown_text: str, data: dict) -> None:
 
 def score_payload(data: dict) -> list[dict]:
     return [
-        {"version": row["version"].upper(), "score": row["score"], "validated": row["validated"]}
+        {"version": row["version"].upper(), "score": row["score"],
+         "validated": row["validated"], "status": data["statuses"][row["version"]]}
         for row in data["historical"]
     ]
 
@@ -418,12 +502,15 @@ def score_payload(data: dict) -> list[dict]:
 def score_bars(data: dict) -> str:
     items = []
     for index, row in enumerate(data["historical"]):
+        status = data["statuses"][row["version"]]
+        suffix = "†" if status == "report-only" else ""
         items.append(
-            '<li><button type="button" class="bar-row" data-score="%d" aria-pressed="false">'
-            '<span>%s</span><span class="bar-track" aria-hidden="true">'
+            '<li><button type="button" class="bar-row" data-score="%d" '
+            'data-status="%s" aria-pressed="false">'
+            '<span>%s%s</span><span class="bar-track" aria-hidden="true">'
             '<span class="bar-fill"></span></span><span class="bar-count">%s</span>'
             "</button></li>"
-            % (index, row["version"].upper(), f"{row['score']:,}")
+            % (index, status, row["version"].upper(), suffix, f"{row['score']:,}")
         )
     return "\n".join(items)
 
@@ -1254,17 +1341,24 @@ def render_report(
     historical = data["historical"]
     v1 = next(row for row in historical if row["version"] == "v1")
     best = next(row for row in historical if row["version"] == latest["version"])
-    delta = (v1["score"] - latest["score"]) * 100 / v1["score"]
-    validated = f"{latest['validated']:,}"
-    puzzles = f"{best['puzzles']:,}"
+    newest = historical[-1]
+    current = next(row for row in historical if row["version"] == newest["version"])
+    current_status = data["statuses"][newest["version"]]
+    delta = (v1["score"] - current["score"]) * 100 / v1["score"]
+    current_note = ("报告支持，未附 CSV" if current_status == "report-only"
+                    else "可下载归档 CSV")
     tokens = {
         "ARTICLE": article,
         "TOC": render_toc(toc_tokens),
-        "BEST_LABEL": f"{latest['version'].upper()} Final 全量独立验证",
-        "BEST_SCORE": f"{latest['score']:,}",
-        "BEST_SUMMARY": f"条指令 · {validated} / {puzzles} 题通过",
+        "CURRENT_LABEL": f"当前算法 {current['version'].upper()}"
+                         + (" · 历史独立研究" if current_status == "report-only" else ""),
+        "CURRENT_SCORE": f"{current['score']:,}",
+        "CURRENT_SUMMARY": (f"条指令 · {current['validated']:,} / {current['puzzles']:,} "
+                            f"题通过 · {current_note}"),
+        "ARCHIVE_LABEL": f"可下载最佳归档 {latest['version'].upper()}",
+        "ARCHIVE_SCORE": f"{latest['score']:,}",
         "V1_SCORE": f"V1 {v1['score']:,} 步",
-        "BEST_DELTA": f"较 V1 少 {delta:.2f}%",
+        "CURRENT_DELTA": f"较 V1 少 {delta:.2f}%",
         "SCORE_BARS": score_bars(data),
         "REFACTOR_BODY": render_refactor_panel(refactor),
         "SCORE_DATA": _escape_script_json(score_payload(data)),

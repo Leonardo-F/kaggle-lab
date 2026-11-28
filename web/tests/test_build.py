@@ -35,7 +35,7 @@ def make_santa(root, version='v9', versions=HISTORICAL, algorithms=('__init__.py
         source = (f'SOLVER_VERSION = {version!r}\n' if name == 'solver.py' else f'# {name}\n')
         (src / 'algorithms' / name).write_text(source, encoding='utf-8')
     (native / 'build.py').write_text('# build\n', encoding='utf-8')
-    (native / 'constructor_wide.cpp').write_text('// wide\n', encoding='utf-8')
+    (native / 'order.cpp').write_text('// order\n', encoding='utf-8')
     (native / 'compat' / 'bits' / 'stdc++.h').write_text('// shim\n', encoding='utf-8')
     simulator = src / 'simulator.html'
     simulator.write_text(
@@ -66,7 +66,7 @@ class ReviewDecouplingTests(unittest.TestCase):
             self.assertEqual(sorted(hashes), [
                 'algorithms/__init__.py', 'algorithms/common.py',
                 'algorithms/native/build.py', 'algorithms/native/compat/bits/stdc++.h',
-                'algorithms/native/constructor_wide.cpp', 'algorithms/solver.py',
+                'algorithms/native/order.cpp', 'algorithms/solver.py',
                 'checkpoint.py', 'graph_solver.py', 'verify.py',
             ])
             self.assertEqual(replay, HISTORICAL)
@@ -135,15 +135,15 @@ class ReviewDecouplingTests(unittest.TestCase):
     def test_native_sources_are_reviewed_and_binaries_are_not_needed(self):
         with tempfile.TemporaryDirectory() as tmp:
             src, simulator, square = make_santa(tmp)
-            (src / 'experiments' / 'native-build').mkdir(parents=True)
-            (src / 'experiments' / 'native-build' / 'constructor_wide').write_bytes(b'\x7fELF')
+            (src / 'experiments' / 'native-current').mkdir(parents=True)
+            (src / 'experiments' / 'native-current' / 'order').write_bytes(b'\x7fELF')
             hashes, version, replay = build_mod.review_state(src, simulator)
-            self.assertNotIn('experiments/native-build/constructor_wide', hashes)
+            self.assertNotIn('experiments/native-current/order', hashes)
             review = reviewed(src, simulator)
-            (src / 'algorithms' / 'native' / 'constructor_wide.cpp').write_text('// changed\n', encoding='utf-8')
+            (src / 'algorithms' / 'native' / 'order.cpp').write_text('// changed\n', encoding='utf-8')
             changed, _, _ = build_mod.review_state(src, simulator)
             with self.assertRaisesRegex(build_mod.BuildError,
-                                        'changed files: algorithms/native/constructor_wide.cpp'):
+                                        'changed files: algorithms/native/order.cpp'):
                 build_mod.validate_review(review, changed, version, replay, simulator)
 
     def test_replay_slots_are_not_derived_from_python_file_names(self):
