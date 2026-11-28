@@ -144,7 +144,7 @@
       <div>
         <p class="brand">SANTA 2026 / THE ELF CALCULATOR</p>
         <h1>精灵计算器模拟器</h1>
-        <p>当前默认独立求解器是 <strong>V10 Full</strong>（Python 管线 + 七个冻结 C++17 构造内核），在正式 1,000 题上本地验证为 <strong>164,306 步</strong>。V1–V10 槽位用于回放各版本 CSV；V9 仍可用 <code>--version v9</code> 复现。自定义题由网页内置 JavaScript 求解。</p>
+        <p>默认回放 V11。导入本地 Python/C++ 求解器生成的 CSV 后，可逐步检查寄存器和目标覆盖，并比较各版本的指令数。</p>
       </div>
       <a class="repo-link" href="https://github.com/Leonardo-F/kaggle-lab/tree/main/competitions/santa-2026">GitHub 求解器 ↗</a>
     </div>
@@ -154,12 +154,12 @@
     <section class="panel input-panel" aria-labelledby="import-title">
       <h2 id="import-title">Python 版本回放</h2>
       <div class="import-pane">
-        <p class="hint">离线读取求解器生成的 CSV。V1–V10 为版本槽位（V1–V9 历史、V10 Full 当前默认版本）；V8+V9 混合提交不是算法版本，可用自定义标签回放。导入 <code>submissions/elf-calculator-independent-v10-score-164306.csv</code> 即可逐题回放真实 V10 结果。网页内置 JavaScript 求解器与 Python/C++ V10 并非同一实现。</p>
-        <p class="hint" id="current-release">当前独立最佳：V10 Full · 1,000 题 · 164,306 步（本地独立验证，不是 Kaggle 榜单成绩）。</p>
+        <p class="hint">离线导入官方题目 CSV 和对应版本的求解器输出。混合归档可以使用自定义标签回放。自定义题由网页内置 JavaScript 教学求解器运行。</p>
+        <p class="hint" id="current-release">V11 研究全量记录为 158,955 步（1,000 题本地合法性验证）。V10 为 164,306 步。</p>
         <label>官方题目 CSV <input id="replay-puzzles" type="file" accept=".csv,text/csv"></label>
         <details open>
           <summary>导入各版程序</summary>
-          <div id="replay-files" data-versions="v1,v2,v3,v4,v5,v6,v7,v8,v9,v10"></div>
+          <div id="replay-files" data-versions="v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11"></div>
           <div id="replay-custom-files" class="custom-files" aria-live="polite"></div>
           <form id="replay-add-version" class="add-version" novalidate>
             <label for="replay-new-label">自定义结果标签（1–40 字符）</label>
@@ -167,7 +167,7 @@
               <input id="replay-new-label" maxlength="40" autocomplete="off" placeholder="例如 V10-draft">
               <button type="submit">添加结果版本</button>
             </div>
-            <p class="hint" id="replay-add-status" role="status">自定义标签仅当前页面会话有效，不上传、不保存；默认 V1–V10 槽位不可移除。</p>
+            <p class="hint" id="replay-add-status" role="status">自定义标签仅当前页面会话有效，不上传、不保存；默认 V1–V11 槽位不可移除。</p>
           </form>
         </details>
         <label>题号 <select id="replay-id" disabled><option value="">先导入题目</option></select></label>
@@ -181,7 +181,7 @@
     </section>
     <section class="panel input-panel" aria-labelledby="input-title">
       <div class="topline">
-        <h2 id="input-title">自定义题 · JavaScript 求解（非 Python/C++ V10）</h2>
+        <h2 id="input-title">自定义题 · JavaScript 求解（非 Python/C++ V11）</h2>
         <button class="example" id="example" type="button">载入示例</button>
       </div>
       <form id="puzzle-form">
@@ -194,7 +194,7 @@
         <label for="limit">数值上限
           <input id="limit" inputmode="numeric" value="30" required aria-describedby="input-hint">
         </label>
-        <p class="hint" id="input-hint">输入正整数，多个值用逗号、空格或换行分隔。上限最高为 10¹⁸。网页求解器是独立的教学实现，步数可能与 Python/C++ V10 不同。</p>
+        <p class="hint" id="input-hint">输入正整数，多个值用逗号、空格或换行分隔。上限最高为 10¹⁸。网页求解器是独立的教学实现，步数可能与 Python/C++ V11 不同。</p>
         <div class="buttons"><button class="primary" id="solve-button" type="submit">求解并回放</button><button id="cancel" type="button" hidden>停止</button></div>
         <p id="status" class="status" role="status" aria-live="polite"></p>
       </form>
@@ -1216,7 +1216,7 @@ self.onmessage = ({data}) => {
   let importedPuzzles = new Map();
 
   function labelOf(key) {
-    const defaultLabels = { v10: "V10 Full" };
+    const defaultLabels = { v10: "V10 Full", v11: "V11" };
     return customSlots.get(key)?.label || defaultLabels[key] || key.toUpperCase();
   }
 
@@ -1362,8 +1362,8 @@ self.onmessage = ({data}) => {
     el("replay-version").add(new Option(labelOf(version), version));
     el("replay-files").append(programInput(version, labelOf(version)));
   }
-  // The current independent release is V10 Full; keep it selected by default.
-  if (defaultVersions.includes("v10")) el("replay-version").value = "v10";
+  // The current independent release is V11; keep it selected by default.
+  if (defaultVersions.includes("v11")) el("replay-version").value = "v11";
 
   function removeCustomVersion(key) {
     if (!customSlots.has(key)) return;

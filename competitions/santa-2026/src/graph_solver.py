@@ -1,16 +1,4 @@
-"""Independent Santa 2026 solver: V10 Full by default.
-
-The current release is V10 Full, which builds seven frozen C++17 constructor
-kernels before solving.  ``--version v9`` reruns the previous published V9
-pipeline from this checkout; historical V1-V8 implementations are preserved in
-Git and are reproduced from a detached worktree of the revision printed by
-``--version <historical>``.  The native build is preflighted once here so
-worker processes only read the same binaries.
-
-Add ``--checkpoint`` for a durable SQLite run that can be resumed with
-``--resume``; a submission is exported only when every input puzzle has been
-solved and replayed by the independent verifier.
-"""
+"""Solve and independently verify Santa puzzles with V9, V10 or V11."""
 
 import argparse
 from concurrent.futures import ProcessPoolExecutor
@@ -18,6 +6,9 @@ import csv
 import json
 from pathlib import Path
 import time
+import subprocess
+
+from algorithms import v11
 
 import checkpoint as checkpoint_engine
 from algorithms.native import build as native_build
@@ -74,7 +65,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("puzzles", type=Path)
     parser.add_argument("--version", default=DEFAULT_VERSION,
-                        help="solver version (default: V10 Full); v9 is also available")
+                        help="solver version (default: V11; also supports v9 and v10)")
     parser.add_argument("--policy", choices=("stage3", "order", "hybrid", "full", "adaptive"),
                         help="V10 candidate policy (default: full)")
     parser.add_argument("--output", type=Path, required=True)
@@ -82,6 +73,8 @@ def main():
     parser.add_argument("--checkpoint", type=Path, help="durable SQLite checkpoint")
     parser.add_argument("--resume", action="store_true", help="resume the identified checkpoint")
     parser.add_argument("--stop-after", type=int, help="schedule at most N unsolved puzzles")
+    parser.add_argument("--split", choices=["dev", "holdout", "all"],
+                        help="V11 official split with --checkpoint (default: all)")
     args = parser.parse_args()
     if args.version not in VERSIONS:
         _reject_legacy_version(parser, args.version)
@@ -107,7 +100,22 @@ def main():
     if not rows or len({row["id"] for row in rows}) != len(rows):
         parser.error("expected nonempty input with unique puzzle IDs")
 
-    preflight(parser)
+    if args.split is not None and (args.version != "v11" or args.checkpoint is None):
+        parser.error("--split requires V11 and --checkpoint")
+    if args.version == "v11":
+        if args.checkpoint is not None:
+            if args.checkpoint.exists() != args.resume:
+                parser.error("use --resume with an existing V11 checkpoint")
+            if args.output.exists():
+                parser.error(f"output already exists: {args.output}")
+            try:
+                v11.batch(args.puzzles, args.checkpoint, args.output, args.jobs,
+                          args.split or "all", args.stop_after)
+            except subprocess.CalledProcessError as exc:
+                parser.exit(exc.returncode)
+            return
+    else:
+        preflight(parser)
 
     if args.checkpoint is not None:
         try:

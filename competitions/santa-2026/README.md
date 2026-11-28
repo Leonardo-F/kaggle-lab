@@ -2,7 +2,7 @@
 
 用加、减、乘、整除编写最短算术程序。每题给出初始值和目标值，计算器有 48 个寄存器。每个目标只需在任一时刻出现一次，初值也算。所有中间值必须是正整数，且不得超过该题的上限。总分为 1,000 道计分题的指令数之和，越低越好。
 
-当前默认独立求解器是 **V10 Full**：七个冻结 C++17 构造器 + 全路线联合调度 + 精确反馈修复 + 目标顺序优化。正式 1,000 题本地验证 **164,306 步**、1,000/1,000 合法、最长 349；V9 为 175,604。V9 仍可用 `--version v9` 在同一 checkout 复现，V1–V8 从固定 Git 提交复现。
+当前默认独立求解器是 **V11**。冻结研究运行覆盖正式 1,000 题，全部合法，得分 **158,955**，较 V10 Full 的 **164,306** 少 5,351 步（3.26%）。历史 V8 + V9 + V10 + V11 答案逐题择优为 **158,585**，1,000 题全部合法，属于独立的归档后处理。见 [V11 数学构造、消融及复现](docs/v11/README.md)。V9/V10 可显式选择，V1–V8 通过历史提交复现。
 
 ## 互动算法报告
 
@@ -20,11 +20,11 @@ python docs/build_report.py --check
 
 下载 [simulator.html](src/simulator.html)，用浏览器打开。输入初始值、目标值和数值上限后，即可逐步查看指令、计算结果和寄存器状态。结果等于目标值时会在页面标出。可复制 JSON 指令或打印结果。
 
-在 **Python 版本回放** 区导入官方题目 CSV，再把各版本实际输出放入 V1–V10 槽位。默认选中 **V10 Full**；选同一题号即可比较合法性、指令数和计算图规模（唯一中间值、共享值、重算步），切换版本查看寄存器并逐条回放。导入文件时会显示该 CSV 的总步数、覆盖题数、未知题号、无法解析的程序和未提供程序的题数。导入 [V10 提交 CSV](submissions/elf-calculator-independent-v10-score-164306.csv) 可逐题回放真实 V10 结果并显示 164,306 步总分。
+在 **Python 版本回放** 区导入官方题目 CSV，再把各版本实际输出放入 V1–V11 槽位。默认选中 **V11**；选同一题号即可比较合法性、指令数和计算图规模（唯一中间值、共享值、重算步），切换版本查看寄存器并逐条回放。导入文件时会显示该 CSV 的总步数、覆盖题数、未知题号、无法解析的程序和未提供程序的题数。导入 [V10 提交 CSV](submissions/elf-calculator-independent-v10-score-164306.csv) 可逐题回放真实 V10 结果并显示 164,306 步总分。
 
-V1–V9 是历史结果槽位，V10 Full 是当前独立版本。页面还可添加**当前会话内**的自定义结果标签（1–40 字符、不可与已有标签重复），用于回放 V8+V9 混合提交等非算法版本结果，也可移除；自定义数据不上传、不持久化，默认槽位不可删除。自定义题由页面内置的 JavaScript 教学求解器处理，它与 Python/C++ V10 不是同一实现，不能把它的步数当作 V10 求解结果。
+V1–V10 是历史结果槽位，V11 是当前默认回放槽位。页面还可添加**当前会话内**的自定义结果标签（1–40 字符、不可与已有标签重复），用于回放 V8+V9 混合提交等非算法版本结果，也可移除；自定义数据不上传、不持久化，默认槽位不可删除。自定义题由页面内置的 JavaScript 教学求解器处理，V11 回放需要导入 CLI 结果。
 
-## 独立求解
+## V9/V10 历史独立求解
 
 使用 Python 3.11+ 和 C++17 编译器（需要 `__int128`；Linux 上推荐 GCC/libstdc++）。接受赛题规则后从 Kaggle 下载官方 `puzzles.csv`，放在本目录的 `data/`。官方题目数据不入库。
 
@@ -32,8 +32,8 @@ V1–V9 是历史结果槽位，V10 Full 是当前独立版本。页面还可添
 # 1) 求解前先显式构建七个冻结 C++17 构造内核（输出到 git-ignored 的 experiments/native-build/）
 python src/algorithms/native/build.py
 
-# 2) 默认独立求解器（V10 Full）；写到 experiments/，不覆盖已存在文件
-python src/graph_solver.py data/puzzles.csv --output experiments/v10.csv --jobs 4
+# 2) 显式选择 V10 Full；写到 experiments/，不覆盖已存在文件
+python src/graph_solver.py data/puzzles.csv --version v10 --output experiments/v10.csv --jobs 4
 python src/verify.py data/puzzles.csv experiments/v10.csv
 
 # 3) 显式版本与策略参数
@@ -62,12 +62,12 @@ python src/merge_submissions.py data/puzzles.csv \
 耗时较长的全量运行可加 SQLite 检查点；中断后用同一命令加 `--resume` 继续，未满题数不会导出 CSV：
 
 ```bash
-python src/graph_solver.py data/puzzles.csv \
+python src/graph_solver.py data/puzzles.csv --version v10 \
   --output experiments/v10.csv --checkpoint experiments/v10.sqlite --jobs 4
-python src/graph_solver.py data/puzzles.csv \
+python src/graph_solver.py data/puzzles.csv --version v10 \
   --output experiments/v10.csv --checkpoint experiments/v10.sqlite --resume --jobs 4
 # 也可以先跑一小批再恢复
-python src/graph_solver.py data/puzzles.csv \
+python src/graph_solver.py data/puzzles.csv --version v10 \
   --output experiments/v10.csv --checkpoint experiments/v10.sqlite --stop-after 32
 ```
 
@@ -85,8 +85,8 @@ python src/graph_solver.py data/puzzles.csv \
 | `rewrite.py` | 冻结两轮 polish 图改写 |
 | `schedule.py` | Stage 1 八序编译与 Stage 2 寄存器压力调度 |
 | `v9.py` | 冻结 V9 管线（`--version v9`） |
-| `v10.py` | V10 Full 管线（默认；联合调度、pressure、修复、joint/cf、Order Fast/CF） |
-| `solver.py` | 版本分发、`SOLVER_VERSION = "v10"`、阶段与配置 |
+| `v10.py` | V10 Full 管线（联合调度、pressure、修复、joint/cf、Order Fast/CF） |
+| `solver.py` | 版本分发、`SOLVER_VERSION = "v11"`、阶段与配置 |
 | `native/constructor_wide.cpp` | 动态可达值字典 + 逆向残差构造内核 |
 | `native/constructor_mitm.cpp` | 同上并增加全字典商邻域匹配 |
 | `native/constructor_pressure.cpp` | 年龄 × 依赖深度的压力感知构造 |

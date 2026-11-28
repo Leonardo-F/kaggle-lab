@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "solver": {
-    "current_version": "v10",
+    "current_version": "v11",
     "source_sha256": {
       "algorithms/__init__.py": "90ebcc2dec83fd3e1bdbad03c61fef977a25c93c639bab56a1b2ec014f30e41e",
       "algorithms/common.py": "7009d0558aafe3fe814e5e7674050dcad7a8b67bcdd9619f1e316c844e24175a",
@@ -18,11 +18,29 @@
       "algorithms/native/constructor_wide.cpp": "99a05ebca2afb190ad90662351392a7784c70b1b67259dfa6ade26645f459ee3",
       "algorithms/rewrite.py": "bbe61b6423ce19bf49525450676a4307462b8cded2a300cf3adf48ca4fa5cade",
       "algorithms/schedule.py": "9798c6df7915a30f8989d94ce55bbd697aed2f1ea64773797d46670d44f31dc1",
-      "algorithms/solver.py": "8cb82dea08137bd43fbf6a9fc5afd7e05a0bbc6376dfd82fe8a30b3328abe160",
+      "algorithms/solver.py": "3f6211296b0a1583f42ac9a4d42cc2c57693ce20c800cd4b9757d87249382044",
       "algorithms/v10.py": "9b02fe83c4e0fcb7c37bd893c663e8308094432d629b78ee15c893cbe618e8ed",
+      "algorithms/v11.py": "94cd1b597e433509307d70449bdb9f3eb3c36e83e451ff195df0027e01eeb4de",
+      "algorithms/v11_frozen_fulltest/bilayer.cpp": "97f1d209fafb056c5b9001db8ede61198ee726d3c995becdff0f78e2508ddaf2",
+      "algorithms/v11_frozen_fulltest/congruence/congruence.cpp": "ee2cbc3b9122777fed7bab3194f6df8e7ae150f91abb83ff68a6950dc90163c1",
+      "algorithms/v11_frozen_fulltest/exact_graph.py": "911ba568e99c8b6f368144ed29b4611cfa3bd4e0de5546d4f9371992356d88d2",
+      "algorithms/v11_frozen_fulltest/experiment.py": "61d1d68e1730ead72dd0ee0733e20336dff66c25b7a626292a3304f27d08aa51",
+      "algorithms/v11_frozen_fulltest/factor.cpp": "7587d875aca8a8947a744c51aa581b51c41ae3c1133eb9104ca76b72ba1cf657",
+      "algorithms/v11_frozen_fulltest/hyper.cpp": "56cd2141b39d554642ddb445044ee684bfa72a5cfb6c1a4850f375c27d83f5db",
+      "algorithms/v11_frozen_fulltest/order.cpp": "a8b3339099a65176e4efb97f85a0dbb1d676cd9b0b07fdeedf91cd7421f17d9c",
+      "algorithms/v11_frozen_fulltest/repo_verify.py": "47f6c75c67d1bb143c871b774d493f77d822544e6c7b020d003be9e128087884",
+      "algorithms/v11_frozen_fulltest/run7.py": "6b1627f2a508de8b5b0e19b073f9f60f15b3688c3748008fc94549d33eec1d6f",
+      "algorithms/v11_frozen_fulltest/run8.py": "1633b637ebbdc94ca571442e7804aac84bbea0f766438f5f780a4b8c460b3b2f",
+      "algorithms/v11_frozen_fulltest/scheduler.py": "44807ce9fc75e2644c07c64f3f5918eb61bf9cefd1d10b4f83ec1b550e490b31",
+      "algorithms/v11_frozen_fulltest/scheduler8.py": "d6486239d9bb3ebea9aae4d9d3ebaa030688741cc5f0d0f6ed2fba341af06af2",
+      "algorithms/v11_frozen_fulltest/synth.cpp": "6913779bd1065c203ded8a9e224cfaba1ad049f9bd63d489fa5fead1e5ac5b1f",
+      "algorithms/v11_frozen_fulltest/variants/basis12free/basis.cpp": "9e2f06a861b8f9a520b63482c19346b00baca607dd4cd1ac3f557d55400360bb",
+      "algorithms/v11_frozen_fulltest/variants/basis12synth/run_basis.py": "a86c5e1f64bd533ba5286c43c72a15abc02b14ff586acbdcbb842a88c78e046c",
+      "algorithms/v11_frozen_fulltest/variants/frozen17/run.py": "7b76ba0894d57d0789c3770a13839a0ee9a5dd9e18dc1d33f10bdd977ec386ce",
+      "algorithms/v11_frozen_fulltest/variants/synth9/synth9.cpp": "3eec2c229022f38f8fb2691e4af7b1a7344d97458b1f9d161313f0b99e4e80db",
       "algorithms/v9.py": "77e0057d0176d432498abfc807bb21242c83b93991d5ea38bce22927ef501ace",
       "checkpoint.py": "370236f37bc286e0afdf7fa41af7315cdc273039d36cf28a171099d269ef3053",
-      "graph_solver.py": "b1cc3768dc4d7818748af5518912432152cf2eb7e05635edd1b9c05d5ad9f9e5",
+      "graph_solver.py": "efc6c7b82dd74a53c1ec08b7dd3e0f41ec200021fe3a3efa6f046fa17e14bfd8",
       "verify.py": "76fe098bb9de8319ad28f3b281f782842036dee60fc91b136c9235f9dc4affd4"
     }
   },
@@ -37,7 +55,8 @@
       "v7",
       "v8",
       "v9",
-      "v10"
+      "v10",
+      "v11"
     ]
   }
 }

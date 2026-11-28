@@ -1,0 +1,23 @@
+{
+  "total": 1000,
+  "complete": 1000,
+  "remaining": 0,
+  "groups": 2000,
+  "groups_by_route": {
+    "basis": 1000,
+    "r8": 1000
+  },
+  "partial_ids": {},
+  "validated_candidates": 12556,
+  "score": 158955,
+  "v10_same_ids": 164306,
+  "improvement_pct": 3.2567282996360447,
+  "comparison": {
+    "better": 848,
+    "worse": 82,
+    "equal": 70
+  },
+  "optional_route_errors": [],
+  "group_elapsed_seconds": 10464.631,
+  "puzzles_sha256": "b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428"
+}
