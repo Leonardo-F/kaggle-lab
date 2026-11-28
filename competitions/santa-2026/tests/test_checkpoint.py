@@ -31,7 +31,7 @@ class CheckpointTest(unittest.TestCase):
     def run_solver(self, *extra):
         return subprocess.run(
             [sys.executable, str(SRC / "graph_solver.py"), str(self.puzzles),
-             "--output", str(self.output), "--checkpoint", str(self.checkpoint), *extra],
+             "--version", "v10", "--output", str(self.output), "--checkpoint", str(self.checkpoint), *extra],
             capture_output=True, text=True,
         )
 

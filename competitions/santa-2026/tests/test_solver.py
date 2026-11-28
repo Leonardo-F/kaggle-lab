@@ -30,6 +30,7 @@ class SolverTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         native_build.ensure_built()
+        subprocess.run(["bash", str(SRC / "algorithms/v11_frozen_fulltest/build.sh")], check=True)
         native_construct.reset_binaries()
 
     def setUp(self):
@@ -61,18 +62,15 @@ class SolverTest(unittest.TestCase):
     def test_default_entry_solves_three_steps(self):
         result = self.run_cli()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('"version": "v10"', result.stdout)
-        self.assertIn('"policy": "full"', result.stdout)
+        self.assertIn('"version": "v11"', result.stdout)
         self.assertIn('"validated": 1', result.stdout)
         self.assertEqual(len(self.read_program()), 3)
 
-    def test_explicit_v10_alias_matches_default(self):
-        self.assertEqual(self.run_cli().returncode, 0)
-        default = self.output.read_bytes()
-        self.output.unlink()
+    def test_explicit_v10_legacy_cli(self):
         result = self.run_cli("--version", "v10")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.output.read_bytes(), default)
+        self.assertIn('"policy": "full"', result.stdout)
+        self.assertEqual(len(self.read_program()), 3)
 
     def test_explicit_v9_reproduction_is_available(self):
         result = self.run_cli("--version", "v9")
@@ -96,7 +94,7 @@ class SolverTest(unittest.TestCase):
                 self.assertIn(f"--version {version}", result.stderr)
 
     def test_unknown_version_has_no_misleading_worktree_command(self):
-        result = self.run_cli("--version", "v11")
+        result = self.run_cli("--version", "unreleased")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unknown solver version", result.stderr)
         self.assertNotIn("git worktree add", result.stderr)
@@ -154,7 +152,7 @@ class SolverTest(unittest.TestCase):
                           v9.DEFAULT_CONFIG["schedule_modes"]), (919, 8, 2, 202609, 32, 12, 6))
 
     def test_solve_returns_v10_stage_and_policy_metrics(self):
-        pid, program, metrics = solve(self.row())
+        pid, program, metrics = solve(self.row(), version="v10")
         self.assertEqual(pid, "test")
         self.assertEqual(len(program), 3)
         self.assertEqual(metrics["v10final"], len(program))
@@ -177,14 +175,14 @@ class SolverTest(unittest.TestCase):
                           v10.DEFAULT_CONFIG["policy"]), (45, 18, 2, 8, "full"))
 
     def test_solve_is_deterministic(self):
-        first = solve(self.row())
-        second = solve(self.row())
+        first = solve(self.row(), version="v10")
+        second = solve(self.row(), version="v10")
         self.assertEqual(first[1], second[1])
         self.assertEqual(first[2], second[2])
 
     def test_zero_step_when_targets_are_starting_values(self):
         row = self.row(targets="[9,27,81]", starting="[9,27,81]")
-        pid, program, metrics = solve(row)
+        pid, program, metrics = solve(row, version="v10")
         self.assertEqual(program, [])
         self.assertEqual((metrics["v10_stage1"], metrics["v10_stage3"], metrics["v10final"]), (0, 0, 0))
         pid, program, metrics = solve(row, version="v9")
@@ -207,9 +205,9 @@ class SolverTest(unittest.TestCase):
         algorithms = SRC / "algorithms"
         names = sorted(path.stem for path in algorithms.glob("*.py"))
         self.assertEqual(names, ["__init__", "common", "construct", "graph",
-                                 "rewrite", "schedule", "solver", "v10", "v9"])
+                                 "rewrite", "schedule", "solver", "v10", "v11", "v9"])
         self.assertEqual(sorted(path.name for path in algorithms.glob("v[0-9]*.py")),
-                         ["v10.py", "v9.py"])
+                         ["v10.py", "v11.py", "v9.py"])
         native = algorithms / "native"
         self.assertEqual(sorted(path.name for path in native.glob("*.cpp")),
                          sorted(FROZEN_CPP))
@@ -253,7 +251,7 @@ class SolverTest(unittest.TestCase):
         with mock.patch("algorithms.v10.construct",
                         side_effect=ValueError("native constructor failed")):
             with self.assertRaisesRegex(ValueError, "native constructor failed"):
-                solve(self.row())
+                solve(self.row(), version="v10")
 
     def test_invalid_metrics_are_rejected_by_checkpoint_validator(self):
         import checkpoint as checkpoint_engine
@@ -269,11 +267,11 @@ class SolverTest(unittest.TestCase):
                                         "nodes": None, "score": None, "error": "boom"}])
         with self.assertRaisesRegex(ValueError, "invalid route metrics"):
             checkpoint_engine.validate_record("v9", row, program, broken)
-        self.assertEqual(SOLVER_VERSION, "v10")
+        self.assertEqual(SOLVER_VERSION, "v11")
 
     def test_solver_version_is_single_sourced(self):
         self.assertEqual(graph_solver.DEFAULT_VERSION, SOLVER_VERSION)
-        self.assertEqual(graph_solver.DEFAULT_VERSION, "v10")
+        self.assertEqual(graph_solver.DEFAULT_VERSION, "v11")
 
 
 class NativeProtocolTest(unittest.TestCase):
